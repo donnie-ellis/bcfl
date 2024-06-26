@@ -1,66 +1,19 @@
-'use server'
-import { getServerAuthSession } from "@/auth"
-import {
-  Player,
-  League,
-  LeaguePlayers,
-  LeagueDetails,
-  Manager,
-  Team,
-  Teams
-} from "@/lib/types"
-import { xml2json } from "xml-js";
+// GET /api/yahoo/teams/league
+// Required fields in query: leagueKey, teamKey
+import { NextRequest, NextResponse } from 'next/server';
+import { Team } from '@/lib/types';
+import { requestYahoo } from '@/lib/yahoo';
 
-export async function getValidAccessToken() {
-  const session = await getServerAuthSession();
-
-  if (session?.error === "RefreshAccessTokenError") {
-    throw new Error("Your login has expired. Please sign in again.")
-  }
-  return session?.accessToken
-}
-
-// Helper function to make the requests.
-// path: eveything after v2. Don't add ?format=json
-export async function requestYahoo(path: string) {
-  const accessToken = await getValidAccessToken();
-  const baseUrl = 'https://fantasysports.yahooapis.com/fantasy/v2'
-  const url = `${baseUrl}/${path}?format=json`
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`
-    }
-  })
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`)
-  }
-  const data = await response.json();
-  return data;
-}
-
-// Gets league details
-export async function fetchLeague(leagueKey: string = process.env.YAHOO_LEAGUE_ID!) {
-  const path = `league/${leagueKey}`;
-  const data = await requestYahoo(path);
-  const leagueDetails: LeagueDetails = data.fantasy_content.league[0]
-  return leagueDetails;
-}
-
-export async function fetchTeams(leagueKey: string = process.env.YAHOO_LEAGUE_ID!) {
-  const path = `league/${leagueKey}/teams`;
-
-  const teamsData: Teams = {
-    league_key: leagueKey,
-    teams: []
-  };
-
+export async function GET(request: NextRequest, { params }: { params: { league: string } }) {
+  const leagueKey = params.league;
+  const path = `users;use_login=1/games;game_keys=nfl/teams`;
   try {
-    const data = await requestYahoo(path)
-
-    const leagueTeamsData = data.fantasy_content.league[1].teams;
-    for (const key in leagueTeamsData) {
+    const data = await requestYahoo(path);
+    const teams: Team[] = [];
+    const teamsData = data.fantasy_content.users[0].user[1].games[0].game[1].teams;;
+    for (const key in teamsData) {
       if (key !== 'count') {
-        const teamData = leagueTeamsData[key].team[0];
+        const teamData = teamsData[key].team[0];
         const team: Team = {
           team_key: '',
           team_id: '',
@@ -133,14 +86,20 @@ export async function fetchTeams(leagueKey: string = process.env.YAHOO_LEAGUE_ID
             }
           }
         });
-        teamsData.teams.push(team);
+        teams.push(team);
       }
     }
-
-
-    return teamsData;
+    let teamOut: Team = {};
+    teams.forEach((team) => {
+      const parsedKey = team.team_key.split('.');
+      const parsedLeague = leagueKey.split('.');
+      if (parsedKey[2] === parsedLeague[2]) {
+        teamOut = team;
+      }
+    })
+    return NextResponse.json(teamOut);
   } catch (error) {
-    console.error('Error fetching league teams:', error);
-    throw error;
+    console.error('Failed to fetch team:', error);
+    return NextResponse.json({ error: 'Failed to fetch league teams' }, { status: 500 });
   }
 }

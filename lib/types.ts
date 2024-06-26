@@ -1,3 +1,5 @@
+import exp from "constants";
+
 export interface Player {
     player_key: string;
     player_id: string;
@@ -19,6 +21,15 @@ export interface Player {
     image_url: string;
     headshot: string;
     headshot_size: string;
+    average_pick: number;
+    average_round: number;
+    percent_drafted: number;
+    average_cost: number;
+    draft_positions: {
+      min: number;
+      max: number;
+      average: number;
+    }  
   }
 
   export interface LeaguePlayers {
@@ -84,4 +95,31 @@ export interface Player {
     teams: Team[];
   }
 
-  
+  export interface League {
+    league_key: string;
+    league_id: number;
+    name: string;
+    url: string;
+    draft_status: string;
+    num_teams: number;
+    league_update_timestamp: string;
+    scoring_type: string;
+    current_week: number;
+    end_week: number;
+    is_finished: boolean;
+    logo_url: string;
+    short_invitation_url: string;
+    league_type: string;
+    renew: string;
+    renewed: string;
+    game_code: string;
+    is_cash_league: boolean;
+    is_plus_league: boolean;
+    is_pro_league: boolean;
+    season: number;
+    start_date: string;
+    start_week: number;
+    felo_tier: string;
+    end_date: string;
+    weekly_deadline: string;
+  }

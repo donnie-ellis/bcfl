@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fantasy_content xml:lang="en-US" yahoo:uri="http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games;game_keys=nfl/teams" time="73.803186416626ms" copyright="Certain Data by Sportradar, Stats Perform and Rotowire" refresh_rate="60" xmlns:yahoo="http://www.yahooapis.com/v1/base.rng" xmlns="http://fantasysports.yahooapis.com/fantasy/v2/base.rng">
+ <users count="1">
+  <user>
+   <guid>5XCKBXAOO6DRCCQF74ERZ3PGZQ</guid>
+   <games count="1">
+    <game>
+     <game_key>449</game_key>
+     <game_id>449</game_id>
+     <name>Football</name>
+     <code>nfl</code>
+     <type>full</type>
+     <url>https://football.fantasysports.yahoo.com/f1</url>
+     <season>2024</season>
+     <is_registration_over>0</is_registration_over>
+     <is_game_over>0</is_game_over>
+     <is_offseason>0</is_offseason>
+     <teams count="1">
+      <team>
+       <team_key>449.l.111366.t.1</team_key>
+       <team_id>1</team_id>
+       <name>DirtyDogg</name>
+       <is_owned_by_current_login>1</is_owned_by_current_login>
+       <url>https://football.fantasysports.yahoo.com/f1/111366/1</url>
+       <team_logos>
+        <team_logo>
+         <size>large</size>
+         <url>https://yahoofantasysports-res.cloudinary.com/image/upload/t_s192sq/fantasy-logos/25240681301_f6e7e4bf99.jpg</url>
+        </team_logo>
+       </team_logos>
+       <waiver_priority/>
+       <faab_balance>100</faab_balance>
+       <number_of_moves>0</number_of_moves>
+       <number_of_trades>0</number_of_trades>
+       <roster_adds>
+        <coverage_type>week</coverage_type>
+        <coverage_value>1</coverage_value>
+        <value>0</value>
+       </roster_adds>
+       <league_scoring_type>head</league_scoring_type>
+       <has_draft_grade>0</has_draft_grade>
+       <managers>
+        <manager>
+         <manager_id>1</manager_id>
+         <nickname>Donnie</nickname>
+         <guid>5XCKBXAOO6DRCCQF74ERZ3PGZQ</guid>
+         <is_commissioner>1</is_commissioner>
+         <is_current_login>1</is_current_login>
+         <image_url>https://s.yimg.com/ag/images/4560/37565676463_58eb3b_64sq.jpg</image_url>
+         <felo_score>676</felo_score>
+         <felo_tier>silver</felo_tier>
+        </manager>
+       </managers>
+       <index-1/>
+      </team>
+     </teams>
+    </game>
+   </games>
+  </user>
+ </users>
+</fantasy_content>
+<!-- fantasy-sports-api- -public-production-bf1-768d65dd45-fg7fx Wed Jun 26 22:10:49 UTC 2024 -->
