@@ -49,3 +49,39 @@ export interface Player {
     season: string;
   }
   
+  export interface Manager {
+    manager_id: string;
+    nickname: string;
+    guid: string;
+    is_commissioner: string;
+    email: string;
+    image_url: string;
+  }
+
+  export interface Team {
+    team_key: string;
+    team_id: string;
+    name: string;
+    url: string;
+    team_logos: { size: string; url: string }[];
+    waiver_priority: number;
+    number_of_moves: number;
+    number_of_trades: number;
+    roster_adds: {
+      coverage_type: string;
+      coverage_value: number;
+      value: number;
+    };
+    league_scoring_type: string;
+    draft_position: number;
+    has_draft_grade: boolean;
+    managers: Manager[];
+    // Add any other team properties you need
+  }
+
+  export interface Teams {
+    league_key: string;
+    teams: Team[];
+  }
+
+  

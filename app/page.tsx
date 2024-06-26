@@ -3,7 +3,7 @@ import { getServerAuthSession } from "@/auth";
 import { signIn, signOut } from "next-auth/react";
 import LoginButton from "@/components/LoginButton";
 import LogOutButton from "@/components/LogOutButton";
-import { fetchLeagues, fetchLeague } from "@/lib/yahoo";
+import { fetchLeagues, fetchLeague, fetchTeams } from "@/lib/yahoo";
 
 export default async function Home() {
   const session = await getServerAuthSession();

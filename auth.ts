@@ -60,9 +60,9 @@ export const authOptions: NextAuthOptions =
                                     'Content-Type': 'application/x-www-form-urlencoded',
                                 },
                                 body: new URLSearchParams({
-                                    client_id: process.env.YAHOO_CLIENT_ID!,
-                                    client_secret: process.env.YAHOO_CLIENT_SECRET!,
-                                    refresh_token: token.refreshToken,
+                                    client_id: process.env.YAHOO_CLIENT_ID! as string,
+                                    client_secret: process.env.YAHOO_CLIENT_SECRET! as string,
+                                    refresh_token: token.refreshToken as string,
                                     grant_type: 'refresh_token',
                                 }),
                             }
@@ -89,7 +89,7 @@ export const authOptions: NextAuthOptions =
              return token
             },
             async session({ session, token, user }) { 
-                session.accessToken = token.accessToken
+                session.accessToken = token.accessToken as string
                 return session;
             },
         }

@@ -1,5 +1,12 @@
 import { getServerAuthSession } from "@/auth"
-import { Player, LeaguePlayers, LeagueDetails } from "@/lib/types"
+import {
+  Player,
+  LeaguePlayers,
+  LeagueDetails,
+  Manager,
+  Team,
+  Teams
+} from "@/lib/types"
 
 async function getValidAccessToken() {
   const session = await getServerAuthSession();
@@ -164,26 +171,101 @@ export async function fetchLeague(leagueKey: string = process.env.YAHOO_LEAGUE_I
   return leagueDetails;
 }
 
-export async function fetchTeam(leagueKey: string) {
-  try {
-    const accessToken = await getValidAccessToken()
-    const response = await fetch(`https://fantasysports.yahooapis.com/fantasy/v2/team/${leagueKey}/roster?format=json`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    })
+export async function fetchTeams(leagueKey: string = process.env.YAHOO_LEAGUE_ID!) {
+  const path = `league/${leagueKey}/teams`;
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+  const teamsData: Teams = {
+    league_key: leagueKey,
+    teams: []
+  };
+
+  try {
+    const data = await requestYahoo(path)
+
+    const leagueTeamsData = data.fantasy_content.league[1].teams;
+    for (const key in leagueTeamsData) {
+      if (key !== 'count') {
+        const teamData = leagueTeamsData[key].team[0];
+        const team: Team = {
+          team_key: '',
+          team_id: '',
+          name: '',
+          url: '',
+          team_logos: [],
+          waiver_priority: 0,
+          number_of_moves: 0,
+          number_of_trades: 0,
+          roster_adds: {
+            coverage_type: '',
+            coverage_value: 0,
+            value: 0
+          },
+          league_scoring_type: '',
+          draft_position: 0,
+          has_draft_grade: false,
+          managers: []
+        };
+        teamData.forEach((item: any) => {
+          if (typeof item === 'object') {
+            const key = Object.keys(item)[0];
+            switch (key) {
+              case 'team_key':
+                team.team_key = item[key];
+                break;
+              case 'team_id':
+                team.team_id = item[key];
+                break;
+              case 'name':
+                team.name = item[key];
+                break;
+              case 'url':
+                team.url = item[key];
+                break;
+              case 'team_logos':
+                team.team_logos = item[key];
+                break;
+              case 'waiver_priority':
+                team.waiver_priority = parseInt(item[key]);
+                break;
+              case 'number_of_moves':
+                team.number_of_moves = parseInt(item[key]);
+                break;
+              case 'number_of_trades':
+                team.number_of_trades = parseInt(item[key]);
+                break;
+              case 'roster_adds':
+                team.roster_adds = item[key];
+                break;
+              case 'league_scoring_type':
+                team.league_scoring_type = item[key];
+                break;
+              case 'draft_position':
+                team.draft_position = parseInt(item[key]);
+                break;
+              case 'has_draft_grade':
+                team.has_draft_grade = item[key] === '1';
+                break;
+              case 'managers':
+                team.managers = item[key].map((managerData: any) => ({
+                  manager_id: managerData.manager.manager_id,
+                  nickname: managerData.manager.nickname,
+                  guid: managerData.manager.guid,
+                  is_commissioner: managerData.manager.is_commissioner,
+                  email: managerData.manager.email,
+                  image_url: managerData.manager.image_url
+                }));
+                break;
+            }
+          }
+        });
+
+        teamsData.teams.push(team);
+      }
     }
 
-
-    const data = await response.json()
-    const team = data.fantasy_content.team[0]
-    const roster = data.fantasy_content.team[1].roster
-    return { team, roster }
+    return teamsData;
   } catch (error) {
-    console.error('Error fetching team:', error)
-    throw error
+    console.error('Error fetching league teams:', error);
+    throw error;
   }
 }
