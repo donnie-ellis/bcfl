@@ -13,7 +13,7 @@ const TeamCard: React.FC<TeamProps> = ({ team }) => {
     <Card className="w-full">
       <CardHeader className="flex flex-row items-center space-x-4 pb-2">
         <Avatar className="h-16 w-16">
-          <AvatarImage src={team.team_logos[0].team_logo.url} alt={`${team.name} logo`} />
+          <AvatarImage src={team.team_logos[0].url} alt={`${team.name} logo`} />
           <AvatarFallback>{team.name}</AvatarFallback>
         </Avatar>
         <div>

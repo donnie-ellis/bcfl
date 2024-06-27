@@ -70,11 +70,6 @@ export async function fetchTeams(leagueKey: string = process.env.YAHOO_LEAGUE_ID
           waiver_priority: 0,
           number_of_moves: 0,
           number_of_trades: 0,
-          roster_adds: {
-            coverage_type: '',
-            coverage_value: 0,
-            value: 0
-          },
           league_scoring_type: '',
           draft_position: 0,
           has_draft_grade: false,
@@ -108,9 +103,6 @@ export async function fetchTeams(leagueKey: string = process.env.YAHOO_LEAGUE_ID
               case 'number_of_trades':
                 team.number_of_trades = parseInt(item[key]);
                 break;
-              case 'roster_adds':
-                team.roster_adds = item[key];
-                break;
               case 'league_scoring_type':
                 team.league_scoring_type = item[key];
                 break;
@@ -143,4 +135,38 @@ export async function fetchTeams(leagueKey: string = process.env.YAHOO_LEAGUE_ID
     console.error('Error fetching league teams:', error);
     throw error;
   }
+}
+
+export async function parseTeamData(data: any) {
+  const teams: any[] = Object.values(data).filter(t => Array.isArray(t));
+
+  return teams.map((teamArray: any[]) => {
+    const team = teamArray[0];
+    const teamObj: { [key: string]: any } = {};
+    team.forEach((item: any) => {
+      if (typeof item === 'object' && item !== null) {
+        Object.assign(teamObj, item);
+      }
+    });
+
+    return {
+      draft_position: teamObj.draft_position,
+      team_key: teamObj.team_key,
+      team_id: teamObj.team_id,
+      name: teamObj.name,
+      is_owned_by_current_login: teamObj.is_owned_by_current_login,
+      url: teamObj.url,
+      team_logos: teamObj.team_logos.map((logo: any) => ({
+        size: logo.team_logo.size,
+        url: logo.team_logo.url
+      })),
+      waiver_priority: teamObj.waiver_priority,
+      faab_balance: teamObj.faab_balance,
+      number_of_moves: teamObj.number_of_moves,
+      number_of_trades: teamObj.number_of_trades,
+      league_scoring_type: teamObj.league_scoring_type,
+      has_draft_grade: teamObj.has_draft_grade,
+      managers: teamObj.managers.map((manager: any) => manager.manager)
+    };
+  });
 }

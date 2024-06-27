@@ -64,9 +64,17 @@ export interface Player {
     manager_id: string;
     nickname: string;
     guid: string;
-    is_commissioner: string;
+    is_commissioner: boolean;
     email: string;
     image_url: string;
+    is_current_login: boolean;
+    felo_score?: string;
+    felo_tier?: string;
+  }
+
+  export interface TeamLogo {
+    size: string;
+    url: string;
   }
 
   export interface Team {
@@ -78,16 +86,11 @@ export interface Player {
     waiver_priority: number;
     number_of_moves: number;
     number_of_trades: number;
-    roster_adds: {
-      coverage_type: string;
-      coverage_value: number;
-      value: number;
-    };
     league_scoring_type: string;
     draft_position: number;
     has_draft_grade: boolean;
     managers: Manager[];
-    // Add any other team properties you need
+    is_owned_by_current_login?: boolean;
   }
 
   export interface Teams {
