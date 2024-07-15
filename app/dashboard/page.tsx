@@ -11,6 +11,7 @@ const DashboardPage = () => {
   const [leagues, setLeagues] = useState<League[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [team, setTeam] = useState<Team>();
+  const [isCommissioner, setIsCommissioner] = useState(false);
 
   useEffect(() => {
     const loadLeagues = async () => {
@@ -36,16 +37,30 @@ const DashboardPage = () => {
     setSelectedLeagueKey(leagueKey);
     setActiveTab("drafts");
 
-    const response = await fetch(`/api/yahoo/teamsForPlayer/${leagueKey}`);
-    if (response.ok) {
-        const team: Team = await response.json();
+    try {
+      // Fetch team data
+      const teamResponse = await fetch(`/api/yahoo/teamsForPlayer/${leagueKey}`);
+      if (teamResponse.ok) {
+        const team: Team = await teamResponse.json();
         setTeam(team);
+      }
+
+      // Check if user is commissioner
+      const commissionerResponse = await fetch(`/api/yahoo/isCommissioner/${leagueKey}`);
+      if (commissionerResponse.ok) {
+        const { isCommissioner } = await commissionerResponse.json();
+        setIsCommissioner(isCommissioner);
+      }
+    } catch (error) {
+      console.error("Failed to fetch team data or check commissioner status:", error);
+      // Optionally, set an error state here
     }
   };
 
   const handleTabChange = (value: string) => {
     if (value === "leagues") {
       setSelectedLeagueKey(null);
+      setIsCommissioner(false);
     }
     setActiveTab(value);
   };
@@ -71,7 +86,12 @@ const DashboardPage = () => {
             <div className="p-4 bg-white rounded-lg shadow">
               <h2 className="text-2xl font-bold mb-4">Drafts for League</h2>
               <p>Selected League Key: {selectedLeagueKey}</p>
-                {team && <TeamCard team={team} />}
+              {team && <TeamCard team={team} />}
+              <p className="mt-4">
+                {isCommissioner
+                  ? "You are a commissioner of this league."
+                  : "You are not a commissioner of this league."}
+              </p>
             </div>
           ) : (
             <p className="text-center text-gray-500 mt-4">
