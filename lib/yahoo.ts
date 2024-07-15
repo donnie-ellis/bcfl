@@ -1,27 +1,124 @@
 'use server'
 import { getServerAuthSession } from "@/auth"
-import {
-  Player,
-  League,
-  LeaguePlayers,
-  LeagueDetails,
-  Manager,
-  Team,
-  Teams
-} from "@/lib/types"
-import { xml2json } from "xml-js";
+import { createClient } from '@supabase/supabase-js'
+// ... (keep other imports)
+
+const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
 export async function getValidAccessToken() {
   const session = await getServerAuthSession();
+  
+  console.log("getValidAccessToken - session:", JSON.stringify(session, null, 2));
 
-  if (session?.error === "RefreshAccessTokenError") {
-    throw new Error("Your login has expired. Please sign in again.")
+  if (!session || !session.user) {
+    console.error("No active session or user");
+    throw new Error("No active session. Please sign in.");
   }
-  return session?.accessToken
+
+  if (!session.user.id) {
+    console.error("User ID is undefined in the session");
+    throw new Error("Invalid user session. Please sign in again.");
+  }
+
+  const userId = session.user.id;
+  console.log("User ID:", userId);
+
+  try {
+    const { data: sessionData, error: sessionError } = await supabase
+      .from('sessions')
+      .select('access_token, expires_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (sessionError) {
+      console.error("Error fetching session data:", sessionError);
+      throw new Error("Failed to retrieve session data.");
+    }
+
+    if (!sessionData) {
+      console.error("No session data found for user:", userId);
+      throw new Error("No valid session found. Please sign in again.");
+    }
+
+    const now = new Date();
+    const expiresAt = new Date(sessionData.expires_at);
+
+    if (now > expiresAt) {
+      // Token has expired, we need to refresh it
+      console.log("Token expired, refreshing...");
+      try {
+        const refreshedToken = await refreshAccessToken(userId);
+        return refreshedToken;
+      } catch (error) {
+        console.error("Error refreshing token:", error);
+        throw new Error("Your session has expired. Please sign in again.");
+      }
+    }
+
+    return sessionData.access_token;
+  } catch (error) {
+    console.error("Unexpected error in getValidAccessToken:", error);
+    throw new Error("An unexpected error occurred. Please try again.");
+  }
+}
+
+async function refreshAccessToken(userId: string) {
+  const { data: sessionData, error: sessionError } = await supabase
+    .from('sessions')
+    .select('refresh_token')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (sessionError || !sessionData) {
+    throw new Error("Failed to retrieve refresh token.");
+  }
+
+  const response = await fetch(
+    "https://api.login.yahoo.com/oauth2/get_token",
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: process.env.YAHOO_CLIENT_ID!,
+        client_secret: process.env.YAHOO_CLIENT_SECRET!,
+        refresh_token: sessionData.refresh_token,
+        grant_type: 'refresh_token',
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const refreshedTokens = await response.json();
+
+  // Update token in database
+  const { error: updateError } = await supabase
+    .from('sessions')
+    .update({
+      access_token: refreshedTokens.access_token,
+      refresh_token: refreshedTokens.refresh_token ?? sessionData.refresh_token,
+      expires_at: new Date(Date.now() + refreshedTokens.expires_in * 1000).toISOString()
+    })
+    .eq('user_id', userId);
+
+  if (updateError) {
+    console.error("Error updating session:", updateError);
+    throw new Error("Failed to update session with refreshed token.");
+  }
+
+  return refreshedTokens.access_token;
 }
 
 // Helper function to make the requests.
-// path: eveything after v2. Don't add ?format=json
+// path: everything after v2. Don't add ?format=json
 export async function requestYahoo(path: string) {
   const accessToken = await getValidAccessToken();
   const baseUrl = 'https://fantasysports.yahooapis.com/fantasy/v2'
