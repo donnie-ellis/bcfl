@@ -23,26 +23,26 @@ const LeagueCard: React.FC<LeagueCardProps> = ({ league, onLeagueClick }) => (
         League URL <ExternalLink className="ml-1 w-4 h-4" />
       </a>
       <img src={league.logo_url} alt={league.name} className="mx-auto" />
-      <p>Scoring Type: 
+      <span>Scoring Type: 
         <Badge 
           variant="secondary">
             {league.scoring_type === 'head' ? 'Head-to-Head' : 'Rotisserie'}
           </Badge>
-        </p>
-      <p>Number of Teams: 
+        </span>
+      <span>Number of Teams: 
         <Badge
           variant="secondary"
         >
           {league.num_teams}
         </Badge>
-      </p>
-      <p>Draft Status: 
+      </span>
+      <span>Draft Status: 
         <Badge 
           variant={league.draft_status === 'predraft' ? "secondary" : "default"}
         >
           {league.draft_status === 'predraft' ? 'Pre-Draft' : league.draft_status}
         </Badge>
-      </p>
+      </span>
     </CardContent>
   </Card>
 );

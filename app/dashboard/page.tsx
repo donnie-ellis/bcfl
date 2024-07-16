@@ -1,8 +1,18 @@
 'use client'
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import LeagueList from '@/components/LeagueList';
 import TeamCard from '@/components/TeamCard';
+import TeamOrder from '@/components/TeamOrder';
 import { League, Team } from '@/lib/types';
 
 const DashboardPage = () => {
@@ -11,7 +21,10 @@ const DashboardPage = () => {
   const [leagues, setLeagues] = useState<League[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [team, setTeam] = useState<Team>();
+  const [teams, setTeams] = useState<Team[]>([]);
   const [isCommissioner, setIsCommissioner] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isTeamsLoading, setIsTeamsLoading] = useState(false);
 
   useEffect(() => {
     const loadLeagues = async () => {
@@ -25,7 +38,6 @@ const DashboardPage = () => {
         setLeagues(fetchedLeagues);
       } catch (error) {
         console.error("Failed to fetch leagues:", error);
-        // Optionally, set an error state here
       } finally {
         setIsLoading(false);
       }
@@ -36,24 +48,29 @@ const DashboardPage = () => {
   const handleLeagueClick = async (leagueKey: string) => {
     setSelectedLeagueKey(leagueKey);
     setActiveTab("drafts");
+    setIsTeamsLoading(true);
 
     try {
-      // Fetch team data
       const teamResponse = await fetch(`/api/yahoo/teamsForPlayer/${leagueKey}`);
       if (teamResponse.ok) {
-        const team: Team = await teamResponse.json();
-        setTeam(team);
+        const teamData: Team = await teamResponse.json();
+        setTeam(teamData);
       }
-
-      // Check if user is commissioner
       const commissionerResponse = await fetch(`/api/yahoo/isCommissioner/${leagueKey}`);
       if (commissionerResponse.ok) {
         const { isCommissioner } = await commissionerResponse.json();
         setIsCommissioner(isCommissioner);
       }
+      const teamsResponse = await fetch(`/api/yahoo/teams/${leagueKey}`);
+      if (teamsResponse.ok) {
+        const teamsData: Team[] = await teamsResponse.json();
+        console.log("Fetched teams:", teamsData);
+        setTeams(teamsData);
+      }
     } catch (error) {
-      console.error("Failed to fetch team data or check commissioner status:", error);
-      // Optionally, set an error state here
+      console.error("Failed to fetch team or teams data:", error);
+    } finally {
+      setIsTeamsLoading(false);
     }
   };
 
@@ -63,6 +80,21 @@ const DashboardPage = () => {
       setIsCommissioner(false);
     }
     setActiveTab(value);
+  };
+
+  const handleCreateDraft = (orderedTeams: Team[]) => {
+    console.log("League Key:", selectedLeagueKey);
+    console.log("Draft Order:", orderedTeams.map(team => ({
+      team_id: team.team_id,
+      name: team.name,
+      managers: team.managers.map(manager => manager.nickname)
+    })));
+    
+    // Here you can add logic to send this data to your backend API
+    // For example:
+    // createDraftOrder(selectedLeagueKey, orderedTeams);
+
+    setIsDialogOpen(false);
   };
 
   return (
@@ -87,11 +119,29 @@ const DashboardPage = () => {
               <h2 className="text-2xl font-bold mb-4">Drafts for League</h2>
               <p>Selected League Key: {selectedLeagueKey}</p>
               {team && <TeamCard team={team} />}
-              <p className="mt-4">
-                {isCommissioner
-                  ? "You are a commissioner of this league."
-                  : "You are not a commissioner of this league."}
-              </p>
+              {isCommissioner && (
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      className="mt-4" 
+                      disabled={isTeamsLoading || teams.length === 0}
+                    >
+                      {isTeamsLoading ? 'Loading teams...' : 'Create a draft'}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-hidden">
+                    <DialogHeader>
+                      <DialogTitle>Create Draft Order</DialogTitle>
+                      <DialogDescription>
+                        Drag and drop teams to set the draft order.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="mt-4 max-h-[calc(80vh-120px)] overflow-y-auto pr-4">
+                      <TeamOrder teams={teams} onSubmit={handleCreateDraft} />
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
           ) : (
             <p className="text-center text-gray-500 mt-4">

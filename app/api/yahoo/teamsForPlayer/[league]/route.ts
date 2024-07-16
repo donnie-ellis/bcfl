@@ -4,8 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Team } from '@/lib/types';
 import { requestYahoo, parseTeamData } from '@/lib/yahoo';
 
-export async function GET(request: NextRequest, { params }: { params: { league: string } }) {
-  const leagueKey = params.league;
+export async function GET(request: NextRequest, { params }: { params: { leagueKey: string } }) {
+  const leagueKey = params.leagueKey;
   const path = `users;use_login=1/games;game_keys=nfl/teams`;
   try {
     const data = await requestYahoo(path);
