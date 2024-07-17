@@ -1,3 +1,7 @@
+// ./app/dashboard/page.tsx
+// The main page for a logged in user. Should display a list of their leages and once 
+// one is selected it should display the active drafts for that league.
+
 'use client'
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

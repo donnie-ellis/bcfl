@@ -1,9 +1,11 @@
+// ./app/page.tsx
+// The start page for the application. Logged in users should not see this.
+
 'use client'
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Button } from "@/components/ui/button";
 import LoginButton from "@/components/LoginButton";
 
 export default function Home() {
