@@ -13,7 +13,8 @@ import {
 import LeagueList from '@/components/LeagueList';
 import TeamCard from '@/components/TeamCard';
 import TeamOrder from '@/components/TeamOrder';
-import { League, Team } from '@/lib/types';
+import LeagueSettingsCard from '@/components/LeagueSettingsCard';
+import { League, Team, LeagueSettings } from '@/lib/types';
 
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState("leagues");
@@ -25,6 +26,8 @@ const DashboardPage = () => {
   const [isCommissioner, setIsCommissioner] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isTeamsLoading, setIsTeamsLoading] = useState(false);
+  const [leagueSettings, setLeagueSettings] = useState<LeagueSettings | null>(null);
+  const [isSettingsLoading, setIsSettingsLoading] = useState(false);
 
   useEffect(() => {
     const loadLeagues = async () => {
@@ -49,6 +52,7 @@ const DashboardPage = () => {
     setSelectedLeagueKey(leagueKey);
     setActiveTab("drafts");
     setIsTeamsLoading(true);
+    setIsSettingsLoading(true);
 
     try {
       const teamResponse = await fetch(`/api/yahoo/teamsForPlayer/${leagueKey}`);
@@ -64,13 +68,18 @@ const DashboardPage = () => {
       const teamsResponse = await fetch(`/api/yahoo/teams/${leagueKey}`);
       if (teamsResponse.ok) {
         const teamsData: Team[] = await teamsResponse.json();
-        console.log("Fetched teams:", teamsData);
         setTeams(teamsData);
       }
+      const settingsResponse = await fetch(`/api/yahoo/leagueSettings/${leagueKey}`);
+      if (settingsResponse.ok) {
+        const settingsData: LeagueSettings = await settingsResponse.json();
+        setLeagueSettings(settingsData);
+      }
     } catch (error) {
-      console.error("Failed to fetch team or teams data:", error);
+      console.error("Failed to fetch data:", error);
     } finally {
       setIsTeamsLoading(false);
+      setIsSettingsLoading(false);
     }
   };
 
@@ -78,6 +87,7 @@ const DashboardPage = () => {
     if (value === "leagues") {
       setSelectedLeagueKey(null);
       setIsCommissioner(false);
+      setLeagueSettings(null);
     }
     setActiveTab(value);
   };
@@ -90,10 +100,6 @@ const DashboardPage = () => {
       managers: team.managers.map(manager => manager.nickname)
     })));
     
-    // Here you can add logic to send this data to your backend API
-    // For example:
-    // createDraftOrder(selectedLeagueKey, orderedTeams);
-
     setIsDialogOpen(false);
   };
 
@@ -119,6 +125,7 @@ const DashboardPage = () => {
               <h2 className="text-2xl font-bold mb-4">Drafts for League</h2>
               <p>Selected League Key: {selectedLeagueKey}</p>
               {team && <TeamCard team={team} />}
+              <LeagueSettingsCard settings={leagueSettings} isLoading={isSettingsLoading} />
               {isCommissioner && (
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>

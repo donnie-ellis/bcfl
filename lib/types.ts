@@ -126,3 +126,48 @@ export interface Player {
     end_date: string;
     weekly_deadline: string;
   }
+
+  export interface LeagueSettings {
+    draft_type: string;
+    is_auction_draft: boolean;
+    scoring_type: string;
+    persistent_url: string;
+    uses_playoff: boolean;
+    has_playoff_consolation_games: boolean;
+    playoff_start_week: number;
+    uses_playoff_reseeding: boolean;
+    uses_lock_eliminated_teams: boolean;
+    num_playoff_teams: number;
+    num_playoff_consolation_teams: number;
+    waiver_type: string;
+    waiver_rule: string;
+    uses_faab: boolean;
+    draft_time: string;
+    draft_pick_time: number;
+    post_draft_players: string;
+    max_teams: number;
+    waiver_time: number;
+    trade_end_date: string;
+    trade_ratify_type: string;
+    trade_reject_time: number;
+    player_pool: string;
+    cant_cut_list: string;
+    roster_positions: {
+      position: string;
+      position_type: string;
+      count: number;
+      is_starting_position: boolean;
+    }[];
+    stat_categories: {
+      stat_id: number;
+      name: string;
+      display_name: string;
+      sort_order: string;
+      position_type: string;
+      stat_position_types: string[];
+      is_only_display_stat: boolean;
+      value: number | null;
+    }[];
+    uses_fractional_points: boolean;
+    uses_negative_points: boolean;
+  }
