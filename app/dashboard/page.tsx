@@ -1,11 +1,10 @@
 // ./app/dashboard/page.tsx
-// The main page for a logged in user. Should display a list of their leages and once 
-// one is selected it should display the active drafts for that league.
-
 'use client'
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import Profile from '@/components/Profile';
 import {
   Dialog,
@@ -33,6 +32,10 @@ const DashboardPage = () => {
   const [isTeamsLoading, setIsTeamsLoading] = useState(false);
   const [leagueSettings, setLeagueSettings] = useState<LeagueSettings | null>(null);
   const [isSettingsLoading, setIsSettingsLoading] = useState(false);
+  const [draftName, setDraftName] = useState('');
+  const [isCreatingDraft, setIsCreatingDraft] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [drafts, setDrafts] = useState<any[]>([]);
 
   useEffect(() => {
     const loadLeagues = async () => {
@@ -80,6 +83,11 @@ const DashboardPage = () => {
         const settingsData: LeagueSettings = await settingsResponse.json();
         setLeagueSettings(settingsData);
       }
+      const draftsResponse = await fetch(`/api/yahoo/drafts/${leagueKey}`);
+      if (draftsResponse.ok) {
+        const draftsData = await draftsResponse.json();
+        setDrafts(draftsData);
+      }
     } catch (error) {
       console.error("Failed to fetch data:", error);
     } finally {
@@ -97,15 +105,52 @@ const DashboardPage = () => {
     setActiveTab(value);
   };
 
-  const handleCreateDraft = (orderedTeams: Team[]) => {
-    console.log("League Key:", selectedLeagueKey);
-    console.log("Draft Order:", orderedTeams.map(team => ({
-      team_id: team.team_id,
-      name: team.name,
-      managers: team.managers.map(manager => manager.nickname)
-    })));
-    
-    setIsDialogOpen(false);
+  const handleCreateDraft = async (orderedTeams: Team[]) => {
+    setIsCreatingDraft(true);
+    try {
+      const response = await fetch('/api/yahoo/createDraft', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          leagueKey: selectedLeagueKey,
+          draftName,
+          orderedTeams: orderedTeams // Sending the full team objects
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create draft');
+      }
+
+      const { draftId, importJobId } = await response.json();
+      setIsDialogOpen(false);
+      setDraftName(''); // Clear the draft name input
+
+      // Start polling for import progress
+      const pollInterval = setInterval(async () => {
+        const progressResponse = await fetch(`/api/yahoo/createDraft?jobId=${importJobId}`);
+        const { status, progress } = await progressResponse.json();
+        setImportProgress(progress);
+
+        if (status === 'complete') {
+          clearInterval(pollInterval);
+          setIsCreatingDraft(false);
+          // Refresh drafts list
+          const draftsResponse = await fetch(`/api/yahoo/drafts/${selectedLeagueKey}`);
+          if (draftsResponse.ok) {
+            const draftsData = await draftsResponse.json();
+            setDrafts(draftsData);
+          }
+        }
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to create draft:', error);
+      alert(error.message); // Display the error message to the user
+      setIsCreatingDraft(false);
+    }
   };
 
   return (
@@ -140,7 +185,7 @@ const DashboardPage = () => {
                   <DialogTrigger asChild>
                     <Button 
                       className="mt-4" 
-                      disabled={isTeamsLoading || teams.length === 0}
+                      disabled={isTeamsLoading || teams.length === 0 || isCreatingDraft}
                     >
                       {isTeamsLoading ? 'Loading teams...' : 'Create a draft'}
                     </Button>
@@ -153,10 +198,34 @@ const DashboardPage = () => {
                       </DialogDescription>
                     </DialogHeader>
                     <div className="mt-4 max-h-[calc(80vh-120px)] overflow-y-auto pr-4">
+                      <Input
+                        placeholder="Draft Name"
+                        value={draftName}
+                        onChange={(e) => setDraftName(e.target.value)}
+                        className="mb-4"
+                      />
                       <TeamOrder teams={teams} onSubmit={handleCreateDraft} />
                     </div>
                   </DialogContent>
                 </Dialog>
+              )}
+              {isCreatingDraft && (
+                <div className="mt-4">
+                  <p>Creating draft and importing players...</p>
+                  <Progress value={importProgress} className="w-full mt-2" />
+                </div>
+              )}
+              <h3 className="text-xl font-bold mt-8 mb-4">Existing Drafts</h3>
+              {drafts.length > 0 ? (
+                <ul>
+                  {drafts.map((draft) => (
+                    <li key={draft.id} className="mb-2">
+                      <span className="font-semibold">{draft.name}</span> - {draft.status}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No drafts created yet.</p>
               )}
             </div>
           ) : (

@@ -33,8 +33,10 @@ const TeamOrder: React.FC<TeamOrderProps> = ({ teams, onSubmit }) => {
     setOrderedTeams(teams);
   }, [teams]);
 
-  const onDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
+  const onDragEnd = (result: any) => {
+    if (!result.destination) {
+      return;
+    }
 
     const items = Array.from(orderedTeams);
     const [reorderedItem] = items.splice(result.source.index, 1);

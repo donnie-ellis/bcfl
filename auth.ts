@@ -159,11 +159,8 @@ export const authOptions: NextAuthOptions = {
             return token;
         },
         async session({ session, token }) {
-            console.log("Session callback - token:", token);
-            console.log("Session callback - initial session:", session);
 
             if (token.userId) {
-                console.log("Fetching user data for userId:", token.userId);
                 const { data: userData, error: userError } = await supabase
                     .from('users')
                     .select('id, email, name, image')
@@ -197,7 +194,6 @@ export const authOptions: NextAuthOptions = {
                 console.error("No userId found in token");
             }
 
-            console.log("Session callback - final session:", session);
             return session;
         },
     }

@@ -100,10 +100,10 @@ export interface Player {
 
   export interface League {
     league_key: string;
-    league_id: number;
+    league_id: string;
     name: string;
-    url: string;
-    draft_status: string;
+    url?: string;
+    draft_status?: string;
     num_teams: number;
     league_update_timestamp: string;
     scoring_type: string;
