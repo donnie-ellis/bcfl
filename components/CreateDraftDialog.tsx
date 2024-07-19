@@ -7,12 +7,14 @@ import { Progress } from "@/components/ui/progress";
 import { Team } from '@/lib/types';
 import { DragDropContext, Droppable, Draggable, DropResult, DroppableProvided, DroppableProps } from 'react-beautiful-dnd';
 import TeamCard from './TeamCard';
+import { Loader2 } from 'lucide-react';
 
 interface CreateDraftDialogProps {
   leagueKey: string;
   teams: Team[];
   onDraftCreated: (newDrafts: any[]) => void;
 }
+
 const StrictModeDroppable = ({ children, ...props }: DroppableProps) => {
   const [enabled, setEnabled] = useState(false);
   useEffect(() => {
@@ -27,7 +29,6 @@ const StrictModeDroppable = ({ children, ...props }: DroppableProps) => {
   }
   return <Droppable {...props}>{children}</Droppable>;
 };
-
 
 const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams, onDraftCreated }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -85,6 +86,7 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
           clearInterval(pollInterval);
           setIsCreatingDraft(false);
           setIsDialogOpen(false);
+          setDraftName(''); // Clear the draft name input
           // Fetch the updated list of drafts for the league
           const draftsResponse = await fetch(`/api/yahoo/drafts/${leagueKey}`);
           if (draftsResponse.ok) {
@@ -102,8 +104,15 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
     }
   };
 
+  const handleDialogClose = (open: boolean) => {
+    if (!open) {
+      setDraftName(''); // Clear the draft name input when closing the dialog
+    }
+    setIsDialogOpen(open);
+  };
+
   return (
-    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+    <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
       <DialogTrigger asChild>
         <Button variant="outline">Create a new draft</Button>
       </DialogTrigger>
@@ -114,12 +123,13 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
             Enter a draft name and drag and drop teams to set the draft order.
           </DialogDescription>
         </DialogHeader>
-        <div className="mt-4 max-h-[calc(80vh-120px)] overflow-y-auto pr-4">
+        <div className={`mt-4 max-h-[calc(80vh-120px)] overflow-y-auto pr-4 ${isCreatingDraft ? 'pointer-events-none' : ''}`}>
           <Input
             placeholder="Draft Name"
             value={draftName}
             onChange={(e) => setDraftName(e.target.value)}
             className="mb-4"
+            disabled={isCreatingDraft}
           />
           <DragDropContext onDragEnd={handleDragEnd}>
             <StrictModeDroppable droppableId="teams">
@@ -150,13 +160,16 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
           <Button onClick={handleCreateDraft} className="mt-4 w-full" disabled={isCreatingDraft}>
             {isCreatingDraft ? 'Creating Draft...' : 'Create Draft'}
           </Button>
-          {isCreatingDraft && (
-            <div className="mt-4">
+        </div>
+        {isCreatingDraft && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70 z-50">
+            <div className="text-center">
+              <Loader2 className="h-8 w-8 animate-spin mb-2 mx-auto" />
               <p>Creating draft and importing players...</p>
               <Progress value={importProgress} className="w-full mt-2" />
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
