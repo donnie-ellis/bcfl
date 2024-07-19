@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface LeagueListProps {
   leagues: League[];
-  onLeagueClick?: (league_key: string) => void;
+  onLeagueClick?: (league: League) => void;
 }
 
 const LeagueList: React.FC<LeagueListProps> = ({ leagues, onLeagueClick }) => (

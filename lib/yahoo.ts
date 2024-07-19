@@ -136,7 +136,7 @@ export async function requestYahoo(path: string) {
   return data;
 }
 
-export async function parseTeamData(data: any): Promise<Team[]> {
+export async function parseTeamData(data: any): Team[] {
   if (!data || !data.fantasy_content || !data.fantasy_content.league || !data.fantasy_content.league[1].teams) {
     console.error('Invalid data structure');
     return [];
@@ -152,13 +152,19 @@ export async function parseTeamData(data: any): Promise<Team[]> {
         team_key: '',
         team_id: '',
         name: '',
+        is_owned_by_current_login: false,
         url: '',
         team_logos: [],
-        waiver_priority: 0,
+        waiver_priority: '',
+        faab_balance: '',
         number_of_moves: 0,
         number_of_trades: 0,
+        roster_adds: {
+          coverage_type: '',
+          coverage_value: 0,
+          value: ''
+        },
         league_scoring_type: '',
-        draft_position: 0,
         has_draft_grade: false,
         managers: []
       };
@@ -176,17 +182,23 @@ export async function parseTeamData(data: any): Promise<Team[]> {
             case 'name':
               team.name = item[key];
               break;
+            case 'is_owned_by_current_login':
+              team.is_owned_by_current_login = item[key] === 1;
+              break;
             case 'url':
               team.url = item[key];
               break;
             case 'team_logos':
               team.team_logos = item[key].map((logo: any) => ({
-                size: logo.size,
-                url: logo.url
+                size: logo.team_logo.size,
+                url: logo.team_logo.url
               }));
               break;
             case 'waiver_priority':
-              team.waiver_priority = parseInt(item[key]);
+              team.waiver_priority = item[key];
+              break;
+            case 'faab_balance':
+              team.faab_balance = item[key];
               break;
             case 'number_of_moves':
               team.number_of_moves = parseInt(item[key]);
@@ -194,14 +206,18 @@ export async function parseTeamData(data: any): Promise<Team[]> {
             case 'number_of_trades':
               team.number_of_trades = parseInt(item[key]);
               break;
+            case 'roster_adds':
+              team.roster_adds = {
+                coverage_type: item[key].coverage_type,
+                coverage_value: parseInt(item[key].coverage_value),
+                value: item[key].value
+              };
+              break;
             case 'league_scoring_type':
               team.league_scoring_type = item[key];
               break;
-            case 'draft_position':
-              team.draft_position = parseInt(item[key]);
-              break;
             case 'has_draft_grade':
-              team.has_draft_grade = item[key] === '1';
+              team.has_draft_grade = item[key] === 1;
               break;
             case 'managers':
               team.managers = item[key].map((managerData: any) => ({
@@ -209,8 +225,11 @@ export async function parseTeamData(data: any): Promise<Team[]> {
                 nickname: managerData.manager.nickname,
                 guid: managerData.manager.guid,
                 is_commissioner: managerData.manager.is_commissioner === '1',
+                is_current_login: managerData.manager.is_current_login === '1',
                 email: managerData.manager.email,
-                image_url: managerData.manager.image_url
+                image_url: managerData.manager.image_url,
+                felo_score: managerData.manager.felo_score,
+                felo_tier: managerData.manager.felo_tier
               }));
               break;
           }

@@ -7,13 +7,13 @@ import { ExternalLink } from 'lucide-react';
 
 interface LeagueCardProps {
   league: League;
-  onLeagueClick?: (league_key: string) => void;
+  onLeagueClick?: (league: League) => void;
 }
 
 const LeagueCard: React.FC<LeagueCardProps> = ({ league, onLeagueClick }) => (
   <Card 
     className="w-full max-w-md cursor-pointer hover:shadow-lg transition-shadow"
-    onClick={() => onLeagueClick && onLeagueClick(String(league.league_key))}
+    onClick={() => onLeagueClick && onLeagueClick(league)}
   >
     <CardHeader>
       <CardTitle className="text-2xl font-bold">{league.name}</CardTitle>

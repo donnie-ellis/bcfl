@@ -60,38 +60,45 @@ export interface Player {
     season: string;
   }
   
-  export interface Manager {
-    manager_id: string;
-    nickname: string;
-    guid: string;
-    is_commissioner: boolean;
-    email: string;
-    image_url: string;
-    is_current_login: boolean;
-    felo_score?: string;
-    felo_tier?: string;
-  }
+// ./lib/types.ts
 
-  export interface TeamLogo {
-    size: string;
-    url: string;
-  }
+export interface TeamLogo {
+  size: string;
+  url: string;
+}
 
-  export interface Team {
-    team_key: string;
-    team_id: string;
-    name: string;
-    url: string;
-    team_logos: { size: string; url: string }[];
-    waiver_priority: number;
-    number_of_moves: number;
-    number_of_trades: number;
-    league_scoring_type: string;
-    draft_position: number;
-    has_draft_grade: boolean;
-    managers: Manager[];
-    is_owned_by_current_login?: boolean;
-  }
+export interface Manager {
+  manager_id: string;
+  nickname: string;
+  guid: string;
+  is_commissioner: boolean;
+  is_current_login: boolean;
+  email?: string;
+  image_url: string;
+  felo_score?: string;
+  felo_tier?: string;
+}
+
+export interface Team {
+  team_key: string;
+  team_id: string;
+  name: string;
+  is_owned_by_current_login: boolean;
+  url: string;
+  team_logos: TeamLogo[];
+  waiver_priority: string;
+  faab_balance: string;
+  number_of_moves: number;
+  number_of_trades: number;
+  roster_adds: {
+    coverage_type: string;
+    coverage_value: number;
+    value: string;
+  };
+  league_scoring_type: string;
+  has_draft_grade: boolean;
+  managers: Manager[];
+}
 
   export interface Teams {
     league_key: string;
