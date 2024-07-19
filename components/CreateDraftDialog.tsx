@@ -1,26 +1,46 @@
 // ./components/CreateDraftDialog.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Team } from '@/lib/types';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable, DropResult, DroppableProvided, DroppableProps } from 'react-beautiful-dnd';
+import TeamCard from './TeamCard';
 
 interface CreateDraftDialogProps {
   leagueKey: string;
   teams: Team[];
   onDraftCreated: (newDrafts: any[]) => void;
 }
+const StrictModeDroppable = ({ children, ...props }: DroppableProps) => {
+  const [enabled, setEnabled] = useState(false);
+  useEffect(() => {
+    const animation = requestAnimationFrame(() => setEnabled(true));
+    return () => {
+      cancelAnimationFrame(animation);
+      setEnabled(false);
+    };
+  }, []);
+  if (!enabled) {
+    return null;
+  }
+  return <Droppable {...props}>{children}</Droppable>;
+};
+
 
 const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams, onDraftCreated }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [draftName, setDraftName] = useState('');
-  const [orderedTeams, setOrderedTeams] = useState(teams);
+  const [orderedTeams, setOrderedTeams] = useState<Team[]>([]);
   const [isCreatingDraft, setIsCreatingDraft] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
 
-  const handleDragEnd = (result: any) => {
+  useEffect(() => {
+    setOrderedTeams(teams);
+  }, [teams]);
+
+  const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
     const items = Array.from(orderedTeams);
     const [reorderedItem] = items.splice(result.source.index, 1);
@@ -85,7 +105,7 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
-        <Button className="w-full">Create a new draft</Button>
+        <Button variant="outline">Create a new draft</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-hidden">
         <DialogHeader>
@@ -102,8 +122,8 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
             className="mb-4"
           />
           <DragDropContext onDragEnd={handleDragEnd}>
-            <Droppable droppableId="teams">
-              {(provided) => (
+            <StrictModeDroppable droppableId="teams">
+              {(provided: DroppableProvided) => (
                 <ul {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
                   {orderedTeams.map((team, index) => (
                     <Draggable key={team.team_key} draggableId={team.team_key} index={index}>
@@ -115,10 +135,9 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
                           className="p-2 bg-gray-100 rounded flex items-center"
                         >
                           <span className="mr-2">{index + 1}.</span>
-                          {team.team_logos && team.team_logos[0] && (
-                            <img src={team.team_logos[0].url} alt={team.name} className="w-6 h-6 mr-2" />
-                          )}
-                          {team.name}
+                          <div className="flex-grow">
+                            <TeamCard team={team} />
+                          </div>
                         </li>
                       )}
                     </Draggable>
@@ -126,7 +145,7 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
                   {provided.placeholder}
                 </ul>
               )}
-            </Droppable>
+            </StrictModeDroppable>
           </DragDropContext>
           <Button onClick={handleCreateDraft} className="mt-4 w-full" disabled={isCreatingDraft}>
             {isCreatingDraft ? 'Creating Draft...' : 'Create Draft'}

@@ -266,29 +266,25 @@ const DashboardPage = () => {
               </Card>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Existing Drafts</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {isLeagueDataLoading ? (
-                        <Skeleton className="h-40 w-full" />
-                      ) : (
-                        renderDraftCards()
-                      )}
-                    </CardContent>
-                  </Card>
-                  
-                  {isCommissioner && (
-                    <CreateDraftDialog 
-                      leagueKey={selectedLeague.league_key} 
-                      teams={teams} 
-                      onDraftCreated={(updatedDrafts) => setDrafts(updatedDrafts)}
-                    />
-                  )}
-                </div>
-                
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>Drafts</CardTitle>
+                    {isCommissioner && (
+                      <CreateDraftDialog 
+                        leagueKey={selectedLeague.league_key} 
+                        teams={teams} 
+                        onDraftCreated={(updatedDrafts) => setDrafts(updatedDrafts)}
+                      />
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    {isLeagueDataLoading ? (
+                      <Skeleton className="h-40 w-full" />
+                    ) : (
+                      renderDraftCards()
+                    )}
+                  </CardContent>
+                </Card>
                 <div className="space-y-4">
                   <Card>
                     <CardHeader>
