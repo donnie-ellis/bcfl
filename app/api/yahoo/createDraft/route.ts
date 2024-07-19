@@ -2,7 +2,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requestYahoo, parseTeamData } from '@/lib/yahoo';
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
+import { v4 as uuidv4 } from 'uuid';
+import { importPlayers, getJobStatus } from '@/lib/playersImport';
+import { League, Team } from '@/lib/types';
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
@@ -12,7 +15,7 @@ export async function POST(request: NextRequest) {
   try {
     // Fetch league data from Yahoo
     const leagueData = await requestYahoo(`league/${leagueKey}`);
-    const league = leagueData.fantasy_content.league[0];
+    const league = leagueData.fantasy_content.league[0] as League;
 
     // Upsert league data
     const { data: upsertedLeague, error: leagueError } = await supabase
@@ -50,14 +53,6 @@ export async function POST(request: NextRequest) {
       throw leagueError;
     }
 
-    // Fetch the latest team data from Yahoo
-    const teamsData = await requestYahoo(`league/${leagueKey}/teams`);
-    const teams = await parseTeamData(teamsData);
-
-    if (!Array.isArray(teams) || teams.length === 0) {
-      throw new Error('Failed to fetch team data from Yahoo');
-    }
-
     // Fetch league settings to get the roster positions
     const settingsData = await requestYahoo(`league/${leagueKey}/settings`);
     const rosterPositions = settingsData.fantasy_content.league[1].settings[0].roster_positions;
@@ -70,7 +65,7 @@ export async function POST(request: NextRequest) {
       return total;
     }, 0);
 
-    const totalPicks = rounds * teams.length;
+    const totalPicks = rounds * orderedTeams.length;
 
     // Ensure orderedTeams is an array of objects with team_key properties
     const draftOrder = orderedTeams.map(teamKey => ({ team_key: teamKey }));
@@ -98,8 +93,9 @@ export async function POST(request: NextRequest) {
 
     const draftId = data[0];
 
-    // Start the player import process (you may want to do this in a separate worker/function)
-    const importJobId = await startPlayerImport(leagueKey);
+    // Start the player import process
+    const importJobId = uuidv4();
+    importPlayers(leagueKey, importJobId).catch(console.error); // Run in background
 
     return NextResponse.json({ draftId, importJobId });
   } catch (error) {
@@ -108,24 +104,16 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// You'll need to implement this function to start the player import process
-async function startPlayerImport(leagueKey: string) {
-  // Implementation details will depend on your setup
-  // This might involve starting a background job, calling another API, etc.
-  // Return a job ID or some identifier for tracking the import progress
-  return 'dummy-import-job-id';
-}
-
 export async function GET(request: NextRequest) {
   const jobId = request.nextUrl.searchParams.get('jobId');
   if (!jobId) {
     return NextResponse.json({ error: 'Missing jobId' }, { status: 400 });
   }
 
-  // In a real implementation, you would check the status of the background job
-  // For this example, we'll just return a mock progress
-  const progress = Math.floor(Math.random() * 100);
-  const status = progress === 100 ? 'complete' : 'in_progress';
+  const jobStatus = await getJobStatus(jobId);
+  if (!jobStatus) {
+    return NextResponse.json({ error: 'Failed to fetch job status' }, { status: 500 });
+  }
 
-  return NextResponse.json({ jobId, status, progress });
+  return NextResponse.json(jobStatus);
 }

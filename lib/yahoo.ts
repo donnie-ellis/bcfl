@@ -3,7 +3,7 @@
 'use server'
 import { getServerAuthSession } from "@/auth"
 import { createClient } from '@supabase/supabase-js'
-import { LeagueDetails, LeagueSettings, Team, Teams } from '@/lib/types'
+import { LeagueDetails, LeagueSettings,  Player, Team, Teams } from '@/lib/types'
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
@@ -300,4 +300,135 @@ export async function parseLeagueSettings(data: any): Promise<LeagueSettings> {
     uses_fractional_points: settings.uses_fractional_points === '1',
     uses_negative_points: settings.uses_negative_points === '1'
   };
+}
+
+export async function parsePlayerData(playerData: any[]): Promise<Player> {
+  const player: Player = {
+    player_key: '',
+    player_id: '',
+    full_name: '',
+    first_name: '',
+    last_name: '',
+    url: '',
+    status: '',
+    editorial_player_key: '',
+    editorial_team_key: '',
+    editorial_team_full_name: '',
+    editorial_team_abbr: '',
+    editorial_team_url: '',
+    bye_weeks: [],
+    is_keeper: { status: false, cost: false, kept: false },
+    uniform_number: '',
+    display_position: '',
+    headshot_url: '',
+    headshot_size: '',
+    image_url: '',
+    is_undroppable: '',
+    position_type: '',
+    primary_position: '',
+    eligible_positions: [],
+    eligible_positions_to_add: [],
+    has_player_notes: 0,
+    player_notes_last_timestamp: 0
+  };
+
+  playerData.forEach(item => {
+    const key = Object.keys(item)[0];
+    switch(key) {
+      case 'player_key':
+      case 'player_id':
+      case 'url':
+      case 'status':
+      case 'injury_note':
+      case 'editorial_player_key':
+      case 'editorial_team_key':
+      case 'editorial_team_full_name':
+      case 'editorial_team_abbr':
+      case 'editorial_team_url':
+      case 'uniform_number':
+      case 'display_position':
+      case 'image_url':
+      case 'is_undroppable':
+      case 'position_type':
+      case 'primary_position':
+        player[key] = item[key];
+        break;
+      case 'name':
+        player.full_name = item[key].full || '';
+        player.first_name = item[key].first || '';
+        player.last_name = item[key].last || '';
+        player.ascii_first_name = item[key].ascii_first || '';
+        player.ascii_last_name = item[key].ascii_last || '';
+        break;      
+      case 'status_full':
+        player.status_full = item[key];
+        break;
+      case 'bye_weeks':
+        player.bye_weeks = [item[key].week];
+        break;
+      case 'is_keeper':
+        player.is_keeper = item[key];
+        break;
+      case 'headshot':
+        player.headshot_url = item[key].url || '';
+        player.headshot_size = item[key].size || '';
+        break;
+      case 'eligible_positions':
+        player.eligible_positions = item[key].map((pos: any) => pos.position);
+        break;
+      case 'eligible_positions_to_add':
+        player.eligible_positions_to_add = item[key];
+        break;
+      case 'has_player_notes':
+        player.has_player_notes = item[key];
+        break;
+      case 'player_notes_last_timestamp':
+        player.player_notes_last_timestamp = item[key];
+        break;
+    }
+  });
+
+  return player;
+}
+
+export async function fetchAllPlayers(leagueKey: string): Promise<Player[]> {
+  let allPlayers: Player[] = [];
+  let start = 0;
+  const count = 25; // Yahoo typically returns 25 players per page
+  let hasMorePlayers = true;
+
+  while (hasMorePlayers) {
+    console.log(`Fetching players starting from index ${start}`);
+    const playersData = await requestYahoo(`league/${leagueKey}/players;start=${start};count=${count};sort=AR`);
+    const players = playersData.fantasy_content.league[1].players;
+    
+    if (!players || players.count === 0) {
+      hasMorePlayers = false;
+      break;
+    }
+
+    for (const key in players) {
+      if (key !== 'count') {
+        const playerData = players[key].player[0];
+        try {
+          const player = await parsePlayerData(playerData);
+          allPlayers.push(player);
+        } catch (error) {
+          console.error(`Error parsing player data:`, error);
+          console.log('Problematic player data:', JSON.stringify(playerData, null, 2));
+        }
+      }
+    }
+
+    console.log(`Fetched ${allPlayers.length} players so far`);
+    start += count;
+
+    // If we fetched less than 'count' players, we've reached the end
+    if (players.count < count) {
+      hasMorePlayers = false;
+    }
+  }
+
+  console.log(`Total players fetched: ${allPlayers.length}`);
+  return allPlayers;
 }

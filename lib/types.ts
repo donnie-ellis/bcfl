@@ -1,36 +1,40 @@
 // ./lib/types.ts
 
 export interface Player {
-    player_key: string;
-    player_id: string;
-    name: {
-      full: string;
-      first: string;
-      last: string;
-    };
-    editorial_team_abbr: string;
-    display_position: string;
-    position_type: string;
-    eligible_positions: string[];
-    status: string;
-    editorial_player_key: string;
-    editorial_team_key: string;
-    editorial_team_full_name: string;
-    bye_weeks: string[];
-    uniform_number: string;
-    image_url: string;
-    headshot: string;
-    headshot_size: string;
-    average_pick: number;
-    average_round: number;
-    percent_drafted: number;
-    average_cost: number;
-    draft_positions: {
-      min: number;
-      max: number;
-      average: number;
-    }  
-  }
+  player_key: string;
+  player_id: string;
+  full_name: string;
+  first_name: string;
+  last_name: string;
+  ascii_first_name?: string;
+  ascii_last_name?: string;  url: string;
+  status: string;
+  status_full?: string;
+  injury_note?: string;
+  editorial_player_key: string;
+  editorial_team_key: string;
+  editorial_team_full_name: string;
+  editorial_team_abbr: string;
+  editorial_team_url: string;
+  bye_weeks: string[];
+  is_keeper: {
+    status: boolean;
+    cost: boolean;
+    kept: boolean;
+  };
+  uniform_number: string;
+  display_position: string;
+  headshot_url?: string;
+  headshot_size?: string;
+  image_url?: string;
+  is_undroppable: string;
+  position_type: string;
+  primary_position: string;
+  eligible_positions: string[];
+  eligible_positions_to_add: string[];
+  has_player_notes: number;
+  player_notes_last_timestamp: number;
+}
 
   export interface LeaguePlayers {
     league_key: string;
