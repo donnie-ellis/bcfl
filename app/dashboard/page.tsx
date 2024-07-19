@@ -14,11 +14,22 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card"
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import Profile from '@/components/Profile';
 import LeagueList from '@/components/LeagueList';
 import CreateDraftDialog from '@/components/CreateDraftDialog';
 import { League, Team, LeagueSettings } from '@/lib/types';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState("leagues");
@@ -101,6 +112,24 @@ const DashboardPage = () => {
     setActiveTab(value);
   };
 
+  const handleDeleteDraft = async (draftId: string) => {
+    try {
+      const response = await fetch(`/api/yahoo/deleteDraft/${draftId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete draft');
+      }
+
+      // Remove the deleted draft from the state
+      setDrafts(drafts.filter(draft => draft.id !== draftId));
+    } catch (error) {
+      console.error('Error deleting draft:', error);
+      alert('Failed to delete draft. Please try again.');
+    }
+  };
+
   const renderDraftCards = () => {
     if (drafts.length === 0) {
       return <p>No drafts created yet.</p>;
@@ -108,8 +137,32 @@ const DashboardPage = () => {
 
     return drafts.map((draft) => (
       <Card key={draft.id} className="mb-4">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>{draft.name}</CardTitle>
+          {isCommissioner && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure you want to delete this draft?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the draft and all related data.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => handleDeleteDraft(draft.id)}>
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </CardHeader>
         <CardContent>
           <p>Start Time: {new Date(draft.created_at).toLocaleString()}</p>
