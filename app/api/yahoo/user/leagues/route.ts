@@ -1,4 +1,4 @@
-// GET /api/yahoo/leagues
+// GET /api/yahoo/user/leagues
 import { NextRequest, NextResponse } from 'next/server';
 import { requestYahoo } from '@/lib/yahoo';
 import { League } from '@/lib/types';

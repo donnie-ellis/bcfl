@@ -1,6 +1,7 @@
 // ./app/dashboard/page.tsx
 'use client'
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -32,6 +33,7 @@ import {
 } from "@/components/ui/alert-dialog"
 
 const DashboardPage = () => {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("leagues");
   const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
   const [leagues, setLeagues] = useState<League[]>([]);
@@ -47,7 +49,7 @@ const DashboardPage = () => {
     const loadLeagues = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch('/api/yahoo/leagues');
+        const response = await fetch('/api/yahoo/user/leagues');
         if (!response.ok) {
           throw new Error('Failed to fetch leagues');
         }
@@ -69,11 +71,11 @@ const DashboardPage = () => {
 
     try {
       const [teamResponse, commissionerResponse, teamsResponse, settingsResponse, draftsResponse] = await Promise.all([
-        fetch(`/api/yahoo/teamsForPlayer/${league.league_key}`),
-        fetch(`/api/yahoo/isCommissioner/${league.league_key}`),
-        fetch(`/api/yahoo/teams/${league.league_key}`),
-        fetch(`/api/yahoo/leagueSettings/${league.league_key}`),
-        fetch(`/api/yahoo/drafts/${league.league_key}`)
+        fetch(`/api/yahoo/user/league/${league.league_key}/team`),
+        fetch(`/api/yahoo/user/league/${league.league_key}/isCommissioner`),
+        fetch(`/api/yahoo/league/${league.league_key}/teams`),
+        fetch(`/api/yahoo/league/${league.league_key}/leagueSettings`),
+        fetch(`/api/db/league/${league.league_key}/drafts`)
       ]);
 
       if (teamResponse.ok) {
@@ -114,7 +116,7 @@ const DashboardPage = () => {
 
   const handleDeleteDraft = async (draftId: string) => {
     try {
-      const response = await fetch(`/api/yahoo/deleteDraft/${draftId}`, {
+      const response = await fetch(`/api/db/draft/${draftId}`, {
         method: 'DELETE',
       });
 
@@ -130,24 +132,38 @@ const DashboardPage = () => {
     }
   };
 
+  const handleDraftClick = (draftId: string) => {
+    router.push(`/draft/${draftId}`);
+  };
+
   const renderDraftCards = () => {
     if (drafts.length === 0) {
       return <p>No drafts created yet.</p>;
     }
 
     return drafts.map((draft) => (
-      <Card key={draft.id} className="mb-4">
+      <Card 
+        key={draft.id} 
+        className="mb-4 cursor-pointer transition-shadow hover:shadow-lg"
+        onClick={() => handleDraftClick(draft.id)}
+      >
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>{draft.name}</CardTitle>
           {isCommissioner && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm">
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent card click when clicking delete button
+                  }}
+                >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent onClick={(e) => e.stopPropagation()}> {/* Prevent card click when dialog is open */}
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you sure you want to delete this draft?</AlertDialogTitle>
                   <AlertDialogDescription>
@@ -177,7 +193,6 @@ const DashboardPage = () => {
       </Card>
     ));
   };
-
   const renderManagerInfo = (managers: Manager[]) => (
     <div className="space-y-2">
       {managers.map((manager, index) => (
@@ -327,6 +342,7 @@ const DashboardPage = () => {
                         leagueKey={selectedLeague.league_key} 
                         teams={teams} 
                         onDraftCreated={(updatedDrafts) => setDrafts(updatedDrafts)}
+                        leagueSettings={leagueSettings}
                       />
                     )}
                   </CardHeader>

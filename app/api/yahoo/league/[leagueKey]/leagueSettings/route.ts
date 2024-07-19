@@ -1,3 +1,5 @@
+// GET /api/yahoo/league/[leagueKey]/leagueSettings
+
 import { NextRequest, NextResponse } from 'next/server';
 import { requestYahoo, parseLeagueSettings } from '@/lib/yahoo';
 

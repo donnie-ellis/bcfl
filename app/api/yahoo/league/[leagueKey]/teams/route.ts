@@ -1,4 +1,4 @@
-// GET /api/yahoo/teams
+// GET /api/yahoo/league/[leagueKey]/teams
 // Required fields in query: leagueKey
 import { NextRequest, NextResponse } from 'next/server';
 import { requestYahoo, parseTeamData } from '@/lib/yahoo';
