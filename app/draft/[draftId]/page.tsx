@@ -26,16 +26,15 @@ const DraftPage: React.FC = () => {
 
   const fetchDraftData = async () => {
     try {
-      const draftResponse = await fetch(`/api/yahoo/db/${draftId}`);
+      const draftResponse = await fetch(`/api/db/draft/${draftId}`);
       const draftData = await draftResponse.json();
       setDraft(draftData);
 
-      // Assuming the draft data includes the league_key
-      const leagueKey = draftData.league_key;
+      const leagueKey = draftData.league_id;
 
       const [leagueResponse, settingsResponse] = await Promise.all([
         fetch(`/api/db/league/${leagueKey}`),
-        fetch(`/api/db/leagueSettings/${leagueKey}`)
+        fetch(`/api/db/league/${leagueKey}/settings`)
       ]);
 
       const [leagueData, settingsData] = await Promise.all([
@@ -65,7 +64,7 @@ const DraftPage: React.FC = () => {
         {/* Left 1/4: Players List */}
         <div className="w-1/4">
           <PlayersList
-            leagueKey={draft.league_key}
+            leagueKey={draft.league_id}
             draftId={draftId}
             onPlayerSelect={setSelectedPlayer}
           />
