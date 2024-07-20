@@ -1,6 +1,6 @@
 // ./components/DraftStatus.tsx
 import React from 'react';
-import { Draft, LeagueSettings } from '@/lib/types';
+import { Draft, LeagueSettings, Pick } from '@/lib/types';
 
 interface DraftStatusProps {
   draft: Draft;
@@ -8,16 +8,22 @@ interface DraftStatusProps {
 }
 
 const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings }) => {
-  const currentRound = Math.floor(draft.current_pick / leagueSettings.num_teams) + 1;
-  const currentPickInRound = draft.current_pick % leagueSettings.num_teams || leagueSettings.num_teams;
-  const picksUntilNextTurn = calculatePicksUntilNextTurn();
+  console.log('Draft in DraftStatus:', draft);  // Debugging log
+  console.log('LeagueSettings in DraftStatus:', leagueSettings);  // Debugging log
 
-  function calculatePicksUntilNextTurn() {
-    // Implement the logic to calculate picks until the current user's next turn
-    // This will depend on the draft order and current pick
-    // For now, we'll return a placeholder value
-    return 5;
-  }
+  const currentRound = Math.ceil(draft.current_pick / leagueSettings.max_teams);
+  const currentPickInRound = ((draft.current_pick - 1) % leagueSettings.max_teams) + 1;
+
+  const getCurrentPick = (): Pick | undefined => {
+    return draft.picks?.find(pick => pick.total_pick_number === draft.current_pick);
+  };
+
+  const getNextPick = (): Pick | undefined => {
+    return draft.picks?.find(pick => pick.total_pick_number === draft.current_pick + 1);
+  };
+
+  const currentPick = getCurrentPick();
+  const nextPick = getNextPick();
 
   return (
     <div className="bg-white shadow-md rounded-lg p-4 mb-4">
@@ -32,16 +38,16 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings }) => {
           <p>{currentPickInRound}</p>
         </div>
         <div>
-          <p className="font-medium">Picks Until Your Turn:</p>
-          <p>{picksUntilNextTurn}</p>
+          <p className="font-medium">Current Pick:</p>
+          <p>{draft.current_pick} of {draft.total_picks}</p>
         </div>
         <div>
           <p className="font-medium">Current Drafter:</p>
-          <p>{draft.current_drafter_name}</p>
+          <p>{currentPick?.teams?.name || 'Unknown'}</p>
         </div>
         <div>
           <p className="font-medium">Next Drafter:</p>
-          <p>{draft.next_drafter_name}</p>
+          <p>{nextPick?.teams?.name || 'Unknown'}</p>
         </div>
       </div>
     </div>

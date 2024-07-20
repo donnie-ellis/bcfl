@@ -182,3 +182,34 @@ export interface Team {
     uses_fractional_points: boolean;
     uses_negative_points: boolean;
   }
+  export interface Draft {
+    id: string;
+    league_id: string;
+    name: string;
+    rounds: number;
+    total_picks: number;
+    current_pick: number;
+    status: string;
+    draft_order: any;  // You might want to define a more specific type for this
+    created_at: string;
+    updated_at: string;
+    picks?: Pick[];
+  }
+  
+  export interface Pick {
+    id: string;
+    draft_id: string;
+    player_id: string | null;
+    pick_number: number;
+    round_number: number;
+    total_pick_number: number;
+    is_keeper: boolean;
+    is_picked: boolean;
+    team_key: string;
+    created_at: string;
+    updated_at: string;
+    teams?: {
+      name: string;
+    };
+  }
+  
