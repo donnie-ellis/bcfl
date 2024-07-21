@@ -8,7 +8,7 @@ import PlayersList from '@/components/PlayersList';
 import DraftedPlayers from '@/components/DraftedPlayers';
 import DraftStatus from '@/components/DraftStatus';
 import PlayerDetails from '@/components/PlayerDetails';
-import { League, Draft, LeagueSettings, Player } from '@/lib/types';
+import { League, Draft, LeagueSettings, Player, Team } from '@/lib/types';
 
 const DraftPage: React.FC = () => {
   const params = useParams();
@@ -18,6 +18,7 @@ const DraftPage: React.FC = () => {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [leagueSettings, setLeagueSettings] = useState<LeagueSettings | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [teams, setTeams] = useState<Team[]>([]);
 
   useEffect(() => {
     if (draftId) {
@@ -33,22 +34,39 @@ const DraftPage: React.FC = () => {
 
       const leagueKey = draftData.league_id;
 
-      const [leagueResponse, settingsResponse] = await Promise.all([
+      const [leagueResponse, settingsResponse, teamsResponse] = await Promise.all([
         fetch(`/api/db/league/${leagueKey}`),
-        fetch(`/api/db/league/${leagueKey}/settings`)
+        fetch(`/api/db/league/${leagueKey}/settings`),
+        fetch(`/api/yahoo/league/${leagueKey}/teams`)
       ]);
 
-      const [leagueData, settingsData] = await Promise.all([
+      const [leagueData, settingsData, teamsData] = await Promise.all([
         leagueResponse.json(),
-        settingsResponse.json()
+        settingsResponse.json(),
+        teamsResponse.json()
       ]);
 
       setLeague(leagueData);
       setLeagueSettings(settingsData);
+      setTeams(teamsData);
+
+      // Update draft picks with full team objects
+      const updatedPicks = draftData.picks.map((pick: any) => ({
+        ...pick,
+        team: teamsData.find((team: Team) => team.team_key === pick.team_key)
+      }));
+      setDraft({...draftData, picks: updatedPicks});
+
     } catch (error) {
       console.error('Error fetching data:', error);
     }
   };
+
+  useEffect(() => {
+    if (draftId) {
+      fetchDraftData();
+    }
+  }, [draftId]);
 
   if (!league || !draft || !leagueSettings) {
     return <div>Loading...</div>;
@@ -62,7 +80,6 @@ const DraftPage: React.FC = () => {
       </div>
 
       <div className="flex space-x-4">
-        {/* Left 1/4: Players List */}
         <div className="w-1/4">
           <PlayersList
             leagueKey={draft.league_id}
@@ -71,19 +88,18 @@ const DraftPage: React.FC = () => {
           />
         </div>
 
-        {/* Middle 1/2: Draft Status and Player Details */}
-        <div className="w-1/2 space-y-4">
+        <div className="w-1/2">
           <DraftStatus
             draft={draft}
             leagueSettings={leagueSettings}
+            teams={teams}
           />
           <PlayerDetails 
             player={selectedPlayer} 
-            leagueKey={draft.league_id}
           />
         </div>
+          {/* Add other middle components here */}
 
-        {/* Right 1/4: Drafted Players */}
         <div className="w-1/4">
           <DraftedPlayers
             leagueKey={draft.league_id}
