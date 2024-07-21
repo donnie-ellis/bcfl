@@ -1,5 +1,4 @@
-// GET /api/yahoo/league/[leagueKey]/leagueSettings
-
+// ./app/api/yahoo/league/[leagueKey]/settings/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { requestYahoo, parseLeagueSettings } from '@/lib/yahoo';
 
@@ -10,12 +9,12 @@ export async function GET(
   const { leagueKey } = params;
 
   try {
-    const path = `league/${leagueKey}/settings`;
-    const data = await requestYahoo(path);
-    const settings = await parseLeagueSettings(data);
-    return NextResponse.json(settings);
+    const data = await requestYahoo(`league/${leagueKey}/settings`);
+    const leagueSettings = await parseLeagueSettings(data);
+
+    return NextResponse.json(leagueSettings);
   } catch (error) {
-    console.error('Failed to fetch league settings:', error);
+    console.error('Error fetching league settings:', error);
     return NextResponse.json({ error: 'Failed to fetch league settings' }, { status: 500 });
   }
 }

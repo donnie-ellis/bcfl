@@ -19,7 +19,7 @@ import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import Profile from '@/components/Profile';
 import LeagueList from '@/components/LeagueList';
 import CreateDraftDialog from '@/components/CreateDraftDialog';
-import { League, Team, LeagueSettings } from '@/lib/types';
+import { League, Team, LeagueSettings, RosterPosition } from '@/lib/types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -251,12 +251,16 @@ const DashboardPage = () => {
       </TableBody>
     </Table>
   );
-  const renderRosterPositions = (positions: any[]) => (
+  
+  const renderRosterPositions = (positions: RosterPosition[]) => (
     <ul className="space-y-1">
       {positions.map((pos, index) => (
         <li key={index}>
-          <Badge variant="outline">{pos.position}</Badge>
-          <span className="ml-2">{pos.count}</span>
+          <Badge variant="outline">{pos.roster_position.position}</Badge>
+          <span className="ml-2">{pos.roster_position.count}</span>
+          {pos.roster_position.position_type && (
+            <span className="ml-2 text-sm text-gray-500">({pos.roster_position.position_type})</span>
+          )}
         </li>
       ))}
     </ul>

@@ -250,7 +250,6 @@ export async function parseLeagueSettings(data: any): Promise<LeagueSettings> {
   const findStat = (statId: number) => {
     return settings.stat_modifiers.stats.find((stat: any) => stat.stat.stat_id === statId);
   };
-
   return {
     draft_type: settings.draft_type,
     is_auction_draft: settings.is_auction_draft === '1',
@@ -276,11 +275,13 @@ export async function parseLeagueSettings(data: any): Promise<LeagueSettings> {
     trade_reject_time: parseInt(settings.trade_reject_time),
     player_pool: settings.player_pool,
     cant_cut_list: settings.cant_cut_list,
-    roster_positions: Object.values(settings.roster_positions).map((pos: any) => ({
-      position: pos.roster_position.position,
-      position_type: pos.roster_position.position_type,
-      count: parseInt(pos.roster_position.count),
-      is_starting_position: pos.roster_position.is_starting_position === '1'
+    roster_positions: settings.roster_positions.map((position: any) => ({
+      roster_position: {
+        position: position.roster_position.position,
+        position_type: position.roster_position.position_type || '',
+        count: parseInt(position.roster_position.count),
+        is_starting_position: position.roster_position.is_starting_position === 1
+      }
     })),
     stat_categories: settings.stat_categories.stats.map((stat: any) => {
       const statModifier = findStat(parseInt(stat.stat.stat_id));

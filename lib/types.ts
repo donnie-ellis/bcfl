@@ -71,6 +71,24 @@ export interface TeamLogo {
   url: string;
 }
 
+// ./lib/types.ts
+
+// ... other type definitions ...
+
+export interface RosterPosition {
+  roster_position: {
+    position: string;
+    position_type?: string;
+    count: number;
+    is_starting_position: boolean;
+  };
+}
+
+export interface LeagueSettings {
+  // ... other fields ...
+  roster_positions: RosterPosition[];
+  // ... other fields ...
+}
 export interface Manager {
   manager_id: string;
   nickname: string;
@@ -163,12 +181,7 @@ export interface Team {
     trade_reject_time: number;
     player_pool: string;
     cant_cut_list: string;
-    roster_positions: {
-      position: string;
-      position_type: string;
-      count: number;
-      is_starting_position: boolean;
-    }[];
+    roster_positions: RosterPosition[];
     stat_categories: {
       stat_id: number;
       name: string;

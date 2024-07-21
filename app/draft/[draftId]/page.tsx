@@ -82,7 +82,7 @@ const DraftPage: React.FC = () => {
         {/* Right 1/4: Drafted Players */}
         <div className="w-1/4">
           <DraftedPlayers
-            leagueKey={draft.league_key}
+            leagueKey={draft.league_id}
             draftId={draftId}
             leagueSettings={leagueSettings}
           />
