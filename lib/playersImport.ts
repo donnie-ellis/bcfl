@@ -1,7 +1,7 @@
 // ./lib/playerImport.ts
 
 import { createClient } from '@supabase/supabase-js'
-import { fetchAllPlayers } from '@/lib/yahoo'
+import { fetchAllPlayers, fetchPlayerDetails } from '@/lib/yahoo'
 import { Player } from '@/lib/types'
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!)

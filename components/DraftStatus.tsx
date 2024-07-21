@@ -1,6 +1,11 @@
 // ./components/DraftStatus.tsx
 import React from 'react';
 import { Draft, LeagueSettings, Pick } from '@/lib/types';
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card"
 
 interface DraftStatusProps {
   draft: Draft;
@@ -18,12 +23,12 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings }) => {
     return draft.picks?.find(pick => pick.total_pick_number === draft.current_pick);
   };
 
-  const getNextPick = (): Pick | undefined => {
-    return draft.picks?.find(pick => pick.total_pick_number === draft.current_pick + 1);
+  const getNextPicks = (count: number): Pick[] => {
+    return draft.picks?.slice(draft.current_pick, draft.current_pick + count) || [];
   };
 
   const currentPick = getCurrentPick();
-  const nextPick = getNextPick();
+  const nextPicks = getNextPicks(5);
 
   return (
     <div className="bg-white shadow-md rounded-lg p-4 mb-4">
@@ -47,7 +52,25 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings }) => {
         </div>
         <div>
           <p className="font-medium">Next Drafter:</p>
-          <p>{nextPick?.teams?.name || 'Unknown'}</p>
+          <HoverCard>
+            <HoverCardTrigger asChild>
+              <p className="cursor-pointer underline">{nextPicks[0]?.teams?.name || 'Unknown'}</p>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-80">
+              <h3 className="text-lg font-semibold mb-2">Next 5 Drafters</h3>
+              <ol className="list-decimal list-inside">
+                {nextPicks.map((pick, index) => (
+                  <li key={index} className="mb-1">
+                    {pick.teams?.name || 'Unknown'} 
+                    <span className="text-sm text-gray-500 ml-2">
+                      (Round {Math.ceil(pick.total_pick_number / leagueSettings.max_teams)}, 
+                      Pick {((pick.total_pick_number - 1) % leagueSettings.max_teams) + 1})
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </HoverCardContent>
+          </HoverCard>
         </div>
       </div>
     </div>

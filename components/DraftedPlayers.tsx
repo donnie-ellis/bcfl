@@ -1,8 +1,10 @@
 // ./components/DraftedPlayers.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LeagueSettings, Draft, Pick, RosterPosition } from '@/lib/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LeagueSettings, Draft, Pick, RosterPosition, Team } from '@/lib/types';
+import { useSession } from 'next-auth/react';
 
 interface DraftedPlayersProps {
   leagueKey: string;
@@ -16,23 +18,43 @@ interface RosterSlot {
 }
 
 const DraftedPlayers: React.FC<DraftedPlayersProps> = ({ leagueKey, draftId, leagueSettings }) => {
+  const { data: session } = useSession();
   const [rosterSlots, setRosterSlots] = useState<RosterSlot[]>([]);
   const [picks, setPicks] = useState<Pick[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
+
+  const fetchTeams = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/yahoo/league/${leagueKey}/teams`);
+      const data = await response.json();
+      setTeams(data);
+      
+      // Set default selected team to the current user's team
+      const userTeam = data.find((team: Team) => team.managers.some(manager => manager.is_current_login));
+      if (userTeam) {
+        setSelectedTeam(userTeam.team_key);
+      }
+    } catch (error) {
+      console.error('Error fetching teams:', error);
+    }
+  }, [leagueKey]);
+
+  const fetchPicks = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/db/draft/${draftId}/picks`);
+      const data = await response.json();
+      setPicks(data);
+    } catch (error) {
+      console.error('Error fetching picks:', error);
+    }
+  }, [draftId]);
 
   useEffect(() => {
-    const fetchPicks = async () => {
-      try {
-        const response = await fetch(`/api/db/draft/${draftId}/picks`);
-        const data = await response.json();
-        setPicks(data);
-      } catch (error) {
-        console.error('Error fetching picks:', error);
-      }
-    };
-
+    fetchTeams();
     fetchPicks();
-  }, [draftId]);
+  }, [fetchTeams, fetchPicks]);
 
   useEffect(() => {
     if (leagueSettings && leagueSettings.roster_positions) {
@@ -50,9 +72,11 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = ({ leagueKey, draftId, lea
   }, [leagueSettings]);
 
   useEffect(() => {
-    if (picks.length > 0 && rosterSlots.length > 0) {
-      const updatedSlots = [...rosterSlots];
-      picks.forEach(pick => {
+    if (picks.length > 0 && rosterSlots.length > 0 && selectedTeam) {
+      const teamPicks = picks.filter(pick => pick.team_key === selectedTeam);
+      const updatedSlots = rosterSlots.map(slot => ({ ...slot, player: null }));
+      
+      teamPicks.forEach(pick => {
         const playerPosition = pick.player?.display_position || '';
         let slotFound = false;
 
@@ -89,7 +113,7 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = ({ leagueKey, draftId, lea
 
       setRosterSlots(updatedSlots);
     }
-  }, [picks, rosterSlots]);
+  }, [picks, selectedTeam]);
 
   const renderSkeletonRows = () => {
     return Array(10).fill(null).map((_, index) => (
@@ -107,7 +131,24 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = ({ leagueKey, draftId, lea
 
   return (
     <div className="bg-white shadow-md rounded-lg p-4">
-      <h2 className="text-xl font-semibold mb-4">Your Drafted Players</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">Drafted Players</h2>
+        <Select
+          value={selectedTeam || undefined}
+          onValueChange={(value) => setSelectedTeam(value)}
+        >
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Select a team" />
+          </SelectTrigger>
+          <SelectContent>
+            {teams.map((team) => (
+              <SelectItem key={team.team_key} value={team.team_key}>
+                {team.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       <Table>
         <TableHeader>
           <TableRow>

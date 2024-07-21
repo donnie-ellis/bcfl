@@ -7,6 +7,7 @@ import Profile from '@/components/Profile';
 import PlayersList from '@/components/PlayersList';
 import DraftedPlayers from '@/components/DraftedPlayers';
 import DraftStatus from '@/components/DraftStatus';
+import PlayerDetails from '@/components/PlayerDetails';
 import { League, Draft, LeagueSettings, Player } from '@/lib/types';
 
 const DraftPage: React.FC = () => {
@@ -70,13 +71,16 @@ const DraftPage: React.FC = () => {
           />
         </div>
 
-        {/* Middle 1/2: Draft Status and other components */}
-        <div className="w-1/2">
+        {/* Middle 1/2: Draft Status and Player Details */}
+        <div className="w-1/2 space-y-4">
           <DraftStatus
             draft={draft}
             leagueSettings={leagueSettings}
           />
-          {/* Add other middle components here */}
+          <PlayerDetails 
+            player={selectedPlayer} 
+            leagueKey={draft.league_id}
+          />
         </div>
 
         {/* Right 1/4: Drafted Players */}
