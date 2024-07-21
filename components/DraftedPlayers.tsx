@@ -146,8 +146,8 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = ({ leagueKey, draftId, lea
             <SelectContent>
               {teams.map((team) => (
                 <SelectItem key={team.team_key} value={team.team_key}>
-                  <div className='flex'>
-                    <TeamLogo teamKey={team.team_key} teams={teams} />
+                  <div className='flex gap-5'>
+                    <TeamLogo teamKey={team.team_key} teams={teams} className='h-5 w-5' />
                     {team.name}
                   </div>
                 </SelectItem>
