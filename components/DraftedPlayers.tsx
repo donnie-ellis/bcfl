@@ -5,6 +5,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LeagueSettings, Draft, Pick, RosterPosition, Team } from '@/lib/types';
 import { useSession } from 'next-auth/react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TeamLogo } from '@/components/TeamLogo';
 
 interface DraftedPlayersProps {
   leagueKey: string;
@@ -130,63 +132,71 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = ({ leagueKey, draftId, lea
   };
 
   return (
-    <div className="bg-white shadow-md rounded-lg p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Drafted Players</h2>
-        <Select
-          value={selectedTeam || undefined}
-          onValueChange={(value) => setSelectedTeam(value)}
-        >
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Select a team" />
-          </SelectTrigger>
-          <SelectContent>
-            {teams.map((team) => (
-              <SelectItem key={team.team_key} value={team.team_key}>
-                {team.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Position</TableHead>
-            <TableHead>Player</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {isLoading ? (
-            renderSkeletonRows()
-          ) : (
-            rosterSlots.map((slot, index) => (
-              <TableRow key={index}>
-                <TableCell>
-                  {shouldStrikeThrough(slot) ? (
-                    <span className="line-through">{slot.position}</span>
-                  ) : (
-                    slot.position
-                  )}
-                </TableCell>
-                <TableCell>
-                  {slot.player ? (
-                    <div>
-                      <span>{slot.player.player?.full_name}</span>
-                      <span className="ml-2 text-sm text-gray-500">
-                        ({slot.player.player?.editorial_team_abbr} - {slot.player.player?.display_position})
-                      </span>
-                    </div>
-                  ) : (
-                    '-'
-                  )}
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
+    <Card>
+      <CardHeader>
+        <div className="justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Drafted Players</h2>
+          <Select
+            value={selectedTeam || undefined}
+            onValueChange={(value) => setSelectedTeam(value)}
+          >
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Select a team" />
+            </SelectTrigger>
+            <SelectContent>
+              {teams.map((team) => (
+                <SelectItem key={team.team_key} value={team.team_key}>
+                  <div className='flex'>
+                    <TeamLogo teamKey={team.team_key} teams={teams} />
+                    {team.name}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </CardHeader>
+      <CardContent>      
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Position</TableHead>
+              <TableHead>Player</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              renderSkeletonRows()
+            ) : (
+              rosterSlots.map((slot, index) => (
+                <TableRow key={index}>
+                  <TableCell>
+                    {shouldStrikeThrough(slot) ? (
+                      <span className="line-through">{slot.position}</span>
+                    ) : (
+                      slot.position
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {slot.player ? (
+                      <div>
+                        <span>{slot.player.player?.full_name}</span>
+                        <span className="ml-2 text-sm text-gray-500">
+                          ({slot.player.player?.editorial_team_abbr} - {slot.player.player?.display_position})
+                        </span>
+                      </div>
+                    ) : (
+                      '-'
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+
   );
 };
 

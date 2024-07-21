@@ -7,8 +7,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-
+import { TeamLogo } from '@/components/TeamLogo';
 interface DraftStatusProps {
   draft: Draft;
   leagueSettings: LeagueSettings;
@@ -35,31 +34,21 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams 
   const lastPick = getLastPick();
   const nextPicks = getNextPicks(5);
 
-  const TeamLogo: React.FC<{ teamKey: string }> = ({ teamKey }) => {
-    const team = teams.find(t => t.team_key === teamKey);
-    return (
-      <Avatar className="h-10 w-10">
-        <AvatarImage src={team?.team_logos[0]?.url} alt={team?.name} />
-        <AvatarFallback>{team?.name[0]}</AvatarFallback>
-      </Avatar>
-    );
-  };
-
   return (
-    <div className="bg-white shadow-md rounded-lg p-4 mb-4 space-y-4">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-semibold">Round/Pick</h2>
-          <p className="text-xl">{currentRound}/{currentPickInRound}</p>
-        </div>
+    <Card>
+      <CardHeader>
+        <h2 className='text-2xl font-semibold'>Round/Pick</h2>
+        <p className='text-xl'>{currentRound} / {currentPick?.pick_number}</p>
+      </CardHeader>
+      <CardContent>
+        
         <div className="flex items-center space-x-2">
-          {currentPick && <TeamLogo teamKey={currentPick.team_key} />}
+          {currentPick && <TeamLogo teamKey={currentPick.team_key} teams={teams}/>}
           <div>
             <p className="font-medium">Currently Drafting</p>
             <p>{teams.find(t => t.team_key === currentPick?.team_key)?.name || 'Unknown'}</p>
           </div>
         </div>
-      </div>
 
       {lastPick && (
         <Card>
@@ -67,7 +56,7 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams 
             <CardTitle>Last Pick</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center space-x-2">
-            <TeamLogo teamKey={lastPick.team_key} />
+            <TeamLogo teamKey={lastPick.team_key} teams={teams} />
             <div>
               <p className="font-medium">{teams.find(t => t.team_key === lastPick.team_key)?.name}</p>
               <p>{lastPick.player?.full_name} ({lastPick.player?.editorial_team_abbr} - {lastPick.player?.display_position})</p>
@@ -81,7 +70,7 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams 
         <HoverCard>
           <HoverCardTrigger asChild>
             <div className="flex items-center space-x-2 cursor-pointer">
-              {nextPicks[0] && <TeamLogo teamKey={nextPicks[0].team_key} />}
+              {nextPicks[0] && <TeamLogo teamKey={nextPicks[0].team_key} teams={teams} />}
               <div>
                 <p className="font-medium">{teams.find(t => t.team_key === nextPicks[0]?.team_key)?.name || 'Unknown'}</p>
                 <p className="text-sm text-gray-500">
@@ -96,7 +85,7 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams 
             <ol className="space-y-2">
               {nextPicks.map((pick, index) => (
                 <li key={index} className="flex items-center space-x-2">
-                  <TeamLogo teamKey={pick.team_key} />
+                  <TeamLogo teamKey={pick.team_key} teams={teams} />
                   <div>
                     <p className="font-medium">{teams.find(t => t.team_key === pick.team_key)?.name || 'Unknown'}</p>
                     <p className="text-sm text-gray-500">
@@ -110,7 +99,9 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams 
           </HoverCardContent>
         </HoverCard>
       </div>
-    </div>
+      </CardContent>
+      </Card>
+    
   );
 };
 
