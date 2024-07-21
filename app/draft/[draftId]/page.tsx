@@ -9,6 +9,8 @@ import DraftedPlayers from '@/components/DraftedPlayers';
 import DraftStatus from '@/components/DraftStatus';
 import PlayerDetails from '@/components/PlayerDetails';
 import { League, Draft, LeagueSettings, Player, Team } from '@/lib/types';
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+
 
 const DraftPage: React.FC = () => {
   const params = useParams();
@@ -19,13 +21,6 @@ const DraftPage: React.FC = () => {
   const [leagueSettings, setLeagueSettings] = useState<LeagueSettings | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
-
-  useEffect(() => {
-    if (draftId) {
-      fetchDraftData();
-    }
-  }, [draftId]);
-
   const fetchDraftData = async () => {
     try {
       const draftResponse = await fetch(`/api/db/draft/${draftId}`);
@@ -61,6 +56,14 @@ const DraftPage: React.FC = () => {
       console.error('Error fetching data:', error);
     }
   };
+  
+  useEffect(() => {
+    if (draftId) {
+      fetchDraftData();
+    }
+  }, [draftId]);
+
+
 
   useEffect(() => {
     if (draftId) {
@@ -75,7 +78,12 @@ const DraftPage: React.FC = () => {
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">{`${league.name} ${draft.name} Draft`}</h1>
+        <h1 className="text-2xl font-bold flex gap-4">
+          <Avatar className='h-12 w-12'>
+            <AvatarFallback>{league.name}</AvatarFallback>
+            <AvatarImage src={league.logo_url} alt={league.name} />
+          </Avatar>
+          {`${league.name} ${draft.name} Draft`}</h1>
         <Profile />
       </div>
 
@@ -87,8 +95,8 @@ const DraftPage: React.FC = () => {
             onPlayerSelect={setSelectedPlayer}
           />
         </div>
-
-        <div className="w-1/2">
+        
+        <div className="w-1/2 space-y-4">
           <DraftStatus
             draft={draft}
             leagueSettings={leagueSettings}
@@ -98,7 +106,7 @@ const DraftPage: React.FC = () => {
             player={selectedPlayer} 
           />
         </div>
-          {/* Add other middle components here */}
+
 
         <div className="w-1/4">
           <DraftedPlayers
