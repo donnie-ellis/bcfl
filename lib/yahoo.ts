@@ -136,7 +136,7 @@ export async function requestYahoo(path: string) {
   return data;
 }
 
-export async function parseTeamData(data: any): Team[] {
+export async function parseTeamData(data: any): Promise<Team[]> {
   if (!data || !data.fantasy_content || !data.fantasy_content.league || !data.fantasy_content.league[1].teams) {
     console.error('Invalid data structure');
     return [];
@@ -520,4 +520,45 @@ export async function fetchPlayerDetails(leagueKey: string, playerKey: string): 
   });
 
   return player;
+}
+
+export async function parseUserTeamData(data: any): Promise<Team | null> {
+  try {
+    const teamData = data.fantasy_content.users[0].user[1].games[0].game[1].teams[0].team[0];
+    
+    const team: Team = {
+      team_key: teamData.find((item: any) => item.team_key)?.team_key,
+      team_id: teamData.find((item: any) => item.team_id)?.team_id,
+      name: teamData.find((item: any) => item.name)?.name,
+      is_owned_by_current_login: teamData.find((item: any) => item.is_owned_by_current_login)?.is_owned_by_current_login === 1,
+      url: teamData.find((item: any) => item.url)?.url,
+      team_logos: teamData.find((item: any) => item.team_logos)?.team_logos.map((logo: any) => ({
+        size: logo.team_logo.size,
+        url: logo.team_logo.url
+      })),
+      waiver_priority: teamData.find((item: any) => item.waiver_priority)?.waiver_priority,
+      faab_balance: teamData.find((item: any) => item.faab_balance)?.faab_balance,
+      number_of_moves: parseInt(teamData.find((item: any) => item.number_of_moves)?.number_of_moves || '0'),
+      number_of_trades: parseInt(teamData.find((item: any) => item.number_of_trades)?.number_of_trades || '0'),
+      roster_adds: teamData.find((item: any) => item.roster_adds)?.roster_adds,
+      league_scoring_type: teamData.find((item: any) => item.league_scoring_type)?.league_scoring_type,
+      has_draft_grade: teamData.find((item: any) => item.has_draft_grade)?.has_draft_grade === 1,
+      managers: teamData.find((item: any) => item.managers)?.managers.map((managerData: any) => ({
+        manager_id: managerData.manager.manager_id,
+        nickname: managerData.manager.nickname,
+        guid: managerData.manager.guid,
+        is_commissioner: managerData.manager.is_commissioner === '1',
+        is_current_login: managerData.manager.is_current_login === '1',
+        email: managerData.manager.email,
+        image_url: managerData.manager.image_url,
+        felo_score: managerData.manager.felo_score,
+        felo_tier: managerData.manager.felo_tier
+      }))
+    };
+
+    return team;
+  } catch (error) {
+    console.error('Error parsing user team data:', error);
+    return null;
+  }
 }

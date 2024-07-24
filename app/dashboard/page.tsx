@@ -1,7 +1,9 @@
 // ./app/dashboard/page.tsx
 'use client'
+
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -15,11 +17,11 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card"
-import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { ChevronDown, Trash2 } from "lucide-react";
 import Profile from '@/components/Profile';
 import LeagueList from '@/components/LeagueList';
 import CreateDraftDialog from '@/components/CreateDraftDialog';
-import { League, Team, LeagueSettings, RosterPosition } from '@/lib/types';
+import { League, Team, LeagueSettings, RosterPosition, Manager } from '@/lib/types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +36,7 @@ import {
 
 const DashboardPage = () => {
   const router = useRouter();
+  const { data: session, update } = useSession();
   const [activeTab, setActiveTab] = useState("leagues");
   const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
   const [leagues, setLeagues] = useState<League[]>([]);
@@ -81,7 +84,15 @@ const DashboardPage = () => {
       if (teamResponse.ok) {
         const teamData: Team = await teamResponse.json();
         setTeam(teamData);
+        
+        // Update the session with league_key and team_key
+        await update({
+          ...session,
+          league_key: league.league_key,
+          team_key: teamData.team_key
+        });
       }
+
       if (commissionerResponse.ok) {
         const { isCommissioner } = await commissionerResponse.json();
         setIsCommissioner(isCommissioner);
@@ -110,6 +121,12 @@ const DashboardPage = () => {
       setSelectedLeague(null);
       setIsCommissioner(false);
       setLeagueSettings(null);
+      // Clear the league_key and team_key from the session
+      update({
+        ...session,
+        league_key: undefined,
+        team_key: undefined
+      });
     }
     setActiveTab(value);
   };
