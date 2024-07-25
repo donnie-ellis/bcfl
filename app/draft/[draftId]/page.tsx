@@ -12,6 +12,7 @@ import PlayerDetails from '@/components/PlayerDetails';
 import { League, Draft, LeagueSettings, Player, Team, Pick } from '@/lib/types';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import SubmitPickButton from '@/components/SubmitPicksButton';
+import { toast } from "sonner";
 
 const DraftPage: React.FC = () => {
   const params = useParams();
@@ -66,6 +67,7 @@ const DraftPage: React.FC = () => {
       setDraft({...draftData, picks: updatedPicks});
     } catch (error) {
       console.error('Error fetching data:', error);
+      toast.error("Failed to fetch draft data. Please try again.");
     }
   };
 
@@ -110,7 +112,10 @@ const DraftPage: React.FC = () => {
   const isCurrentUserPick = currentPick?.team_key === team?.team_key;
 
   const handleSubmitPick = async () => {
-    if (!selectedPlayer || !currentPick || !draft) return;
+    if (!selectedPlayer || !currentPick || !draft) {
+      toast.error("Unable to submit pick. Please try again.");
+      return;
+    }
 
     try {
       const response = await fetch(`/api/db/draft/${draftId}/pick`, {
@@ -128,9 +133,13 @@ const DraftPage: React.FC = () => {
         throw new Error('Failed to submit pick');
       }
 
+      toast.success(`You've drafted ${selectedPlayer.full_name}!`);
+
       setSelectedPlayer(null);
+      fetchDraftData(); // Refetch data to update the draft state
     } catch (error) {
       console.error('Error submitting pick:', error);
+      toast.error("Failed to submit pick. Please try again.");
     }
   };
 

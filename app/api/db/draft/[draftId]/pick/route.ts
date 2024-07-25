@@ -55,18 +55,44 @@ export async function POST(
   const { pickId, playerId } = await request.json();
 
   try {
-    // Start a transaction
-    const { data, error } = await supabase.rpc('submit_draft_pick', {
-      p_draft_id: draftId,
-      p_pick_id: pickId,
-      p_player_id: playerId
-    });
+    // Update the pick
+    const { error: pickError } = await supabase
+      .from('picks')
+      .update({ player_id: playerId, is_picked: true })
+      .eq('id', pickId)
+      .eq('draft_id', draftId);
 
-    if (error) throw error;
+    if (pickError) throw pickError;
+
+    // Update the draft_players table
+    const { error: draftPlayerError } = await supabase
+      .from('draft_players')
+      .upsert(
+        { draft_id: draftId, player_id: playerId, is_picked: true },
+        { onConflict: 'draft_id,player_id' }
+      );
+
+    if (draftPlayerError) throw draftPlayerError;
+
+    // Increment the current pick
+    const { data: draft, error: fetchDraftError } = await supabase
+      .from('drafts')
+      .select('current_pick')
+      .eq('id', draftId)
+      .single();
+
+    if (fetchDraftError) throw fetchDraftError;
+
+    const { error: updateDraftError } = await supabase
+      .from('drafts')
+      .update({ current_pick: draft.current_pick + 1 })
+      .eq('id', draftId);
+
+    if (updateDraftError) throw updateDraftError;
 
     return NextResponse.json({ message: 'Pick submitted successfully' });
   } catch (error) {
     console.error('Error submitting pick:', error);
-    return NextResponse.json({ error: 'Failed to submit pick' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to submit pick', details: error }, { status: 500 });
   }
 }
