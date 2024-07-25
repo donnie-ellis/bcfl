@@ -111,12 +111,6 @@ const DashboardPage = () => {
       setSelectedLeague(null);
       setIsCommissioner(false);
       setLeagueSettings(null);
-      // Clear the league_key and team_key from the session
-      update({
-        ...session,
-        league_key: undefined,
-        team_key: undefined
-      });
     }
     setActiveTab(value);
   };
