@@ -2,7 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerAuthSession } from "@/auth";
-import { requestYahoo, parseUserTeamData } from '@/lib/yahoo';
+import { requestYahoo, parseTeamData } from '@/lib/yahoo';
 import { Team } from '@/lib/types';
 
 export async function GET(
@@ -18,20 +18,23 @@ export async function GET(
   const { leagueKey } = params;
 
   try {
-    const path = `users;use_login=1/games;game_keys=nfl/teams`;
+    console.debug('In the try block')
+    const path = `league/${leagueKey}/teams`;
     const data = await requestYahoo(path);
-    const userTeam = await parseUserTeamData(data);
+    const teams = await parseTeamData(data.fantasy_content.league[1].teams);
 
-    if (!userTeam) {
-      return NextResponse.json({ error: 'User team not found' }, { status: 404 });
+    if (Array.isArray(teams)) {
+      // Find the team owned by the current user
+      const userTeam = teams.find(team => team.is_owned_by_current_login);
+
+      if (!userTeam) {
+        return NextResponse.json({ error: 'User team not found in this league' }, { status: 404 });
+      }
+
+      return NextResponse.json(userTeam);
+    } else {
+      return NextResponse.json({ error: 'Unexpected response format' }, { status: 500 });
     }
-
-    // Check if the team belongs to the requested league
-    if (!userTeam.team_key.startsWith(leagueKey)) {
-      return NextResponse.json({ error: 'User team not found in this league' }, { status: 404 });
-    }
-
-    return NextResponse.json(userTeam);
   } catch (error) {
     console.error('Failed to fetch user team:', error);
     return NextResponse.json({ error: 'Failed to fetch user team' }, { status: 500 });
