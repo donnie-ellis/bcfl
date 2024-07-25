@@ -73,7 +73,7 @@ const PlayersList: React.FC<PlayersListProps> = ({ leagueKey, draftId, onPlayerS
 
   const positions = useMemo(() => {
     const allPositions = players.flatMap(player => player.eligible_positions);
-    return Array.from(new Set(allPositions)).filter(pos => pos !== 'IR' && pos !== 'BN');
+    return Array.from(new Set(allPositions)).filter(pos => pos !== 'IR' && pos !== 'BN' && pos !== 'W/R/T');
   }, [players]);
 
   const filteredPlayers = useMemo(() => {
@@ -92,9 +92,9 @@ const PlayersList: React.FC<PlayersListProps> = ({ leagueKey, draftId, onPlayerS
   return (
     <Card className="flex flex-col h-full">
       <CardHeader className="py-3">
-        <CardTitle>Available Players</CardTitle>
+        <CardTitle>Players</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col flex-grow p-0">
+      <CardContent className="flex flex-col flex-grow p-0 h-full overflow-hidden">
         <div className="py-2">
           <PlayerFilters
             searchTerm={searchTerm}
