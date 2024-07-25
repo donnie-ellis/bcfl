@@ -21,6 +21,7 @@ const DraftPage: React.FC = () => {
   const [leagueSettings, setLeagueSettings] = useState<LeagueSettings | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [team, setTeam] = useState<Team | null>(null);
   const fetchDraftData = async () => {
     try {
       const draftResponse = await fetch(`/api/db/draft/${draftId}`);
@@ -29,21 +30,24 @@ const DraftPage: React.FC = () => {
 
       const leagueKey = draftData.league_id;
 
-      const [leagueResponse, settingsResponse, teamsResponse] = await Promise.all([
+      const [leagueResponse, settingsResponse, teamsResponse, teamResponse] = await Promise.all([
         fetch(`/api/db/league/${leagueKey}`),
         fetch(`/api/db/league/${leagueKey}/settings`),
-        fetch(`/api/yahoo/league/${leagueKey}/teams`)
+        fetch(`/api/yahoo/league/${leagueKey}/teams`),
+        fetch(`/api/yahoo/user/league/${leagueKey}/team`)
       ]);
 
-      const [leagueData, settingsData, teamsData] = await Promise.all([
+      const [leagueData, settingsData, teamsData, teamData] = await Promise.all([
         leagueResponse.json(),
         settingsResponse.json(),
-        teamsResponse.json()
+        teamsResponse.json(),
+        teamResponse.json()
       ]);
 
       setLeague(leagueData);
       setLeagueSettings(settingsData);
       setTeams(teamsData);
+      setTeam(teamData)
 
       // Update draft picks with full team objects
       const updatedPicks = draftData.picks.map((pick: any) => ({
