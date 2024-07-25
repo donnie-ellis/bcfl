@@ -148,28 +148,28 @@ const DraftPage: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-4">
+    <div className="flex flex-col h-screen">
+      <div className="flex justify-between items-center p-4 bg-background">
         <h1 className="text-2xl font-bold flex gap-4">
           <Avatar className='h-12 w-12'>
-            <AvatarFallback>{league.name}</AvatarFallback>
-            <AvatarImage src={league.logo_url} alt={league.name} />
+            <AvatarFallback>{league?.name}</AvatarFallback>
+            <AvatarImage src={league?.logo_url} alt={league?.name} />
           </Avatar>
-          {`${league.name} ${draft.name} Draft`}
+          {`${league?.name} ${draft?.name} Draft`}
         </h1>
         <Profile />
       </div>
 
-      <div className="flex space-x-4">
-        <div className="w-1/4">
+      <div className="flex flex-grow overflow-hidden">
+        <div className="w-1/4 p-2 overflow-hidden flex flex-col">
           <PlayersList
-            leagueKey={draft.league_id}
+            leagueKey={draft?.league_id || ''}
             draftId={draftId}
             onPlayerSelect={setSelectedPlayer}
           />
         </div>
         
-        <div className="w-1/2 space-y-4">
+        <div className="w-1/2 p-2 overflow-auto flex flex-col">
           <DraftStatus
             draft={draft}
             leagueSettings={leagueSettings}
@@ -186,9 +186,9 @@ const DraftPage: React.FC = () => {
           />
         </div>
 
-        <div className="w-1/4">
+        <div className="w-1/4 p-2 overflow-hidden flex flex-col">
           <DraftedPlayers
-            leagueKey={draft.league_id}
+            leagueKey={draft?.league_id || ''}
             draftId={draftId}
             leagueSettings={leagueSettings}
           />

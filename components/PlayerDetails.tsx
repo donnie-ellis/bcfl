@@ -22,8 +22,6 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
 
   // Helper function to format bye weeks
   const formatByeWeeks = (byeWeeks: any): string => {
-    console.log('Raw bye_weeks data:', byeWeeks); // Debugging log
-
     if (!byeWeeks || byeWeeks.length === 0) return 'N/A';
 
     try {
