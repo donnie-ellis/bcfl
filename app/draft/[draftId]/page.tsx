@@ -8,8 +8,9 @@ import PlayersList from '@/components/PlayersList';
 import DraftedPlayers from '@/components/DraftedPlayers';
 import DraftStatus from '@/components/DraftStatus';
 import PlayerDetails from '@/components/PlayerDetails';
-import { League, Draft, LeagueSettings, Player, Team } from '@/lib/types';
+import { League, Draft, LeagueSettings, Player, Team, Pick } from '@/lib/types';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import SubmitPickButton from '@/components/SubmitPicksButton';
 
 
 const DraftPage: React.FC = () => {
@@ -22,6 +23,8 @@ const DraftPage: React.FC = () => {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [team, setTeam] = useState<Team | null>(null);
+  const [currentPick, setCurrentPick] = useState<Pick | null>(null);
+
   const fetchDraftData = async () => {
     try {
       const draftResponse = await fetch(`/api/db/draft/${draftId}`);
@@ -30,24 +33,27 @@ const DraftPage: React.FC = () => {
 
       const leagueKey = draftData.league_id;
 
-      const [leagueResponse, settingsResponse, teamsResponse, teamResponse] = await Promise.all([
+      const [leagueResponse, settingsResponse, teamsResponse, teamResponse, currentPickResponse] = await Promise.all([
         fetch(`/api/db/league/${leagueKey}`),
         fetch(`/api/db/league/${leagueKey}/settings`),
         fetch(`/api/yahoo/league/${leagueKey}/teams`),
-        fetch(`/api/yahoo/user/league/${leagueKey}/team`)
+        fetch(`/api/yahoo/user/league/${leagueKey}/team`),
+        fetch(`/api/db/draft/${draftId}/pick`)
       ]);
 
-      const [leagueData, settingsData, teamsData, teamData] = await Promise.all([
+      const [leagueData, settingsData, teamsData, teamData, currentPickData] = await Promise.all([
         leagueResponse.json(),
         settingsResponse.json(),
         teamsResponse.json(),
-        teamResponse.json()
+        teamResponse.json(),
+        currentPickResponse.json()
       ]);
 
       setLeague(leagueData);
       setLeagueSettings(settingsData);
       setTeams(teamsData);
       setTeam(teamData)
+      setCurrentPick(currentPickData)
 
       // Update draft picks with full team objects
       const updatedPicks = draftData.picks.map((pick: any) => ({
@@ -60,6 +66,8 @@ const DraftPage: React.FC = () => {
       console.error('Error fetching data:', error);
     }
   };
+  const isCurrentUserPick = currentPick?.team_key === team?.team_key;
+
   
   useEffect(() => {
     if (draftId) {
@@ -79,6 +87,33 @@ const DraftPage: React.FC = () => {
     return <div>Loading...</div>;
   }
 
+  const handleSubmitPick = async () => {
+    if (!selectedPlayer || !currentPick || !draft) return;
+
+    try {
+      const response = await fetch(`/api/db/draft/${draftId}/pick`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          pickId: currentPick.id,
+          playerId: selectedPlayer.id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit pick');
+      }
+
+      // Refresh draft data after successful pick submission
+      await fetchDraftData();
+      setSelectedPlayer(null);
+    } catch (error) {
+      console.error('Error submitting pick:', error);
+    }
+  };
+
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-4">
@@ -91,6 +126,7 @@ const DraftPage: React.FC = () => {
         <Profile />
       </div>
 
+      {/* Left Column */}
       <div className="flex space-x-4">
         <div className="w-1/4">
           <PlayersList
@@ -100,18 +136,25 @@ const DraftPage: React.FC = () => {
           />
         </div>
         
+        {/* Center Column */}
         <div className="w-1/2 space-y-4">
           <DraftStatus
             draft={draft}
             leagueSettings={leagueSettings}
             teams={teams}
           />
+          <SubmitPickButton
+            isCurrentUserPick={isCurrentUserPick}
+            selectedPlayer={selectedPlayer}
+            currentPick={currentPick}
+            onSubmitPick={handleSubmitPick}
+          />
           <PlayerDetails 
             player={selectedPlayer} 
           />
         </div>
 
-
+        {/* Right Column */}
         <div className="w-1/4">
           <DraftedPlayers
             leagueKey={draft.league_id}

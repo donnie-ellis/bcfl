@@ -61,6 +61,7 @@ export interface Player {
     value_last_month?: number;
     value_to_date?: number;
   };
+  is_drafted?: boolean
 }
 
   export interface LeaguePlayers {
