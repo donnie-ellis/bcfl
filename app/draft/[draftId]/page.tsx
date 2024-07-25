@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import { useSupabaseClient } from '@/lib/useSupabaseClient';
 import Profile from '@/components/Profile';
 import PlayersList from '@/components/PlayersList';
 import DraftedPlayers from '@/components/DraftedPlayers';
@@ -12,10 +13,10 @@ import { League, Draft, LeagueSettings, Player, Team, Pick } from '@/lib/types';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import SubmitPickButton from '@/components/SubmitPicksButton';
 
-
 const DraftPage: React.FC = () => {
   const params = useParams();
   const draftId = params.draftId as string;
+  const supabase = useSupabaseClient();
 
   const [league, setLeague] = useState<League | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -26,6 +27,8 @@ const DraftPage: React.FC = () => {
   const [currentPick, setCurrentPick] = useState<Pick | null>(null);
 
   const fetchDraftData = async () => {
+    if (!supabase) return;
+
     try {
       const draftResponse = await fetch(`/api/db/draft/${draftId}`);
       const draftData = await draftResponse.json();
@@ -52,8 +55,8 @@ const DraftPage: React.FC = () => {
       setLeague(leagueData);
       setLeagueSettings(settingsData);
       setTeams(teamsData);
-      setTeam(teamData)
-      setCurrentPick(currentPickData)
+      setTeam(teamData);
+      setCurrentPick(currentPickData);
 
       // Update draft picks with full team objects
       const updatedPicks = draftData.picks.map((pick: any) => ({
@@ -61,31 +64,50 @@ const DraftPage: React.FC = () => {
         team: teamsData.find((team: Team) => team.team_key === pick.team_key)
       }));
       setDraft({...draftData, picks: updatedPicks});
-
     } catch (error) {
       console.error('Error fetching data:', error);
     }
   };
+
+  useEffect(() => {
+    if (draftId && supabase) {
+      fetchDraftData();
+
+      // Subscribe to draft changes
+      const draftSubscription = supabase
+        .channel('draft_updates')
+        .on('postgres_changes', { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'drafts', 
+          filter: `id=eq.${draftId}` 
+        }, (payload) => {
+          setDraft(prevDraft => ({ ...prevDraft, ...payload.new }));
+        })
+        .subscribe();
+
+      // Subscribe to pick changes
+      const picksSubscription = supabase
+        .channel('picks_updates')
+        .on('postgres_changes', { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'picks', 
+          filter: `draft_id=eq.${draftId}` 
+        }, (payload) => {
+          setCurrentPick(payload.new as Pick);
+          fetchDraftData(); // Refetch all data to ensure consistency
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(draftSubscription);
+        supabase.removeChannel(picksSubscription);
+      };
+    }
+  }, [draftId, supabase]);
+
   const isCurrentUserPick = currentPick?.team_key === team?.team_key;
-
-  
-  useEffect(() => {
-    if (draftId) {
-      fetchDraftData();
-    }
-  }, [draftId]);
-
-
-
-  useEffect(() => {
-    if (draftId) {
-      fetchDraftData();
-    }
-  }, [draftId]);
-
-  if (!league || !draft || !leagueSettings) {
-    return <div>Loading...</div>;
-  }
 
   const handleSubmitPick = async () => {
     if (!selectedPlayer || !currentPick || !draft) return;
@@ -106,13 +128,15 @@ const DraftPage: React.FC = () => {
         throw new Error('Failed to submit pick');
       }
 
-      // Refresh draft data after successful pick submission
-      await fetchDraftData();
       setSelectedPlayer(null);
     } catch (error) {
       console.error('Error submitting pick:', error);
     }
   };
+
+  if (!league || !draft || !leagueSettings) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="container mx-auto p-4">
@@ -122,11 +146,11 @@ const DraftPage: React.FC = () => {
             <AvatarFallback>{league.name}</AvatarFallback>
             <AvatarImage src={league.logo_url} alt={league.name} />
           </Avatar>
-          {`${league.name} ${draft.name} Draft`}</h1>
+          {`${league.name} ${draft.name} Draft`}
+        </h1>
         <Profile />
       </div>
 
-      {/* Left Column */}
       <div className="flex space-x-4">
         <div className="w-1/4">
           <PlayersList
@@ -136,7 +160,6 @@ const DraftPage: React.FC = () => {
           />
         </div>
         
-        {/* Center Column */}
         <div className="w-1/2 space-y-4">
           <DraftStatus
             draft={draft}
@@ -154,7 +177,6 @@ const DraftPage: React.FC = () => {
           />
         </div>
 
-        {/* Right Column */}
         <div className="w-1/4">
           <DraftedPlayers
             leagueKey={draft.league_id}

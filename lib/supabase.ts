@@ -1,10 +1,9 @@
 // ./lib/supabase.ts
-import { createClient } from '@supabase/supabase-js';
+import { getServerSupabaseClient } from './serverSupabaseClient';
 import { League, Team } from '@/lib/types';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
-
 export async function ensureLeagueExists(leagueKey: string, leagueData: Partial<League>, teams: Team[]) {
+  const supabase = getServerSupabaseClient();
   const { data: league, error: leagueError } = await supabase
     .from('leagues')
     .upsert({ 

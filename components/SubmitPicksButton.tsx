@@ -24,7 +24,7 @@ const SubmitPickButton: React.FC<SubmitPickButtonProps> = ({
       disabled={isDisabled}
       className={`w-full ${isDisabled ? 'bg-gray-300' : 'bg-green-500 hover:bg-green-600'}`}
     >
-      Submit Pick
+      {isCurrentUserPick ? 'Submit Pick' : 'Waiting for your turn...'}
     </Button>
   );
 };

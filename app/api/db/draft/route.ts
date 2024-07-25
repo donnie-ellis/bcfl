@@ -1,15 +1,13 @@
 // ./app/api/db/draft/route.ts
-
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
 import { requestYahoo } from '@/lib/yahoo';
 import { v4 as uuidv4 } from 'uuid';
 import { importPlayers } from '@/lib/playersImport';
 import { League, LeagueSettings } from '@/lib/types';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
-
 export async function POST(request: NextRequest) {
+  const supabase = getServerSupabaseClient();
   const { leagueKey, draftName, orderedTeams } = await request.json();
 
   try {

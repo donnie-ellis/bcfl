@@ -1,13 +1,12 @@
 // ./app/api/db/draft/[draftId]/pick/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
+import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { draftId: string } }
 ) {
+  const supabase = getServerSupabaseClient();
   const { draftId } = params;
 
   try {
@@ -51,6 +50,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { draftId: string } }
 ) {
+  const supabase = getServerSupabaseClient();
   const { draftId } = params;
   const { pickId, playerId } = await request.json();
 

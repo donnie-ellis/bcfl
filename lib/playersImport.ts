@@ -1,12 +1,10 @@
-// ./lib/playerImport.ts
-
-import { createClient } from '@supabase/supabase-js'
-import { fetchAllPlayers, fetchPlayerDetails } from '@/lib/yahoo'
-import { Player } from '@/lib/types'
-
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!)
+// ./lib/playersImport.ts
+import { getServerSupabaseClient } from './serverSupabaseClient';
+import { fetchAllPlayers, fetchPlayerDetails } from '@/lib/yahoo';
+import { Player } from '@/lib/types';
 
 export async function importPlayers(leagueKey: string, jobId?: string): Promise<void> {
+  const supabase = getServerSupabaseClient();
   try {
     if (jobId) await updateJobStatus(jobId, 'in_progress', 0);
 
@@ -52,6 +50,7 @@ export async function importPlayers(leagueKey: string, jobId?: string): Promise<
 }
 
 async function recordSuccessfulImport(leagueKey: string, playerCount: number) {
+  const supabase = getServerSupabaseClient();
   try {
     await supabase.from('player_import_history').insert({
       league_key: leagueKey,
@@ -64,6 +63,7 @@ async function recordSuccessfulImport(leagueKey: string, playerCount: number) {
   }
 }
 async function updateJobStatus(jobId: string, status: 'in_progress' | 'complete' | 'error', progress: number) {
+  const supabase = getServerSupabaseClient();
   try {
     const { error } = await supabase
       .from('import_jobs')
@@ -78,6 +78,7 @@ async function updateJobStatus(jobId: string, status: 'in_progress' | 'complete'
 }
 
 export async function getJobStatus(jobId: string) {
+  const supabase = getServerSupabaseClient();
   try {
     const { data, error } = await supabase
       .from('import_jobs')
