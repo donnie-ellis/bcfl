@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    const draftId = data[0];
+    const draftId = data[0].created_draft_id;
 
     // Start the player import process
     const importJobId = uuidv4();
