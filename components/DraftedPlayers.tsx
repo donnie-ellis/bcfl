@@ -1,10 +1,10 @@
 // ./components/DraftedPlayers.tsx
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
 import { LeagueSettings, Pick, Player } from '@/lib/types';
-import { ScrollArea } from "@/components/ui/scroll-area";
+import PlayerCard from '@/components/PlayerCard';
 
 interface DraftedPlayersProps {
   leagueKey: string;
@@ -16,86 +16,69 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = ({ leagueKey, draftId, lea
   const [draftedPlayers, setDraftedPlayers] = useState<(Pick & { player: Player })[]>([]);
   const supabase = useSupabaseClient();
 
-  const fetchDraftedPlayers = async () => {
-    if (!supabase) return;
-
-    console.log('Fetching drafted players...');
-    const { data, error } = await supabase
-      .from('picks')
-      .select(`
-        *,
-        player:players(*),
-        teams:team_key(name)
-      `)
-      .eq('draft_id', draftId)
-      .eq('is_picked', true)
-      .order('total_pick_number', { ascending: true });
-
-    if (error) {
-      console.error('Error fetching drafted players:', error);
-    } else {
-      console.log('Fetched drafted players:', data);
-      setDraftedPlayers(data);
-    }
-  };
-
   useEffect(() => {
+    const fetchDraftedPlayers = async () => {
+      if (!supabase) return;
+
+      const { data, error } = await supabase
+        .from('picks')
+        .select(`
+          *,
+          player:players(*)
+        `)
+        .eq('draft_id', draftId)
+        .eq('is_picked', true)
+        .order('total_pick_number', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching drafted players:', error);
+      } else {
+        setDraftedPlayers(data);
+      }
+    };
+
     if (supabase) {
       fetchDraftedPlayers();
 
       const subscription = supabase
         .channel('drafted_players')
         .on('postgres_changes', { 
-          event: '*', 
+          event: 'UPDATE', 
           schema: 'public', 
           table: 'picks', 
           filter: `draft_id=eq.${draftId}` 
         }, (payload) => {
-          console.log('Received real-time update:', payload);
           fetchDraftedPlayers();
         })
-        .subscribe((status) => {
-          console.log('Subscription status:', status);
-        });
+        .subscribe();
 
       return () => {
-        console.log('Unsubscribing from channel');
-        subscription.unsubscribe();
+        supabase.removeChannel(subscription);
       };
     }
   }, [draftId, supabase]);
 
-  if (!supabase) {
-    return <div>Loading...</div>;
-  }
-
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
-        <CardTitle>Drafted Players ({draftedPlayers.length})</CardTitle>
+        <CardTitle>Drafted Players</CardTitle>
       </CardHeader>
       <CardContent className="flex-grow overflow-hidden">
         <ScrollArea className="h-full">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Pick</TableHead>
-                <TableHead>Team</TableHead>
-                <TableHead>Player</TableHead>
-                <TableHead>Position</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {draftedPlayers.map((pick) => (
-                <TableRow key={pick.id}>
-                  <TableCell>{pick.total_pick_number}</TableCell>
-                  <TableCell>{pick.teams?.name}</TableCell>
-                  <TableCell>{pick.player?.full_name}</TableCell>
-                  <TableCell>{pick.player?.display_position}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          {draftedPlayers.map((pick) => (
+            <div key={pick.id} className="mb-4">
+              <div className="font-semibold text-sm text-gray-500 mb-1">
+                Round {pick.round_number}, Pick {pick.pick_number}
+              </div>
+              {pick.player && (
+                <PlayerCard
+                  player={pick.player}
+                  isDrafted={true}
+                  onClick={() => {}} // No action on click for drafted players
+                />
+              )}
+            </div>
+          ))}
         </ScrollArea>
       </CardContent>
     </Card>
