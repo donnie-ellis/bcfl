@@ -115,14 +115,27 @@ export interface Team {
   };
   league_scoring_type: string;
   has_draft_grade: boolean;
-  managers: Array<{
-    manager_id: string;
-    nickname: string;
-    guid: string;
-    is_commissioner: boolean;
-    email?: string;
-    image_url: string;
-  }>;
+  managers: Manager[]
+}
+
+export interface Manager {
+  manager_id: string;
+  nickname: string;
+  guid: string;
+  is_commissioner: boolean;
+  email?: string;
+  image_url: string;
+  felo_score: string;
+  felo_tier: string;
+}
+
+export interface ManagerData {
+  manager: Manager;
+  relationship: {
+    manager_guid: string,
+    team_key: string,
+    league_key: string,
+  }
 }
 
 export interface Draft {

@@ -9,6 +9,7 @@ import { LeagueSettings, Team } from '@/lib/types';
 import { DragDropContext, Droppable, Draggable, DropResult, DroppableProvided, DroppableProps } from 'react-beautiful-dnd';
 import TeamCard from './TeamCard';
 import { Loader2 } from 'lucide-react';
+import { POST } from '@/app/api/auth/logout/route';
 
 interface CreateDraftDialogProps {
   leagueKey: string;
@@ -59,6 +60,15 @@ const handleCreateDraft = async () => {
 
     setIsCreatingDraft(true);
     try {
+      const managerResponse = await fetch(`api/yahoo/league/${leagueKey}/managers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      if (!managerResponse.ok) {
+        throw new Error('Failed to update managers');
+      }
       const response = await fetch('/api/db/draft', {
         method: 'POST',
         headers: {
