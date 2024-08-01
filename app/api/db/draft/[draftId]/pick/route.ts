@@ -1,6 +1,7 @@
 // ./app/api/db/draft/[draftId]/pick/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
+import { getServerAuthSession } from "@/auth";
 
 export async function GET(
   request: NextRequest,
@@ -21,20 +22,9 @@ export async function GET(
 
     const { data: currentPick, error: pickError } = await supabase
       .from('picks')
-      .select(`
-        id,
-        draft_id,
-        player_id,
-        pick_number,
-        round_number,
-        total_pick_number,
-        is_keeper,
-        is_picked,
-        team_key,
-        teams (name)
-      `)
+      .select(`*`)
       .eq('draft_id', draftId)
-      .eq('total_pick_number', draft.current_pick)
+      .eq('total_pick_number', draft.current_pick!)
       .single();
 
     if (pickError) throw pickError;
@@ -54,15 +44,44 @@ export async function POST(
   const { draftId } = params;
   const { pickId, playerId } = await request.json();
 
+  // Get the current user's session
+  const session = await getServerAuthSession();
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const userGuid = session.user.id;
+
   try {
-    // Update the pick
-    const { error: pickError } = await supabase
+    // Fetch the pick and related team information
+    const { data: pick, error: pickError } = await supabase
       .from('picks')
-      .update({ player_id: playerId, is_picked: true })
+      .select(`
+        id,
+        team_key,
+        drafts!picks_draft_id_fkey (
+          league_id
+        )
+      `)
+      .eq('id', pickId)
+      .single();
+
+    if (pickError) throw pickError;
+
+    // Check if the user is authorized to make this pick
+    const isAuthorized = await checkUserAuthorization(supabase, userGuid, pick.team_key, pick.drafts.league_id);
+    if (!isAuthorized) {
+      return NextResponse.json({ error: 'Unauthorized to make this pick' }, { status: 403 });
+    }
+
+    // Update the pick
+    const { error: updateError } = await supabase
+      .from('picks')
+      .update({ player_id: playerId, is_picked: true, picked_by: userGuid })
       .eq('id', pickId)
       .eq('draft_id', draftId);
 
-    if (pickError) throw pickError;
+    if (updateError) throw updateError;
 
     // Update the draft_players table
     const { error: draftPlayerError } = await supabase
@@ -95,4 +114,38 @@ export async function POST(
     console.error('Error submitting pick:', error);
     return NextResponse.json({ error: 'Failed to submit pick', details: error }, { status: 500 });
   }
+}
+
+async function checkUserAuthorization(supabase, userGuid: string, teamKey: string, leagueKey: string): Promise<boolean> {
+  // Check if the user is the team owner
+  const { data: teamOwner, error: teamError } = await supabase
+    .from('manager_team_league')
+    .select('manager_guid')
+    .eq('team_key', teamKey)
+    .eq('league_key', leagueKey)
+    .single();
+
+  if (teamError) {
+    console.error('Error checking team ownership:', teamError);
+    return false;
+  }
+
+  if (teamOwner && teamOwner.manager_guid === userGuid) {
+    return true;
+  }
+
+  // Check if the user is a commissioner
+  const { data: commissioner, error: commissionerError } = await supabase
+    .from('managers')
+    .select('is_commissioner')
+    .eq('guid', userGuid)
+    .eq('league_keys', leagueKey)
+    .single();
+
+  if (commissionerError) {
+    console.error('Error checking commissioner status:', commissionerError);
+    return false;
+  }
+
+  return commissioner && commissioner.is_commissioner;
 }

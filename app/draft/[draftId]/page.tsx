@@ -13,6 +13,7 @@ import { League, Draft, LeagueSettings, Player, Team, Pick } from '@/lib/types';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import SubmitPickButton from '@/components/SubmitPicksButton';
 import { toast } from "sonner";
+import { error } from 'console';
 
 const DraftPage: React.FC = () => {
   const params = useParams();
@@ -45,6 +46,22 @@ const DraftPage: React.FC = () => {
         fetch(`/api/db/draft/${draftId}/pick`)
       ]);
 
+      if (!leagueResponse.ok) {
+        throw new Error('Error getting league information')
+      }
+      if (!settingsResponse.ok) {
+        throw new Error('Error getting settings information')
+      }      
+      if (!teamsResponse.ok) {
+        throw new Error('Error getting teams information')
+      }      
+      if (!teamResponse.ok) {
+        throw new Error('Error getting team information')
+      }      
+      if (!currentPickResponse.ok) {
+        throw new Error('Error getting pick information')
+      }
+      
       const [leagueData, settingsData, teamsData, teamData, currentPickData] = await Promise.all([
         leagueResponse.json(),
         settingsResponse.json(),

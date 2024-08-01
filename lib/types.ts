@@ -167,4 +167,5 @@ export interface Pick {
   team?: {
     name: string;
   };
+  picked_by?: string;
 }
