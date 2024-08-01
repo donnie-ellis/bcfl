@@ -13,7 +13,6 @@ import { League, Draft, LeagueSettings, Player, Team, Pick } from '@/lib/types';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import SubmitPickButton from '@/components/SubmitPicksButton';
 import { toast } from "sonner";
-import { error } from 'console';
 
 const DraftPage: React.FC = () => {
   const params = useParams();
@@ -46,20 +45,8 @@ const DraftPage: React.FC = () => {
         fetch(`/api/db/draft/${draftId}/pick`)
       ]);
 
-      if (!leagueResponse.ok) {
-        throw new Error('Error getting league information')
-      }
-      if (!settingsResponse.ok) {
-        throw new Error('Error getting settings information')
-      }      
-      if (!teamsResponse.ok) {
-        throw new Error('Error getting teams information')
-      }      
-      if (!teamResponse.ok) {
-        throw new Error('Error getting team information')
-      }      
-      if (!currentPickResponse.ok) {
-        throw new Error('Error getting pick information')
+      if (!leagueResponse.ok || !settingsResponse.ok || !teamsResponse.ok || !teamResponse.ok || !currentPickResponse.ok) {
+        throw new Error('Error fetching data');
       }
       
       const [leagueData, settingsData, teamsData, teamData, currentPickData] = await Promise.all([
@@ -92,7 +79,6 @@ const DraftPage: React.FC = () => {
     if (draftId && supabase) {
       fetchDraftData();
 
-      // Subscribe to draft changes
       const draftSubscription = supabase
         .channel('draft_updates')
         .on('postgres_changes', { 
@@ -102,10 +88,10 @@ const DraftPage: React.FC = () => {
           filter: `id=eq.${draftId}` 
         }, (payload) => {
           setDraft(prevDraft => ({ ...prevDraft, ...payload.new }));
+          fetchDraftData(); // Refetch all data to ensure consistency
         })
         .subscribe();
 
-      // Subscribe to pick changes
       const picksSubscription = supabase
         .channel('picks_updates')
         .on('postgres_changes', { 
@@ -113,8 +99,7 @@ const DraftPage: React.FC = () => {
           schema: 'public', 
           table: 'picks', 
           filter: `draft_id=eq.${draftId}` 
-        }, (payload) => {
-          setCurrentPick(payload.new as Pick);
+        }, () => {
           fetchDraftData(); // Refetch all data to ensure consistency
         })
         .subscribe();

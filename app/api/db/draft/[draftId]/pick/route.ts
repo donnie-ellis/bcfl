@@ -24,7 +24,7 @@ export async function GET(
       .from('picks')
       .select(`*`)
       .eq('draft_id', draftId)
-      .eq('total_pick_number', draft.current_pick!)
+      .eq('total_pick_number', draft.current_pick)
       .single();
 
     if (pickError) throw pickError;
@@ -96,15 +96,17 @@ export async function POST(
     // Increment the current pick
     const { data: draft, error: fetchDraftError } = await supabase
       .from('drafts')
-      .select('current_pick')
+      .select('current_pick, total_picks')
       .eq('id', draftId)
       .single();
 
     if (fetchDraftError) throw fetchDraftError;
 
+    const nextPick = Math.min(draft.current_pick + 1, draft.total_picks);
+
     const { error: updateDraftError } = await supabase
       .from('drafts')
-      .update({ current_pick: draft.current_pick + 1 })
+      .update({ current_pick: nextPick })
       .eq('id', draftId);
 
     if (updateDraftError) throw updateDraftError;
