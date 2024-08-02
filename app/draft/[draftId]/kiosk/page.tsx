@@ -5,13 +5,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
 import Profile from '@/components/Profile';
-import PlayersList from '@/components/PlayersList';
-import DraftedPlayers from '@/components/DraftedPlayers';
-import DraftStatus from '@/components/DraftStatus';
-import PlayerDetails from '@/components/PlayerDetails';
 import { League, Draft, LeagueSettings, Player, Team, Pick } from '@/lib/types';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import RoundSquares from '@/components/RoundSquares';
+import DraftList from '@/components/DraftList';
 import { toast } from "sonner";
 
 const KioskPage: React.FC = () => {
@@ -22,7 +19,6 @@ const KioskPage: React.FC = () => {
   const [league, setLeague] = useState<League | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [leagueSettings, setLeagueSettings] = useState<LeagueSettings | null>(null);
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [currentPick, setCurrentPick] = useState<Pick | null>(null);
   const [isMounted, setIsMounted] = useState(true);
@@ -149,6 +145,8 @@ const KioskPage: React.FC = () => {
     return <div>Loading...</div>;
   }
 
+  const currentTeamKey = currentPick ? currentPick.team_key : '';
+
   return (
     <div className="flex flex-col h-screen">
       <div className="flex justify-between items-center p-4 bg-background">
@@ -171,8 +169,13 @@ const KioskPage: React.FC = () => {
         )}
       </div>
 
-      <div className="flex-grow flex overflow-hidden">
-        
+      <div className="flex-grow overflow-hidden">
+        {draft && currentTeamKey && (
+          <DraftList
+            draft={draft}
+            currentTeamKey={currentTeamKey}
+          />
+        )}
       </div>
     </div>
   );
