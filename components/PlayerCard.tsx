@@ -2,7 +2,7 @@
 import React from 'react';
 import { Player } from '@/lib/types';
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface PlayerCardProps {
   player: Player;
@@ -16,15 +16,25 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick }) =
       className={`mb-2 cursor-pointer hover:bg-gray-100 transition-all ${isDrafted ? 'opacity-50' : ''}`}
       onClick={onClick}
     >
-      <CardContent className="p-3 flex items-center justify-between">
-        <div>
+      <CardContent className="p-3 flex items-center space-x-3">
+        <Avatar className="h-12 w-12 rounded">
+          <AvatarImage src={player.headshot_url || player.image_url} alt={player.full_name} />
+          <AvatarFallback>{player.full_name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+        </Avatar>
+        <div className="flex-grow">
           <p className="font-semibold">{player.full_name}</p>
-          <p className="text-sm text-gray-500">{player.editorial_team_full_name}</p>
+          <p className="text-sm">
+            <span className="font-medium text-primary">{player.display_position}</span>
+            {player.editorial_team_full_name && (
+              <> - <span className="text-gray-500">{player.editorial_team_full_name}</span></>
+            )}
+          </p>
         </div>
-        <div className="flex items-center space-x-2">
-          <Badge variant="secondary">{player.display_position}</Badge>
-          <span className="text-sm font-medium">{player.rank ? '#' + player.rank : ''}</span>
-        </div>
+        {player.rank && (
+          <div className="text-sm font-medium">
+            #{player.rank}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -13,6 +13,7 @@ import { League, Draft, LeagueSettings, Player, Team, Pick } from '@/lib/types';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import SubmitPickButton from '@/components/SubmitPicksButton';
 import { toast } from "sonner";
+import Link from 'next/link';
 
 const DraftPage: React.FC = () => {
   const params = useParams();
@@ -26,6 +27,7 @@ const DraftPage: React.FC = () => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [team, setTeam] = useState<Team | null>(null);
   const [currentPick, setCurrentPick] = useState<Pick | null>(null);
+  const [isCommissioner, setIsCommissioner] = useState(false);
 
   const fetchDraftData = async () => {
     if (!supabase) return;
@@ -78,6 +80,12 @@ const DraftPage: React.FC = () => {
   useEffect(() => {
     if (draftId && supabase) {
       fetchDraftData();
+
+      async () => {
+      const commissionerResponse = await fetch(`/api/yahoo/isCommissioner/${league?.league_key}`);
+      const commissionerData = await commissionerResponse.json();
+      setIsCommissioner(commissionerData.isCommissioner);
+    }
 
       const draftSubscription = supabase
         .channel('draft_updates')
@@ -160,6 +168,11 @@ const DraftPage: React.FC = () => {
           {`${league?.name} ${draft?.name} Draft`}
         </h1>
         <Profile />
+        {isCommissioner && (
+          <Link href={`/draft/${draftId}/kiosk`} className="mr-4 text-blue-500 hover:underline">
+            Kiosk Mode
+          </Link>
+        )}
       </div>
 
       <div className="flex flex-grow overflow-hidden">
