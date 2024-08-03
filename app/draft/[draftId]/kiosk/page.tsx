@@ -1,3 +1,5 @@
+// ./app/draft/[draftId]/kiosk/page.tsx
+
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -141,7 +143,8 @@ const KioskPage: React.FC = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to submit pick');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit pick');
       }
 
       toast.success(`${player.full_name} has been drafted!`);

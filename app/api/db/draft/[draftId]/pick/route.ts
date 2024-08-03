@@ -1,4 +1,5 @@
 // ./app/api/db/draft/[draftId]/pick/route.ts
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
 import { getServerAuthSession } from "@/auth";
@@ -141,7 +142,7 @@ async function checkUserAuthorization(supabase, userGuid: string, teamKey: strin
     .from('managers')
     .select('is_commissioner')
     .eq('guid', userGuid)
-    .eq('league_keys', leagueKey)
+    .contains('league_keys', [leagueKey])
     .single();
 
   if (commissionerError) {
