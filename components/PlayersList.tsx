@@ -18,7 +18,7 @@ const PlayersList: React.FC<PlayersListProps> = ({ leagueKey, draftId, onPlayerS
   const [draftedPlayerIds, setDraftedPlayerIds] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
-  const [hideSelected, setHideSelected] = useState(false);
+  const [hideSelected, setHideSelected] = useState(true);
   const supabase = useSupabaseClient();
 
   useEffect(() => {
