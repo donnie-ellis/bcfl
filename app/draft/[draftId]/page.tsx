@@ -184,7 +184,7 @@ const DraftPage: React.FC = () => {
           />
         </div>
         
-        <div className="w-1/2 p-2 overflow-auto flex flex-col">
+        <div className="w-1/2 p-2 overflow-auto flex flex-col gap-y-4">
           <DraftStatus
             draft={draft}
             leagueSettings={leagueSettings}

@@ -20,7 +20,7 @@ interface DraftStatusProps {
 const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams }) => {
   if (!draft || !leagueSettings) {
     return (
-      <Card className="mb-4">
+      <Card className="">
         <CardHeader className="pb-2">
           <Skeleton className="h-6 w-48 mx-auto" />
         </CardHeader>
@@ -60,7 +60,7 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams 
   const nextFivePicks = Array.from({ length: 5 }, (_, i) => getCurrentTeam(currentPick + i + 1));
 
   return (
-    <Card className="mb-4">
+    <Card className="">
       <CardHeader className="pb-2">
         <CardTitle className="text-center">Round {round} Pick {pickInRound}</CardTitle>
       </CardHeader>
