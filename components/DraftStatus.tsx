@@ -10,14 +10,16 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import TeamNeeds from './TeamNeeds';
 
 interface DraftStatusProps {
   draft: Draft | null;
   leagueSettings: LeagueSettings | null;
   teams: Team[];
+  team: Team
 }
 
-const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams }) => {
+const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams, team }) => {
   if (!draft || !leagueSettings) {
     return (
       <Card className="">

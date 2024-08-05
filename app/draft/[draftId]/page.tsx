@@ -14,6 +14,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import SubmitPickButton from '@/components/SubmitPicksButton';
 import { toast } from "sonner";
 import Link from 'next/link';
+import TeamNeeds from '@/components/TeamNeeds';
 
 const DraftPage: React.FC = () => {
   const params = useParams();
@@ -189,6 +190,12 @@ const DraftPage: React.FC = () => {
             draft={draft}
             leagueSettings={leagueSettings}
             teams={teams}
+            team={team}
+          />
+          <TeamNeeds 
+            teamKey={team?.team_key}
+            draftId={draft.id}
+            leagueSettings={leagueSettings}
           />
           <SubmitPickButton
             isCurrentUserPick={isCurrentUserPick}

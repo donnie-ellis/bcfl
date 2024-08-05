@@ -23,9 +23,9 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draftId, teamKey 
   const supabase = useSupabaseClient();
 
   useEffect(() => {
-    const fetchTeamPicks = async () => {
-      if (!supabase) return;
+    if (!supabase) return;
 
+    const fetchTeamPicks = async () => {
       const { data: picks, error } = await supabase
         .from('picks')
         .select(`
@@ -46,29 +46,58 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draftId, teamKey 
 
     const updatePositionNeeds = (picks: (Pick & { player: Player | null })[]) => {
       const needs: PositionNeed[] = leagueSettings.roster_positions
-        .filter(pos => pos.roster_position.position !== 'BN' && pos.roster_position.position !== 'IR')
+        .filter(pos => !['BN', 'IR'].includes(pos.roster_position.position))
         .map(pos => ({
           position: pos.roster_position.position,
           needed: pos.roster_position.count,
           filled: 0
         }));
 
+      const flexPositions = ['W/R/T', 'W/R'];
+      const regularPositions = needs.filter(need => !flexPositions.includes(need.position));
+      const flexNeeds = needs.filter(need => flexPositions.includes(need.position));
+
       picks.forEach(pick => {
         if (pick.player) {
-          const positionNeed = needs.find(need => pick.player!.eligible_positions.includes(need.position));
-          if (positionNeed) {
-            positionNeed.filled = Math.min(positionNeed.filled + 1, positionNeed.needed);
+          const eligiblePositions = pick.player.eligible_positions;
+          let positionFilled = false;
+
+          // First, try to fill regular positions
+          for (const position of eligiblePositions) {
+            const positionNeed = regularPositions.find(need => need.position === position);
+            if (positionNeed && positionNeed.filled < positionNeed.needed) {
+              positionNeed.filled++;
+              positionFilled = true;
+              break;
+            }
+          }
+
+          // If no regular position was filled, try to fill flex positions
+          if (!positionFilled) {
+            for (const flexNeed of flexNeeds) {
+              if (flexNeed.position === 'W/R/T' && 
+                  (eligiblePositions.includes('WR') || eligiblePositions.includes('RB') || eligiblePositions.includes('TE')) && 
+                  flexNeed.filled < flexNeed.needed) {
+                flexNeed.filled++;
+                break;
+              } else if (flexNeed.position === 'W/R' && 
+                         (eligiblePositions.includes('WR') || eligiblePositions.includes('RB')) && 
+                         flexNeed.filled < flexNeed.needed) {
+                flexNeed.filled++;
+                break;
+              }
+            }
           }
         }
       });
 
-      setPositionNeeds(needs);
+      setPositionNeeds([...regularPositions, ...flexNeeds]);
     };
 
     fetchTeamPicks();
 
     const subscription = supabase
-      .channel('team_picks')
+      .channel('team_needs')
       .on('postgres_changes', { 
         event: 'UPDATE', 
         schema: 'public', 
@@ -98,15 +127,15 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draftId, teamKey 
       </CardHeader>
       <CardContent className="p-0">
         <ScrollArea className="h-[calc(100%-2rem)] px-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+          <div className="flex flex-wrap gap-2">
             {positionNeeds.map((need) => (
               <Badge
                 key={need.position}
                 variant="outline"
-                className={`flex items-center justify-between p-2 ${getSeverityColor(need.needed, need.filled)}`}
+                className={`flex items-center justify-between p-2 ${getSeverityColor(need.needed, need.filled)} flex-grow basis-0 min-w-[80px]`}
               >
-                <span className="font-bold">{need.position}</span>
-                <span>{need.filled}/{need.needed}</span>
+                <span className="font-bold text-xs">{need.position}</span>
+                <span className="text-xs">{need.filled}/{need.needed}</span>
               </Badge>
             ))}
           </div>

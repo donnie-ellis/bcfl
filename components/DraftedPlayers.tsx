@@ -33,9 +33,8 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = ({ leagueKey, draftId, lea
 
       if (error) {
         console.error('Error fetching drafted players:', error);
-      } else {
+      } 
         setDraftedPlayers(data);
-      }
     };
 
     if (supabase) {

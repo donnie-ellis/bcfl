@@ -9,6 +9,7 @@ import PlayerCard from '@/components/PlayerCard';
 import PlayerList from '@/components/PlayersList';
 import SubmitPickButton from '@/components/SubmitPicksButton';
 import { Team, Pick, Player, LeagueSettings } from '@/lib/types';
+import TeamNeeds from './TeamNeeds';
 
 interface CurrentPickDetailsProps {
   currentTeam: Team;
@@ -70,6 +71,11 @@ const CurrentPickDetails: React.FC<CurrentPickDetailsProps> = ({
       <CardContent className="flex-grow overflow-hidden">
         <ScrollArea className="h-full">
           <div className="space-y-4">
+            <TeamNeeds
+              draftId={draftId}
+              teamKey={currentTeam.team_key}
+              leagueSettings={leagueSettings}
+            />
             <div>
               <h3 className="font-semibold mb-2">Managers:</h3>
               <ul>
