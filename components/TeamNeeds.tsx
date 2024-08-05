@@ -3,8 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
 import { LeagueSettings, Pick, Player } from '@/lib/types';
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface TeamNeedsProps {
   leagueSettings: LeagueSettings;
@@ -23,7 +21,7 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draftId, teamKey 
   const supabase = useSupabaseClient();
 
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase || !teamKey) return;
 
     const fetchTeamPicks = async () => {
       const { data: picks, error } = await supabase
@@ -111,7 +109,7 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draftId, teamKey 
     return () => {
       supabase.removeChannel(subscription);
     };
-  }, [supabase, draftId, teamKey, leagueSettings]);
+  }, [supabase, draftId, teamKey, leagueSettings]); // Added teamKey to the dependency array
 
   const getSeverityColor = (needed: number, filled: number) => {
     const remaining = needed - filled;

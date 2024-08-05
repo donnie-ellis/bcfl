@@ -17,46 +17,44 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = ({ leagueKey, draftId, lea
   const [draftedPlayers, setDraftedPlayers] = useState<(Pick & { player: Player })[]>([]);
   const supabase = useSupabaseClient();
 
-  useEffect(() => {
-    const fetchDraftedPlayers = async () => {
-      if (!supabase) return;
+  const fetchDraftedPlayers = async () => {
+    if (!supabase) return;
 
-      const { data, error } = await supabase
-        .from('picks')
-        .select(`
-          *,
-          player:players(*)
-        `)
-        .eq('draft_id', draftId)
-        .eq('team_key', teamKey)
-        .order('total_pick_number', { ascending: true });
+    const { data, error } = await supabase
+      .from('picks')
+      .select(`
+        *,
+        player:players(*)
+      `)
+      .eq('draft_id', draftId)
+      .eq('team_key', teamKey)
+      .order('total_pick_number', { ascending: true });
 
-      if (error) {
-        console.error('Error fetching drafted players:', error);
-      } 
-        setDraftedPlayers(data);
-    };
-
-    if (supabase) {
-      fetchDraftedPlayers();
-
-      const subscription = supabase
-        .channel('drafted_players')
-        .on('postgres_changes', { 
-          event: 'UPDATE', 
-          schema: 'public', 
-          table: 'picks', 
-          filter: `draft_id=eq.${draftId}` 
-        }, (payload) => {
-          fetchDraftedPlayers();
-        })
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(subscription);
-      };
+    if (error) {
+      console.error('Error fetching drafted players:', error);
+    } else {
+      setDraftedPlayers(data);
     }
-  }, [draftId, supabase]);
+  };
+
+  useEffect(() => {
+    fetchDraftedPlayers();
+
+    const subscription = supabase?.channel('drafted_players')
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'picks', 
+        filter: `draft_id=eq.${draftId} AND team_key=eq.${teamKey}` 
+      }, (payload) => {
+        fetchDraftedPlayers();
+      })
+      .subscribe();
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, [draftId, teamKey, supabase]);
 
   return (
     <Card className="h-full flex flex-col">
@@ -78,14 +76,14 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = ({ leagueKey, draftId, lea
                 />
               ) : (
                 <Card 
-                className={'mb-2 cursor-pointer hover:bg-gray-100 transition-all opacity-50'}
-              >
-                <CardContent className="p-3 flex items-center space-x-3">
-                  <div className="flex-grow">
-                    <p className="font-semibold">Not yet selected</p>
-                  </div>
-                </CardContent>
-              </Card>
+                  className='mb-2 cursor-pointer hover:bg-gray-100 transition-all opacity-50'
+                >
+                  <CardContent className="p-3 flex items-center space-x-3">
+                    <div className="flex-grow">
+                      <p className="font-semibold">Not yet selected</p>
+                    </div>
+                  </CardContent>
+                </Card>
               )}
             </div>
           ))}

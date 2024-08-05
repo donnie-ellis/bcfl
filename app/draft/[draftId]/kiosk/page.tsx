@@ -13,6 +13,7 @@ import DraftList from '@/components/DraftList';
 import CurrentPickDetails from '@/components/CurrentPickDetails';
 import { toast } from "sonner";
 import { RealtimeChannel } from '@supabase/supabase-js';
+import DraftedPlayers from '@/components/DraftedPlayers';
 
 const KioskPage: React.FC = () => {
   const params = useParams();
@@ -188,10 +189,12 @@ const KioskPage: React.FC = () => {
       <div className="flex-grow overflow-hidden flex">
         <div className="w-1/2 p-4">
           {draft && currentTeamKey && (
-            <DraftList
-              draft={draft}
-              currentTeamKey={currentTeamKey}
-            />
+          <DraftedPlayers
+            leagueKey={draft.league_id || ''}
+            draftId={draftId}
+            leagueSettings={leagueSettings}
+            teamKey={currentTeam.team_key}
+          />
           )}
         </div>
         <div className="w-1/2 p-4">
