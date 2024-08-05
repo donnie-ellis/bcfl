@@ -97,6 +97,11 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams,
           </p>
 
           <Progress value={progress} className="w-full" />
+          <TeamNeeds 
+            teamKey={team?.team_key}
+            draftId={draft.id}
+            leagueSettings={leagueSettings}
+          />
         </div>
       </CardContent>
     </Card>

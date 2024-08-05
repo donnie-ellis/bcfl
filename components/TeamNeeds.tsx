@@ -121,27 +121,18 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draftId, teamKey 
   };
 
   return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle>Team Needs</CardTitle>
-      </CardHeader>
-      <CardContent className="p-0">
-        <ScrollArea className="h-[calc(100%-2rem)] px-4">
-          <div className="flex flex-wrap gap-2">
-            {positionNeeds.map((need) => (
-              <Badge
-                key={need.position}
-                variant="outline"
-                className={`flex items-center justify-between p-2 ${getSeverityColor(need.needed, need.filled)} flex-grow basis-0 min-w-[80px]`}
-              >
-                <span className="font-bold text-xs">{need.position}</span>
-                <span className="text-xs">{need.filled}/{need.needed}</span>
-              </Badge>
-            ))}
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
+    <div className="flex flex-wrap gap-2">
+      {positionNeeds.map((need) => (
+        <Badge
+          key={need.position}
+          variant="outline"
+          className={`flex items-center justify-between p-2 ${getSeverityColor(need.needed, need.filled)} flex-grow basis-0 min-w-[80px]`}
+        >
+          <span className="font-bold text-xs">{need.position}</span>
+          <span className="text-xs">{need.filled}/{need.needed}</span>
+        </Badge>
+      ))}
+    </div>
   );
 };
 
