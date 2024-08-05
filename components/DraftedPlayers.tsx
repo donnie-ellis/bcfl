@@ -28,7 +28,6 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = ({ leagueKey, draftId, lea
           player:players(*)
         `)
         .eq('draft_id', draftId)
-        .eq('is_picked', true)
         .eq('team_key', teamKey)
         .order('total_pick_number', { ascending: true });
 
@@ -72,12 +71,22 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = ({ leagueKey, draftId, lea
               <div className="font-semibold text-sm text-gray-500 mb-1">
                 Round {pick.round_number}, Pick {pick.pick_number}
               </div>
-              {pick.player && (
+              {pick.player ? (
                 <PlayerCard
                   player={pick.player}
                   isDrafted={true}
                   onClick={() => {}} // No action on click for drafted players
                 />
+              ) : (
+                <Card 
+                className={'mb-2 cursor-pointer hover:bg-gray-100 transition-all opacity-50'}
+              >
+                <CardContent className="p-3 flex items-center space-x-3">
+                  <div className="flex-grow">
+                    <p className="font-semibold">Not yet selected</p>
+                  </div>
+                </CardContent>
+              </Card>
               )}
             </div>
           ))}
