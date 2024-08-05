@@ -14,6 +14,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import SubmitPickButton from '@/components/SubmitPicksButton';
 import { toast } from "sonner";
 import Link from 'next/link';
+import DraftHeader from '@/components/DraftHeader';
 
 const DraftPage: React.FC = () => {
   const params = useParams();
@@ -159,22 +160,7 @@ const DraftPage: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen">
-      <div className="flex justify-between items-center p-4 bg-background">
-        <h1 className="text-2xl font-bold flex gap-4">
-          <Avatar className='h-12 w-12'>
-            <AvatarFallback>{league?.name}</AvatarFallback>
-            <AvatarImage src={league?.logo_url} alt={league?.name} />
-          </Avatar>
-          {`${league?.name} ${draft?.name} Draft`}
-        </h1>
-        <Profile />
-        {isCommissioner && (
-          <Link href={`/draft/${draftId}/kiosk`} className="mr-4 text-blue-500 hover:underline">
-            Kiosk Mode
-          </Link>
-        )}
-      </div>
-
+      <DraftHeader league={league} draft={draft} />
       <div className="flex flex-grow overflow-hidden">
         <div className="w-1/4 p-2 overflow-hidden flex flex-col">
           <PlayersList
