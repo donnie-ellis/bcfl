@@ -11,7 +11,7 @@ export async function GET(request: NextRequest, { params }: { params: { leagueKe
   try {
     const data = await requestYahoo(path);
     const teams: Team[] = await parseTeamData(data);
-    
+      
     if (teams.length === 0) {
       console.error('No teams parsed from the data');
       return NextResponse.json({ error: 'No teams found' }, { status: 404 });

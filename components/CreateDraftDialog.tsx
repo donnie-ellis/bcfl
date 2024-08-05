@@ -52,6 +52,24 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
     setOrderedTeams(items);
   };
 
+  function prepareTeamForUpsert(team: Team, leagueId: string) {
+    return {
+      league_id: leagueId,
+      team_key: team.team_key,
+      team_id: team.team_id,
+      name: team.name,
+      url: team.url,
+      team_logos: team.team_logos,
+      waiver_priority: team.waiver_priority ? parseInt(team.waiver_priority) : null,
+      number_of_moves: team.number_of_moves,
+      number_of_trades: team.number_of_trades,
+      league_scoring_type: team.league_scoring_type,
+      has_draft_grade: team.has_draft_grade,
+      faab_balance: team.faab_balance,
+    };
+  }
+  
+
 const handleCreateDraft = async () => {
     if (!draftName.trim()) {
       alert('Please enter a draft name');
@@ -60,6 +78,19 @@ const handleCreateDraft = async () => {
 
     setIsCreatingDraft(true);
     try {
+      // Update the teams in the DB
+      const teamsResponse = await fetch(`api/db/league/${leagueKey}/teams`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(teams),
+      })
+      if (!teamsResponse.ok) {
+        throw new Error('Failed to update teams');
+      }
+
+      // Update the managers in the DB
       const managerResponse = await fetch(`api/yahoo/league/${leagueKey}/managers`, {
         method: 'POST',
         headers: {
@@ -69,6 +100,8 @@ const handleCreateDraft = async () => {
       if (!managerResponse.ok) {
         throw new Error('Failed to update managers');
       }
+
+      // Create the Draft in the DB
       const response = await fetch('/api/db/draft', {
         method: 'POST',
         headers: {

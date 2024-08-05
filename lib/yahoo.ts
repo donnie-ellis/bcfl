@@ -152,7 +152,6 @@ export async function parseTeamData(data: any): Promise<Team[]> {
         team_key: '',
         team_id: '',
         name: '',
-        is_owned_by_current_login: false,
         url: '',
         team_logos: [],
         waiver_priority: '',
@@ -181,9 +180,6 @@ export async function parseTeamData(data: any): Promise<Team[]> {
               break;
             case 'name':
               team.name = item[key];
-              break;
-            case 'is_owned_by_current_login':
-              team.is_owned_by_current_login = item[key] === 1;
               break;
             case 'url':
               team.url = item[key];
