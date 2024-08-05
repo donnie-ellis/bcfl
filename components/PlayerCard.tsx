@@ -7,16 +7,17 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 interface PlayerCardProps {
   player: Player;
   isDrafted: boolean;
+  fadeDrafted?: boolean;
   onClick: () => void;
 }
 
-const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick }) => {
+const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, fadeDrafted, onClick }) => {
   return (
     <Card 
-      className={`mb-2 cursor-pointer hover:bg-gray-100 transition-all ${isDrafted ? 'opacity-50' : ''}`}
+      className={`mb-2 cursor-pointer group transition-all duration-300 ease-in-out hover:shadow-lg hover:scale-105 ${isDrafted && fadeDrafted ? 'opacity-50' : ''}`}
       onClick={onClick}
     >
-      <CardContent className="p-3 flex items-center space-x-3">
+      <CardContent className="p-3 flex items-center space-x-3 text-muted-foreground group-hover:text-foreground transition-colors duration-300">
         <Avatar className="h-12 w-12 rounded">
           <AvatarImage src={player.headshot_url || player.image_url} alt={player.full_name} />
           <AvatarFallback>{player.full_name.split(' ').map(n => n[0]).join('')}</AvatarFallback>

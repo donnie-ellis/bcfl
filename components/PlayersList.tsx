@@ -107,13 +107,14 @@ const PlayersList: React.FC<PlayersListProps> = ({ leagueKey, draftId, onPlayerS
           />
         </div>
         <ScrollArea className="flex-grow px-4">
-          <div className="space-y-2 py-2">
+          <div className="space-y-2 py-2 px-2">
             {filteredPlayers.map((player) => (
               <PlayerCard
                 key={player.id}
                 player={player}
                 isDrafted={draftedPlayerIds.includes(player.id)}
                 onClick={() => onPlayerSelect(player)}
+                fadeDrafted={true}
               />
             ))}
           </div>
