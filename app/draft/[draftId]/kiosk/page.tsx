@@ -14,6 +14,7 @@ import CurrentPickDetails from '@/components/CurrentPickDetails';
 import { toast } from "sonner";
 import { RealtimeChannel } from '@supabase/supabase-js';
 import DraftedPlayers from '@/components/DraftedPlayers';
+import DraftHeader from '@/components/DraftHeader';
 
 const KioskPage: React.FC = () => {
   const params = useParams();
@@ -166,23 +167,17 @@ const KioskPage: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen">
-      <div className="flex justify-between items-center p-4 bg-background">
-        <h1 className="text-2xl font-bold flex gap-4">
-          <Avatar className='h-12 w-12'>
-            <AvatarFallback>{league?.name}</AvatarFallback>
-            <AvatarImage src={league?.logo_url} alt={league?.name} />
-          </Avatar>
-          {`${league?.name} ${draft?.name} Draft - Kiosk Mode`}
-        </h1>
-        <Profile />
-      </div>
-
+      <DraftHeader league={league} draft={draft} />
       <div className="flex-none w-full">
         {draft && leagueSettings && (
-          <RoundSquares
-            draft={draft}
-            leagueSettings={leagueSettings}
-          />
+          <div className="p-4">
+            <h2 className="text-2xl font-bold mb-4">Current Round</h2>
+            <RoundSquares
+              draft={draft}
+              leagueSettings={leagueSettings}
+              currentRoundOnly={true}
+            />
+          </div>
         )}
       </div>
 
