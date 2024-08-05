@@ -206,6 +206,7 @@ const DraftPage: React.FC = () => {
             leagueKey={draft?.league_id || ''}
             draftId={draftId}
             leagueSettings={leagueSettings}
+            teamKey={team?.team_key}
           />
         </div>
       </div>

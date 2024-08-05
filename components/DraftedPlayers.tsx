@@ -10,9 +10,10 @@ interface DraftedPlayersProps {
   leagueKey: string;
   draftId: string;
   leagueSettings: LeagueSettings;
+  teamKey: string
 }
 
-const DraftedPlayers: React.FC<DraftedPlayersProps> = ({ leagueKey, draftId, leagueSettings }) => {
+const DraftedPlayers: React.FC<DraftedPlayersProps> = ({ leagueKey, draftId, leagueSettings, teamKey }) => {
   const [draftedPlayers, setDraftedPlayers] = useState<(Pick & { player: Player })[]>([]);
   const supabase = useSupabaseClient();
 
@@ -28,6 +29,7 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = ({ leagueKey, draftId, lea
         `)
         .eq('draft_id', draftId)
         .eq('is_picked', true)
+        .eq('team_key', teamKey)
         .order('total_pick_number', { ascending: true });
 
       if (error) {
