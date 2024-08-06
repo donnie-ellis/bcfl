@@ -58,9 +58,6 @@ const DraftHeader: React.FC<DraftHeaderProps> = ({ league, draft, additionalCont
           <Button variant="outline">Kiosk Mode</Button>
         </Link>
       )}
-      <Link href={`/league/${league?.league_key}`} passHref>
-        <Button variant="outline">League Home</Button>
-      </Link>
     </>
   );
 
