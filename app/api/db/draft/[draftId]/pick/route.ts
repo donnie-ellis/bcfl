@@ -37,6 +37,8 @@ export async function GET(
   }
 }
 
+
+// POST
 export async function POST(
   request: NextRequest,
   { params }: { params: { draftId: string } }
@@ -75,50 +77,28 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized to make this pick' }, { status: 403 });
     }
 
-    // Update the pick
-    const { error: updateError } = await supabase
-      .from('picks')
-      .update({ player_id: playerId, is_picked: true, picked_by: userGuid })
-      .eq('id', pickId)
-      .eq('draft_id', draftId);
+    // Call the submit_draft_pick function
+    const { data, error } = await supabase.rpc('submit_draft_pick', {
+      p_draft_id: parseInt(draftId),
+      p_pick_id: pickId,
+      p_player_id: playerId,
+      p_picked_by: userGuid
+    });
 
-    if (updateError) throw updateError;
+    if (error) throw error;
 
-    // Update the draft_players table
-    const { error: draftPlayerError } = await supabase
-      .from('draft_players')
-      .upsert(
-        { draft_id: draftId, player_id: playerId, is_picked: true },
-        { onConflict: 'draft_id,player_id' }
-      );
+    if (!data.success) {
+      return NextResponse.json({ error: data.message }, { status: 500 });
+    }
 
-    if (draftPlayerError) throw draftPlayerError;
-
-    // Increment the current pick
-    const { data: draft, error: fetchDraftError } = await supabase
-      .from('drafts')
-      .select('current_pick, total_picks')
-      .eq('id', draftId)
-      .single();
-
-    if (fetchDraftError) throw fetchDraftError;
-
-    const nextPick = Math.min(draft.current_pick + 1, draft.total_picks);
-
-    const { error: updateDraftError } = await supabase
-      .from('drafts')
-      .update({ current_pick: nextPick })
-      .eq('id', draftId);
-
-    if (updateDraftError) throw updateDraftError;
-
-    return NextResponse.json({ message: 'Pick submitted successfully' });
+    return NextResponse.json({ message: data.message });
   } catch (error) {
     console.error('Error submitting pick:', error);
     return NextResponse.json({ error: 'Failed to submit pick', details: error }, { status: 500 });
   }
 }
 
+// DELETE
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { draftId: string } }
