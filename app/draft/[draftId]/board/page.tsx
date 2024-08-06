@@ -9,6 +9,7 @@ import DraftHeader from '@/components/DraftHeader';
 import RoundSquares from '@/components/RoundSquares';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const DraftBoardPage: React.FC = () => {
   const params = useParams();
@@ -102,11 +103,15 @@ const DraftBoardPage: React.FC = () => {
       <DraftHeader league={league} draft={draft} />
       <ScrollArea className="flex-grow">
         <div className="p-4 space-y-8">
-            {rounds.map((round) => (
-            <div key={round} className="space-y-2">
-                <h2 className="text-2xl font-bold">Round {round}</h2>
-                <div className="bg-secondary p-2 rounded-lg">
-                <RoundSquares
+          {rounds.map((round) => (
+          <Card key={round}>
+            <CardHeader>
+              <CardTitle>
+                Round {round}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RoundSquares
                     draft={{
                     ...draft,
                     picks: draft.picks.filter(
@@ -116,9 +121,9 @@ const DraftBoardPage: React.FC = () => {
                     leagueSettings={leagueSettings}
                     currentRoundOnly={false}
                 />
-                </div>
-            </div>
-            ))}
+            </CardContent>
+          </Card>
+          ))}
         </div>
       </ScrollArea>
     </div>
