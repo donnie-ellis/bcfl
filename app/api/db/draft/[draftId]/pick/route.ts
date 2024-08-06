@@ -119,6 +119,89 @@ export async function POST(
   }
 }
 
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { draftId: string } }
+) {
+  const supabase = getServerSupabaseClient();
+  const { draftId } = params;
+  const { pickId } = await request.json();
+
+  // Get the current user's session
+  const session = await getServerAuthSession();
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const userGuid = session.user.id;
+
+  try {
+    // Fetch the draft and league information
+    const { data: draft, error: draftError } = await supabase
+      .from('drafts')
+      .select('league_id')
+      .eq('id', draftId)
+      .single();
+
+    if (draftError) throw draftError;
+
+    // Check if the user is a commissioner
+    const isCommissioner = await checkCommissionerStatus(supabase, userGuid, draft.league_id);
+    if (!isCommissioner) {
+      return NextResponse.json({ error: 'Unauthorized to delete this pick' }, { status: 403 });
+    }
+
+    // Fetch the pick to be deleted
+    const { data: pick, error: pickError } = await supabase
+      .from('picks')
+      .select('player_id')
+      .eq('id', pickId)
+      .eq('draft_id', draftId)
+      .single();
+
+    if (pickError) throw pickError;
+
+    // Start a transaction
+    const { error: transactionError } = await supabase.rpc('begin_transaction');
+    if (transactionError) throw transactionError;
+
+    try {
+      // Clear the pick
+      const { error: clearPickError } = await supabase
+        .from('picks')
+        .update({ player_id: null, is_picked: false, picked_by: null })
+        .eq('id', pickId)
+        .eq('draft_id', draftId);
+
+      if (clearPickError) throw clearPickError;
+
+      // Update the draft_players table
+      if (pick.player_id) {
+        const { error: draftPlayerError } = await supabase
+          .from('draft_players')
+          .update({ is_picked: false })
+          .eq('draft_id', draftId)
+          .eq('player_id', pick.player_id);
+
+        if (draftPlayerError) throw draftPlayerError;
+      }
+
+      // Commit the transaction
+      const { error: commitError } = await supabase.rpc('commit_transaction');
+      if (commitError) throw commitError;
+
+      return NextResponse.json({ message: 'Pick deleted successfully' });
+    } catch (error) {
+      // Rollback the transaction if any error occurs
+      await supabase.rpc('rollback_transaction');
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error deleting pick:', error);
+    return NextResponse.json({ error: 'Failed to delete pick', details: error }, { status: 500 });
+  }
+}
+
 async function checkUserAuthorization(supabase, userGuid: string, teamKey: string, leagueKey: string): Promise<boolean> {
   // Check if the user is the team owner
   const { data: teamOwner, error: teamError } = await supabase
@@ -138,17 +221,21 @@ async function checkUserAuthorization(supabase, userGuid: string, teamKey: strin
   }
 
   // Check if the user is a commissioner
-  const { data: commissioner, error: commissionerError } = await supabase
+  return await checkCommissionerStatus(supabase, userGuid, leagueKey);
+}
+
+async function checkCommissionerStatus(supabase, userGuid: string, leagueKey: string): Promise<boolean> {
+  const { data: manager, error } = await supabase
     .from('managers')
     .select('is_commissioner')
     .eq('guid', userGuid)
     .contains('league_keys', [leagueKey])
     .single();
 
-  if (commissionerError) {
-    console.error('Error checking commissioner status:', commissionerError);
+  if (error) {
+    console.error('Error checking commissioner status:', error);
     return false;
   }
 
-  return commissioner && commissioner.is_commissioner;
+  return manager?.is_commissioner || false;
 }
