@@ -7,9 +7,10 @@ interface RoundSquaresProps {
   draft: Draft & { picks: (Pick & { player: Player | null, team: Team })[] };
   leagueSettings: LeagueSettings;
   currentRoundOnly?: boolean;
+  onSquareHover?: (pick: Pick & { player: Player | null, team: Team }) => React.ReactNode;
 }
 
-const RoundSquares: React.FC<RoundSquaresProps> = ({ draft, leagueSettings, currentRoundOnly = false }) => {
+const RoundSquares: React.FC<RoundSquaresProps> = ({ draft, leagueSettings, currentRoundOnly = false, onSquareHover }) => {
   const picksPerRound = draft.picks.length / draft.rounds;
   const currentRound = Math.ceil(draft.current_pick / picksPerRound);
 
@@ -24,6 +25,7 @@ const RoundSquares: React.FC<RoundSquaresProps> = ({ draft, leagueSettings, curr
           <DraftSquare
             pick={pick}
             isCurrentPick={pick.total_pick_number === draft.current_pick}
+            onSquareHover={onSquareHover}
           />
         </div>
       ))}

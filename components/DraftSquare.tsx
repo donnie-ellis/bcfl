@@ -3,14 +3,16 @@ import React from 'react';
 import { Team, Pick, Player } from '@/lib/types';
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 
 interface DraftSquareProps {
   pick: Pick & { player: Player | null, team: Team };
   isCurrentPick: boolean;
+  onSquareHover?: (pick: Pick & { player: Player | null, team: Team }) => React.ReactNode;
 }
 
-const DraftSquare: React.FC<DraftSquareProps> = ({ pick, isCurrentPick }) => {
-  return (
+const DraftSquare: React.FC<DraftSquareProps> = ({ pick, isCurrentPick, onSquareHover }) => {
+  const Square = () => (
     <Card className={`w-full h-full ${isCurrentPick ? 'border-2 border-blue-500' : ''}`}>
       <CardContent className="p-2 h-full flex flex-col justify-between">
         <div className="text-xs">
@@ -38,6 +40,21 @@ const DraftSquare: React.FC<DraftSquareProps> = ({ pick, isCurrentPick }) => {
       </CardContent>
     </Card>
   );
+
+  if (onSquareHover) {
+    return (
+      <HoverCard>
+        <HoverCardTrigger asChild>
+          <div><Square /></div>
+        </HoverCardTrigger>
+        <HoverCardContent className="w-80">
+          {onSquareHover(pick)}
+        </HoverCardContent>
+      </HoverCard>
+    );
+  }
+
+  return <Square />;
 };
 
 export default DraftSquare;
