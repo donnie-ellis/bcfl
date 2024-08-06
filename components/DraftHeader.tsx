@@ -1,16 +1,21 @@
 // ./components/DraftHeader.tsx
-import React from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+
+import React, { useState, useEffect } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import Profile from '@/components/Profile';
 import { League, Draft } from '@/lib/types';
-import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger } from "@/components/ui/navigation-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu } from "lucide-react";
+import Link from 'next/link';
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Menu, Sun, Moon } from "lucide-react";
+import { useTheme } from 'next-themes';
 
 interface DraftHeaderProps {
   league: League | null;
@@ -19,100 +24,95 @@ interface DraftHeaderProps {
 }
 
 const DraftHeader: React.FC<DraftHeaderProps> = ({ league, draft, additionalContent }) => {
-  const { data: session } = useSession();
-  const pathname = usePathname();
-  const [isCommissioner, setIsCommissioner] = React.useState(false);
+  const [isCommissioner, setIsCommissioner] = useState(false);
+  const { theme, setTheme } = useTheme();
 
-  React.useEffect(() => {
+  useEffect(() => {
     const checkCommissionerStatus = async () => {
-      if (session && league) {
-        const response = await fetch(`/api/yahoo/user/league/${league.league_key}/isCommissioner`);
-        const data = await response.json();
-        setIsCommissioner(data.isCommissioner);
+      if (league) {
+        try {
+          const response = await fetch(`/api/db/league/${league.league_key}/isCommissioner`);
+          if (response.ok) {
+            const data = await response.json();
+            setIsCommissioner(data.isCommissioner);
+          }
+        } catch (error) {
+          console.error('Error checking commissioner status:', error);
+        }
       }
     };
 
     checkCommissionerStatus();
-  }, [session, league]);
+  }, [league]);
 
-  const navItems = [
-    { href: '/dashboard', label: 'Dashboard' },
-    { href: `/draft/${draft?.id}`, label: 'Draft' },
-    { href: `/draft/${draft?.id}/board`, label: 'Board' },
-    ...(isCommissioner ? [{ href: `/draft/${draft?.id}/kiosk`, label: 'Kiosk' }] : []),
-  ];
-
-  const renderNavItems = (mobile: boolean = false) => (
+  const NavButtons = () => (
     <>
-      {navItems.map((item) => (
-        <NavigationMenuItem key={item.href}>
-          <Link href={item.href} legacyBehavior passHref>
-            <NavigationMenuLink
-              className={cn(
-                "px-4 py-2 rounded-md transition-colors duration-200",
-                "text-sm font-medium",
-                "border border-transparent",
-                "hover:bg-accent hover:text-accent-foreground",
-                mobile ? "block w-full text-left mb-2" : "inline-block",
-                pathname === item.href
-                  ? "bg-primary text-primary-foreground"
-                  : "text-foreground",
-                "dark:text-foreground dark:hover:bg-accent dark:hover:text-accent-foreground",
-                "dark:data-[active]:bg-primary dark:data-[active]:text-primary-foreground"
-              )}
-              active={pathname === item.href}
-            >
-              {item.label}
-            </NavigationMenuLink>
-          </Link>
-        </NavigationMenuItem>
-      ))}
+      <Link href={`/draft/${draft?.id}`} passHref>
+        <Button variant="outline">Draft Central</Button>
+      </Link>
+      <Link href={`/draft/${draft?.id}/board`} passHref>
+        <Button variant="outline">Draft Board</Button>
+      </Link>
+      {isCommissioner && (
+        <Link href={`/draft/${draft?.id}/kiosk`} passHref>
+          <Button variant="outline">Kiosk Mode</Button>
+        </Link>
+      )}
+      <Link href={`/league/${league?.league_key}`} passHref>
+        <Button variant="outline">League Home</Button>
+      </Link>
     </>
+  );
+
+  const ThemeToggle = () => (
+    <Button
+      variant="outline"
+      size="icon"
+      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+      aria-label="Toggle theme"
+    >
+      <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+      <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+    </Button>
   );
 
   return (
     <div className="flex justify-between items-center p-4 bg-background">
-      <div className="flex items-center gap-4">
-        <Avatar className='h-12 w-12'>
-          <AvatarFallback>{league?.name}</AvatarFallback>
-          <AvatarImage src={league?.logo_url} alt={league?.name} />
-        </Avatar>
-        <h1 className="text-2xl font-bold hidden sm:block">
-          {`${league?.name} ${draft?.name} Draft`}
-        </h1>
-      </div>
-
+      <h1 className="text-2xl font-bold flex gap-4 items-center">
+        <Link href="/dashboard" className="hover:opacity-80 transition-opacity">
+          <Avatar className='h-12 w-12'>
+            <AvatarFallback>{league?.name?.[0]}</AvatarFallback>
+            <AvatarImage src={league?.logo_url} alt={league?.name} />
+          </Avatar>
+        </Link>
+        <span className="hidden md:inline">{`${league?.name} ${draft?.name} Draft`}</span>
+        <span className="md:hidden">{draft?.name}</span>
+      </h1>
       <div className="flex items-center space-x-4">
-        {/* Desktop Navigation */}
-        <NavigationMenu className="hidden sm:flex">
-          <NavigationMenuList className="space-x-2">
-            {renderNavItems()}
-          </NavigationMenuList>
-        </NavigationMenu>
-
-        {/* Mobile Navigation */}
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="sm:hidden">
-              <Menu className="h-6 w-6" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="right">
-            <NavigationMenu orientation="vertical" className="mt-10">
-              <NavigationMenuList className="flex-col items-start space-y-4">
-                {renderNavItems(true)}
-                <NavigationMenuItem>
-                  <Profile />
-                </NavigationMenuItem>
-              </NavigationMenuList>
-            </NavigationMenu>
-          </SheetContent>
-        </Sheet>
-
-        {additionalContent}
-        <div className="hidden sm:block">
-          <Profile />
+        <div className="hidden md:flex space-x-2">
+          <NavButtons />
         </div>
+        <ThemeToggle />
+        <div className="md:hidden">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Menu className="h-[1.2rem] w-[1.2rem]" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>{league?.name}</SheetTitle>
+                <SheetDescription>{draft?.name} Draft</SheetDescription>
+              </SheetHeader>
+              <div className="flex flex-col space-y-2 mt-4">
+                <NavButtons />
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+        {additionalContent}
+        <Profile />
       </div>
     </div>
   );
