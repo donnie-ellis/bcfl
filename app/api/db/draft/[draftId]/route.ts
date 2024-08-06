@@ -39,8 +39,6 @@ export async function GET(request: NextRequest, { params }: { params: { draftId:
       picks: picks
     };
 
-    console.log('Fetched draft data:', draftWithPicks);  // Add this line for debugging
-
     return NextResponse.json(draftWithPicks);
   } catch (error) {
     console.error('Error fetching draft:', error);
