@@ -1,19 +1,16 @@
 // ./app/draft/[draftId]/page.tsx
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
-import Profile from '@/components/Profile';
 import PlayersList from '@/components/PlayersList';
 import DraftedPlayers from '@/components/DraftedPlayers';
 import DraftStatus from '@/components/DraftStatus';
 import PlayerDetails from '@/components/PlayerDetails';
 import { League, Draft, LeagueSettings, Player, Team, Pick } from '@/lib/types';
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import SubmitPickButton from '@/components/SubmitPicksButton';
 import { toast } from "sonner";
-import Link from 'next/link';
 import DraftHeader from '@/components/DraftHeader';
 
 const DraftPage: React.FC = () => {
@@ -29,8 +26,9 @@ const DraftPage: React.FC = () => {
   const [team, setTeam] = useState<Team | null>(null);
   const [currentPick, setCurrentPick] = useState<Pick | null>(null);
   const [isCommissioner, setIsCommissioner] = useState(false);
-
-  const fetchDraftData = async () => {
+  const [isPickSubmitting, setIsPickSubmitting] = useState(false);
+  
+  const fetchDraftData = useCallback(async () => {
     if (!supabase) return;
 
     try {
@@ -76,7 +74,7 @@ const DraftPage: React.FC = () => {
       console.error('Error fetching data:', error);
       toast.error("Failed to fetch draft data. Please try again.");
     }
-  };
+  }, [supabase, draftId]);
 
   useEffect(() => {
     if (draftId && supabase) {
@@ -118,13 +116,15 @@ const DraftPage: React.FC = () => {
         supabase.removeChannel(picksSubscription);
       };
     }
-  }, [draftId, supabase]);
+  }, [draftId, supabase, fetchDraftData]);
 
   const isCurrentUserPick = currentPick?.team_key === team?.team_key;
 
   const handleSubmitPick = async () => {
+    setIsPickSubmitting(true);
     if (!selectedPlayer || !currentPick || !draft) {
       toast.error("Unable to submit pick. Please try again.");
+      setIsPickSubmitting(false);
       return;
     }
 
@@ -148,9 +148,11 @@ const DraftPage: React.FC = () => {
 
       setSelectedPlayer(null);
       fetchDraftData(); // Refetch data to update the draft state
+      setIsPickSubmitting(false);
     } catch (error) {
       console.error('Error submitting pick:', error);
       toast.error("Failed to submit pick. Please try again.");
+      setIsPickSubmitting(false);
     }
   };
 
@@ -182,6 +184,7 @@ const DraftPage: React.FC = () => {
             selectedPlayer={selectedPlayer}
             currentPick={currentPick}
             onSubmitPick={handleSubmitPick}
+            isPickSubmitting={isPickSubmitting}
           />
           <PlayerDetails 
             player={selectedPlayer} 

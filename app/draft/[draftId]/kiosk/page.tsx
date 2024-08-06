@@ -5,11 +5,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
-import Profile from '@/components/Profile';
 import { League, Draft, LeagueSettings, Player, Team, Pick } from '@/lib/types';
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import RoundSquares from '@/components/RoundSquares';
-import DraftList from '@/components/DraftList';
 import CurrentPickDetails from '@/components/CurrentPickDetails';
 import { toast } from "sonner";
 import { RealtimeChannel } from '@supabase/supabase-js';
@@ -26,6 +23,7 @@ const KioskPage: React.FC = () => {
   const [leagueSettings, setLeagueSettings] = useState<LeagueSettings | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [currentPick, setCurrentPick] = useState<Pick | null>(null);
+  const [isPicksubmitting, setIsPickSubmitting] = useState<boolean>(false);
 
   const fetchDraftData = useCallback(async () => {
     if (!supabase) return;
@@ -127,8 +125,10 @@ const KioskPage: React.FC = () => {
   }, [supabase, draftId, fetchDraftData]);
 
   const handleSubmitPick = async (player: Player) => {
+    setIsPickSubmitting(true);
     if (!currentPick || !draft) {
       toast.error("Unable to submit pick. Please try again.");
+      setIsPickSubmitting(false)
       return;
     }
 
@@ -151,9 +151,11 @@ const KioskPage: React.FC = () => {
 
       toast.success(`${player.full_name} has been drafted!`);
       fetchDraftData(); // Refetch data to update the draft state
+      setIsPickSubmitting(false);
     } catch (error) {
       console.error('Error submitting pick:', error);
       toast.error("Failed to submit pick. Please try again.");
+      setIsPickSubmitting(false);
     }
   };
 
@@ -202,6 +204,7 @@ const KioskPage: React.FC = () => {
               draftId={draftId}
               leagueSettings={leagueSettings}
               onSubmitPick={handleSubmitPick}
+              isPickSubmitting={isPicksubmitting}
             />
           )}
         </div>

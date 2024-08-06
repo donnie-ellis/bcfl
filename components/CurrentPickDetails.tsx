@@ -19,6 +19,7 @@ interface CurrentPickDetailsProps {
   draftId: string;
   leagueSettings: LeagueSettings;
   onSubmitPick: (player: Player) => void;
+  isPickSubmitting?: boolean
 }
 
 const CurrentPickDetails: React.FC<CurrentPickDetailsProps> = ({
@@ -28,7 +29,8 @@ const CurrentPickDetails: React.FC<CurrentPickDetailsProps> = ({
   leagueKey,
   draftId,
   leagueSettings,
-  onSubmitPick
+  onSubmitPick,
+  isPickSubmitting = false
 }) => {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -132,6 +134,7 @@ const CurrentPickDetails: React.FC<CurrentPickDetailsProps> = ({
                           selectedPlayer={selectedPlayer}
                           currentPick={currentPick}
                           onSubmitPick={handleSubmitPick}
+                          isPickSubmitting={isPickSubmitting}
                         />
                       </motion.div>
                     )}
