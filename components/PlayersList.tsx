@@ -1,77 +1,40 @@
 // ./components/PlayersList.tsx
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useSupabaseClient } from '@/lib/useSupabaseClient';
-import { Player } from '@/lib/types';
+import { Player, Draft } from '@/lib/types';
 import PlayerFilters from './PlayerFilters';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import PlayerCard from '@/components/PlayerCard';
+import { Skeleton } from "@/components/ui/skeleton";
+import { motion, AnimatePresence } from "framer-motion";
+import useSWR from 'swr';
 
 interface PlayersListProps {
   leagueKey: string;
   draftId: string;
+  draft: Draft;
   onPlayerSelect: (player: Player) => void;
 }
 
-const PlayersList: React.FC<PlayersListProps> = ({ leagueKey, draftId, onPlayerSelect }) => {
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [draftedPlayerIds, setDraftedPlayerIds] = useState<number[]>([]);
+const fetcher = (url: string) => fetch(url).then(res => res.json());
+
+const PlayersList: React.FC<PlayersListProps> = ({ leagueKey, draftId, draft, onPlayerSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
   const [hideSelected, setHideSelected] = useState(true);
-  const supabase = useSupabaseClient();
 
-  useEffect(() => {
-    const fetchPlayers = async () => {
-      if (!supabase) return;
+  const { data: playersData, error: playersError } = useSWR<Player[]>(
+    `/api/db/league/${leagueKey}/players?draftId=${draftId}`,
+    fetcher
+  );
 
-      const { data: playersData, error: playersError } = await supabase
-        .from('players')
-        .select('*')
-        .order('rank', { ascending: true });
-
-      if (playersError) {
-        console.error('Error fetching players:', playersError);
-      } else {
-        setPlayers(playersData);
-      }
-
-      // Fetch drafted players
-      const { data: draftedData, error: draftedError } = await supabase
-        .from('draft_players')
-        .select('player_id')
-        .eq('draft_id', draftId)
-        .eq('is_picked', true);
-
-      if (draftedError) {
-        console.error('Error fetching drafted players:', draftedError);
-      } else {
-        setDraftedPlayerIds(draftedData.map(item => item.player_id));
-      }
-    };
-
-    if (supabase) {
-      fetchPlayers();
-
-      const subscription = supabase
-        .channel('drafted_players')
-        .on('postgres_changes', { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'draft_players', 
-          filter: `draft_id=eq.${draftId}` 
-        }, (payload) => {
-          setDraftedPlayerIds(prev => [...prev, payload.new.player_id]);
-        })
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(subscription);
-      };
-    }
-  }, [draftId, supabase]);
+  const players = useMemo(() => playersData || [], [playersData]);
+  const draftedPlayerIds = useMemo(() => 
+    draft.picks.filter(pick => pick.is_picked).map(pick => pick.player_id),
+    [draft.picks]
+  );
 
   const positions = useMemo(() => {
     const allPositions = players.flatMap(player => player.eligible_positions);
@@ -89,13 +52,15 @@ const PlayersList: React.FC<PlayersListProps> = ({ leagueKey, draftId, onPlayerS
 
       return matchesSearch && matchesPosition && matchesHideSelected;
     });
-  }, [players, searchTerm, selectedPositions, hideSelected, draftedPlayerIds]);
+  }, [players, draftedPlayerIds, searchTerm, selectedPositions, hideSelected]);
 
   const handlePlayerClick = (player: Player) => {
     if (!draftedPlayerIds.includes(player.id)) {
       onPlayerSelect(player);
     }
   };
+
+  if (playersError) return <div>Error loading players</div>;
 
   return (
     <Card className="flex flex-col h-full">
@@ -115,17 +80,37 @@ const PlayersList: React.FC<PlayersListProps> = ({ leagueKey, draftId, onPlayerS
           />
         </div>
         <ScrollArea className="flex-grow px-4">
-          <div className="space-y-2 py-2 px-2">
-            {filteredPlayers.map((player) => (
-              <PlayerCard
-                key={player.id}
-                player={player}
-                isDrafted={draftedPlayerIds.includes(player.id)}
-                onClick={() => handlePlayerClick(player)}
-                fadeDrafted={true}
-              />
-            ))}
-          </div>
+          <AnimatePresence>
+            {!players.length ? (
+              Array.from({ length: 10 }).map((_, index) => (
+                <motion.div
+                  key={`skeleton-${index}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <Skeleton className="h-20 w-full mb-2" />
+                </motion.div>
+              ))
+            ) : (
+              filteredPlayers.map((player) => (
+                <motion.div
+                  key={player.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <PlayerCard
+                    player={player}
+                    isDrafted={draftedPlayerIds.includes(player.id)}
+                    onClick={() => handlePlayerClick(player)}
+                    fadeDrafted={true}
+                  />
+                </motion.div>
+              ))
+            )}
+          </AnimatePresence>
         </ScrollArea>
       </CardContent>
     </Card>

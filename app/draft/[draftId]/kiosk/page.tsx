@@ -193,6 +193,7 @@ const KioskPage: React.FC = () => {
               leagueSettings={leagueSettings}
               onSubmitPick={handleSubmitPick}
               isPickSubmitting={isPickSubmitting}
+              draft={memoizedDraft}
             />
           )}
         </div>

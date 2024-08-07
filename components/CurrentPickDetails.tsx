@@ -8,7 +8,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import PlayerCard from '@/components/PlayerCard';
 import PlayerList from '@/components/PlayersList';
 import SubmitPickButton from '@/components/SubmitPicksButton';
-import { Team, Pick, Player, LeagueSettings } from '@/lib/types';
+import { Team, Pick, Player, LeagueSettings, Draft } from '@/lib/types';
 import TeamNeeds from './TeamNeeds';
 
 interface CurrentPickDetailsProps {
@@ -19,7 +19,8 @@ interface CurrentPickDetailsProps {
   draftId: string;
   leagueSettings: LeagueSettings;
   onSubmitPick: (player: Player) => void;
-  isPickSubmitting?: boolean
+  isPickSubmitting?: boolean;
+  draft: Draft;
 }
 
 const CurrentPickDetails: React.FC<CurrentPickDetailsProps> = ({
@@ -30,7 +31,8 @@ const CurrentPickDetails: React.FC<CurrentPickDetailsProps> = ({
   draftId,
   leagueSettings,
   onSubmitPick,
-  isPickSubmitting = false
+  isPickSubmitting = false,
+  draft
 }) => {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -113,6 +115,7 @@ const CurrentPickDetails: React.FC<CurrentPickDetailsProps> = ({
                         leagueKey={leagueKey}
                         draftId={draftId}
                         onPlayerSelect={handlePlayerSelect}
+                        draft={draft}
                       />
                     </ScrollArea>
                   </div>

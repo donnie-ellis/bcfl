@@ -214,6 +214,7 @@ const DraftBoardPage: React.FC = () => {
                   leagueKey={memoizedDraft.league_id}
                   draftId={draftId}
                   onPlayerSelect={setSelectedPlayer}
+                  draft={memoizedDraft}
                 />
               </ScrollArea>
             </div>
