@@ -1,4 +1,5 @@
 // ./app/draft/[draftId]/board/page.tsx
+
 'use client'
 
 import React, { useState, useCallback, useMemo } from 'react';
@@ -15,6 +16,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import PlayersList from '@/components/PlayersList';
 import SubmitPickButton from '@/components/SubmitPicksButton';
 import PlayerCard from '@/components/PlayerCard';
+import { Switch } from "@/components/ui/switch";
 import useSWR from 'swr';
 import useSWRImmutable from 'swr/immutable';
 
@@ -46,9 +48,41 @@ const DraftBoardPage: React.FC = () => {
   const handleSquareHover = useCallback((pick: Pick & { player: Player | null, team: Team }) => {
     if (!isCommissioner?.isCommissioner) return null;
 
+    const handleKeeperChange = async (checked: boolean) => {
+      try {
+        const response = await fetch(`/api/db/draft/${draftId}/pick/setKeeper`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ pickId: pick.id, isKeeper: checked }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to update keeper status');
+        }
+
+        toast.success(`Keeper status ${checked ? 'set' : 'unset'} successfully`);
+        mutatePicks();
+      } catch (error) {
+        console.error('Error updating keeper status:', error);
+        toast.error("Failed to update keeper status. Please try again.");
+      }
+    };
+
     return (
       <div className="space-y-2">
         <h3 className="font-semibold">Commissioner Actions</h3>
+        {pick.player && (
+          <div className="flex items-center space-x-2">
+            <Switch
+              checked={pick.is_keeper}
+              onCheckedChange={handleKeeperChange}
+              id={`keeper-switch-${pick.id}`}
+            />
+            <label htmlFor={`keeper-switch-${pick.id}`}>Keeper</label>
+          </div>
+        )}
         {pick.player ? (
           <Button variant="destructive" onClick={() => handleDeletePick(pick)}>Delete Pick</Button>
         ) : (
@@ -59,7 +93,7 @@ const DraftBoardPage: React.FC = () => {
         )}
       </div>
     );
-  }, [isCommissioner]);
+  }, [isCommissioner, draftId, mutatePicks]);
 
   const handleDeletePick = async (pick: Pick) => {
     try {
@@ -145,7 +179,7 @@ const DraftBoardPage: React.FC = () => {
       <DraftHeader league={league} draft={memoizedDraft} />
       <ScrollArea className="flex-grow">
         <div className="p-4 space-y-8">
-          {rounds.map((round) => (
+          {memoizedDraft && memoizedDraft.picks && Array.from({ length: memoizedDraft.rounds }, (_, i) => i + 1).map((round) => (
             <Card key={round}>
               <CardHeader>
                 <CardTitle>Round {round}</CardTitle>
