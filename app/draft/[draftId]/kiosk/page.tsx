@@ -147,14 +147,12 @@ const KioskPage: React.FC = () => {
   const MemoizedDraftedPlayers = useMemo(() => (
     memoizedDraft && leagueSettings && currentPick ? (
       <DraftedPlayers
-        draftId={draftId}
         picks={memoizedPicks}
-        leagueSettings={leagueSettings}
         teamKey={currentPick.team_key}
-        lastUpdateTimestamp={lastUpdateTimestampRef.current}
+        teamName={teams?.find(team => team.team_key === currentPick.team_key)?.name}
       />
     ) : null
-  ), [memoizedDraft, leagueSettings, currentPick, draftId, memoizedPicks]);
+  ), [memoizedDraft, leagueSettings, currentPick, memoizedPicks, teams]);
 
   if (draftError || leagueError || settingsError || teamsError || currentPickError || playerError) {
     return <div>Error loading draft data. Please try again.</div>;

@@ -63,6 +63,7 @@ export interface Player {
     value_to_date?: number;
   };
   is_drafted?: boolean;
+  is_keeper?: boolean;
 }
 
 export interface League {

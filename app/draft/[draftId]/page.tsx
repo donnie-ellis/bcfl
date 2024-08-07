@@ -141,14 +141,12 @@ const DraftPage: React.FC = () => {
   const MemoizedDraftedPlayers = useMemo(() => (
     draftData && leagueSettings && team && (
       <DraftedPlayers
-        draftId={draftId}
         picks={memoizedPicks}
-        leagueSettings={leagueSettings}
         teamKey={team.team_key}
-        lastUpdateTimestamp={lastUpdateTimestamp}
+        teamName={teams?.find(team => team.team_key === team.team_key)?.name}
       />
     )
-  ), [draftData, leagueSettings, team, draftId, memoizedPicks, lastUpdateTimestamp]);
+  ), [draftData, leagueSettings, team, memoizedPicks, teams]);
 
   if (draftError || leagueError || settingsError || teamsError || teamError || currentPickError) {
     return <div>Error loading draft data. Please try again.</div>;

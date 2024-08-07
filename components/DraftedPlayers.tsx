@@ -3,26 +3,22 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
-import { LeagueSettings, Pick, Player } from '@/lib/types';
+import { Pick, Player } from '@/lib/types';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DraftedPlayersProps {
-  draftId: string;
-  picks: Pick[];
-  leagueSettings: LeagueSettings;
+  picks: Pick[] | undefined;
   teamKey: string;
-  lastUpdateTimestamp: number;
+  teamName: string | undefined;
 }
 
 const DraftedPlayers: React.FC<DraftedPlayersProps> = React.memo(({ 
-  draftId,
   picks,
-  leagueSettings, 
   teamKey,
-  lastUpdateTimestamp
+  teamName,
 }) => {
   const [playerDetails, setPlayerDetails] = useState<Record<string, Player>>({});
   const [loadingPlayerIds, setLoadingPlayerIds] = useState<number[]>([]);
@@ -92,8 +88,8 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = React.memo(({
     </Card>
   );
 
-  const IntegratedPlayerCard: React.FC<{ player: Player, isDrafted: boolean }> = ({ player, isDrafted }) => (
-    <Card className={`mb-2 cursor-pointer hover:bg-gray-100 transition-all ${isDrafted ? 'opacity-50' : ''}`}>
+  const IntegratedPlayerCard: React.FC<{ player: Player, isDrafted: boolean }> = ({ player }) => (
+    <Card className={`mb-2 cursor-pointer hover:bg-gray-100 transition-all`}>
       <CardContent className="p-3 flex items-center space-x-3">
         <Avatar className="h-12 w-12 rounded">
           <AvatarImage src={player.headshot_url || player.image_url} alt={player.full_name} />
@@ -105,11 +101,6 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = React.memo(({
               <TooltipTrigger asChild>
                 <div className="flex items-center space-x-1">
                   <p className="font-semibold truncate">{player.full_name}</p>
-                  {player.is_keeper && (
-                    <Badge variant="secondary" className="text-xs px-1 py-0">
-                      K
-                    </Badge>
-                  )}
                 </div>
               </TooltipTrigger>
               <TooltipContent>
@@ -163,10 +154,18 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = React.memo(({
     return <PlayerCardSkeleton />;
   }, [playerDetails, loadingPlayerIds]);
 
+  const setTitle = (name: string) => {
+    if (name.endsWith('s')) {
+      return name + "'";
+    } else {
+      return name + "'s";
+    };
+  };
+
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
-        <CardTitle>Team Picks</CardTitle>
+        <CardTitle>{teamName ? setTitle(teamName) + ' Picks' : 'Team Picks'}</CardTitle>
       </CardHeader>
       <CardContent className="flex-grow overflow-hidden">
         <ScrollArea className="h-full">
