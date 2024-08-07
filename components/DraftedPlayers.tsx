@@ -4,8 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
 import { LeagueSettings, Pick, Player } from '@/lib/types';
-import PlayerCard from '@/components/PlayerCard';
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DraftedPlayersProps {
   draftId: string;
@@ -90,6 +92,48 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = React.memo(({
     </Card>
   );
 
+  const IntegratedPlayerCard: React.FC<{ player: Player, isDrafted: boolean }> = ({ player, isDrafted }) => (
+    <Card className={`mb-2 cursor-pointer hover:bg-gray-100 transition-all ${isDrafted ? 'opacity-50' : ''}`}>
+      <CardContent className="p-3 flex items-center space-x-3">
+        <Avatar className="h-12 w-12 rounded">
+          <AvatarImage src={player.headshot_url || player.image_url} alt={player.full_name} />
+          <AvatarFallback>{player.full_name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+        </Avatar>
+        <div className="flex-grow">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center space-x-1">
+                  <p className="font-semibold truncate">{player.full_name}</p>
+                  {player.is_keeper && (
+                    <Badge variant="secondary" className="text-xs px-1 py-0">
+                      K
+                    </Badge>
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{player.editorial_team_full_name}</p>
+                <p>{player.display_position}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <p className="text-sm">
+            <span className="font-medium text-primary">{player.display_position}</span>
+            {player.editorial_team_full_name && (
+              <> - <span className="text-gray-500">{player.editorial_team_full_name}</span></>
+            )}
+          </p>
+        </div>
+        {player.rank && (
+          <div className="text-sm font-medium">
+            #{player.rank}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
   const renderPickCard = useCallback((pick: Pick) => {
     if (!pick.is_picked) {
       return <PlaceholderCard />;
@@ -113,13 +157,7 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = React.memo(({
 
     const player = playerDetails[pick.player_id];
     if (player) {
-      return (
-        <PlayerCard
-          player={player}
-          isDrafted={true}
-          onClick={() => {}}
-        />
-      );
+      return <IntegratedPlayerCard player={player} isDrafted={true} />;
     }
 
     return <PlayerCardSkeleton />;
