@@ -6,6 +6,7 @@ import Profile from '@/components/Profile';
 import { League, Draft } from '@/lib/types';
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sheet,
   SheetContent,
@@ -16,16 +17,18 @@ import {
 } from "@/components/ui/sheet";
 import { Menu, Sun, Moon } from "lucide-react";
 import { useTheme } from 'next-themes';
+import { AnimatePresence, motion } from "framer-motion";
 
 interface DraftHeaderProps {
-  league: League | null;
-  draft: Draft | null;
+  league: League | null | undefined;
+  draft: Draft | null | undefined;
   additionalContent?: React.ReactNode;
 }
 
 const DraftHeader: React.FC<DraftHeaderProps> = ({ league, draft, additionalContent }) => {
-  const [isCommissioner, setIsCommissioner] = useState(false);
+  const [isCommissioner, setIsCommissioner] = useState<boolean | null>(null);
   const { theme, setTheme } = useTheme();
+  const isLoading = !league || !draft;
 
   useEffect(() => {
     const checkCommissionerStatus = async () => {
@@ -38,6 +41,7 @@ const DraftHeader: React.FC<DraftHeaderProps> = ({ league, draft, additionalCont
           }
         } catch (error) {
           console.error('Error checking commissioner status:', error);
+          setIsCommissioner(false);
         }
       }
     };
@@ -53,11 +57,20 @@ const DraftHeader: React.FC<DraftHeaderProps> = ({ league, draft, additionalCont
       <Link href={`/draft/${draft?.id}/board`} passHref>
         <Button variant="outline">Draft Board</Button>
       </Link>
-      {isCommissioner && (
-        <Link href={`/draft/${draft?.id}/kiosk`} passHref>
-          <Button variant="outline">Kiosk Mode</Button>
-        </Link>
-      )}
+      <AnimatePresence>
+        {isCommissioner && (
+          <motion.div
+            initial={{ opacity: 0, width: 0 }}
+            animate={{ opacity: 1, width: "auto" }}
+            exit={{ opacity: 0, width: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Link href={`/draft/${draft?.id}/kiosk`} passHref>
+              <Button variant="outline">Kiosk Mode</Button>
+            </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 
@@ -76,40 +89,59 @@ const DraftHeader: React.FC<DraftHeaderProps> = ({ league, draft, additionalCont
   return (
     <div className="flex justify-between items-center p-4 bg-background">
       <h1 className="text-2xl font-bold flex gap-4 items-center">
-        <Link href="/dashboard" className="hover:opacity-80 transition-opacity">
-          <Avatar className='h-12 w-12'>
-            <AvatarFallback>{league?.name?.[0]}</AvatarFallback>
-            <AvatarImage src={league?.logo_url} alt={league?.name} />
-          </Avatar>
-        </Link>
-        <span className="hidden md:inline">{`${league?.name} ${draft?.name} Draft`}</span>
-        <span className="md:hidden">{draft?.name}</span>
+        {isLoading ? (
+          <>
+            <Skeleton className="h-12 w-12 rounded-full" />
+            <Skeleton className="h-8 w-48" />
+          </>
+        ) : (
+          <>
+            <Link href="/dashboard" className="hover:opacity-80 transition-opacity">
+              <Avatar className='h-12 w-12'>
+                <AvatarFallback>{league.name?.[0]}</AvatarFallback>
+                <AvatarImage src={league.logo_url} alt={league.name} />
+              </Avatar>
+            </Link>
+            <span className="hidden md:inline">{`${league.name} ${draft.name} Draft`}</span>
+            <span className="md:hidden">{draft.name}</span>
+          </>
+        )}
       </h1>
       <div className="flex items-center space-x-4">
-        <div className="hidden md:flex space-x-2">
-          <NavButtons />
-        </div>
-        <ThemeToggle />
-        <div className="md:hidden">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="icon">
-                <Menu className="h-[1.2rem] w-[1.2rem]" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent>
-              <SheetHeader>
-                <SheetTitle>{league?.name}</SheetTitle>
-                <SheetDescription>{draft?.name} Draft</SheetDescription>
-              </SheetHeader>
-              <div className="flex flex-col space-y-2 mt-4">
-                <NavButtons />
-              </div>
-            </SheetContent>
-          </Sheet>
-        </div>
-        {additionalContent}
-        <Profile />
+        {isLoading ? (
+          <>
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-10 rounded-full" />
+          </>
+        ) : (
+          <>
+            <div className="hidden md:flex space-x-2">
+              <NavButtons />
+            </div>
+            <ThemeToggle />
+            <div className="md:hidden">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <Menu className="h-[1.2rem] w-[1.2rem]" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent>
+                  <SheetHeader>
+                    <SheetTitle>{league.name}</SheetTitle>
+                    <SheetDescription>{draft.name} Draft</SheetDescription>
+                  </SheetHeader>
+                  <div className="flex flex-col space-y-2 mt-4">
+                    <NavButtons />
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
+            {additionalContent}
+            <Profile />
+          </>
+        )}
       </div>
     </div>
   );
