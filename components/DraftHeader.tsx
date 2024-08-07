@@ -1,6 +1,7 @@
 // ./components/DraftHeader.tsx
+'use client'
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import Profile from '@/components/Profile';
 import { League, Draft } from '@/lib/types';
@@ -18,6 +19,7 @@ import {
 import { Menu, Sun, Moon } from "lucide-react";
 import { useTheme } from 'next-themes';
 import { AnimatePresence, motion } from "framer-motion";
+import useSWR from 'swr';
 
 interface DraftHeaderProps {
   league: League | null | undefined;
@@ -25,29 +27,18 @@ interface DraftHeaderProps {
   additionalContent?: React.ReactNode;
 }
 
+const fetcher = (url: string) => fetch(url).then(res => res.json());
+
 const DraftHeader: React.FC<DraftHeaderProps> = ({ league, draft, additionalContent }) => {
-  const [isCommissioner, setIsCommissioner] = useState<boolean | null>(null);
   const { theme, setTheme } = useTheme();
   const isLoading = !league || !draft;
 
-  useEffect(() => {
-    const checkCommissionerStatus = async () => {
-      if (league) {
-        try {
-          const response = await fetch(`/api/db/league/${league.league_key}/isCommissioner`);
-          if (response.ok) {
-            const data = await response.json();
-            setIsCommissioner(data.isCommissioner);
-          }
-        } catch (error) {
-          console.error('Error checking commissioner status:', error);
-          setIsCommissioner(false);
-        }
-      }
-    };
+  const { data: isCommissionerData, error: isCommissionerError } = useSWR(
+    league ? `/api/db/league/${league.league_key}/isCommissioner` : null,
+    fetcher
+  );
 
-    checkCommissionerStatus();
-  }, [league]);
+  const isCommissioner = isCommissionerData?.isCommissioner;
 
   const NavButtons = () => (
     <>
