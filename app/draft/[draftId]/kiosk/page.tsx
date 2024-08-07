@@ -9,6 +9,7 @@ import CurrentPickDetails from '@/components/CurrentPickDetails';
 import { toast } from "sonner";
 import DraftedPlayers from '@/components/DraftedPlayers';
 import DraftHeader from '@/components/DraftHeader';
+import useSWRImmutable from 'swr/immutable'
 import useSWR from 'swr';
 import { debounce } from 'lodash';
 
@@ -31,9 +32,9 @@ const KioskPage: React.FC = () => {
   );
 
   const { data: draftData, error: draftError, mutate: mutateDraft } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher, { refreshInterval: 5000 });
-  const { data: leagueData, error: leagueError } = useSWR<League>(draftData ? `/api/db/league/${draftData.league_id}` : null, fetcher);
-  const { data: leagueSettings, error: settingsError } = useSWR<LeagueSettings>(draftData ? `/api/db/league/${draftData.league_id}/settings` : null, fetcher);
-  const { data: teams, error: teamsError } = useSWR<Team[]>(draftData ? `/api/yahoo/league/${draftData.league_id}/teams` : null, fetcher);
+  const { data: leagueData, error: leagueError } = useSWRImmutable<League>(draftData ? `/api/db/league/${draftData.league_id}` : null, fetcher);
+  const { data: leagueSettings, error: settingsError } = useSWRImmutable<LeagueSettings>(draftData ? `/api/db/league/${draftData.league_id}/settings` : null, fetcher);
+  const { data: teams, error: teamsError } = useSWRImmutable<Team[]>(draftData ? `/api/yahoo/league/${draftData.league_id}/teams` : null, fetcher);
   const { data: currentPick, error: currentPickError, mutate: mutateCurrentPick } = useSWR<Pick>(`/api/db/draft/${draftId}/pick`, fetcher, { refreshInterval: 5000 });
   
   const { data: playerData, error: playerError } = useSWR<Player[]>(

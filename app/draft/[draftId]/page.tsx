@@ -13,6 +13,7 @@ import SubmitPickButton from '@/components/SubmitPicksButton';
 import { toast } from "sonner";
 import DraftHeader from '@/components/DraftHeader';
 import useSWR from 'swr';
+import useSWRImmutable from 'swr/immutable';
 import { debounce } from 'lodash';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -27,10 +28,10 @@ const DraftPage: React.FC = () => {
   const [lastUpdateTimestamp, setLastUpdateTimestamp] = useState<number>(Date.now());
 
   const { data: draftData, error: draftError } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher, { refreshInterval: 5000 });
-  const { data: leagueData, error: leagueError } = useSWR<League>(draftData ? `/api/db/league/${draftData.league_id}` : null, fetcher);
-  const { data: leagueSettings, error: settingsError } = useSWR<LeagueSettings>(draftData ? `/api/db/league/${draftData.league_id}/settings` : null, fetcher);
-  const { data: teams, error: teamsError } = useSWR<Team[]>(draftData ? `/api/yahoo/league/${draftData.league_id}/teams` : null, fetcher);
-  const { data: team, error: teamError } = useSWR<Team>(draftData ? `/api/yahoo/user/league/${draftData.league_id}/team` : null, fetcher);
+  const { data: leagueData, error: leagueError } = useSWRImmutable<League>(draftData ? `/api/db/league/${draftData.league_id}` : null, fetcher);
+  const { data: leagueSettings, error: settingsError } = useSWRImmutable<LeagueSettings>(draftData ? `/api/db/league/${draftData.league_id}/settings` : null, fetcher);
+  const { data: teams, error: teamsError } = useSWRImmutable<Team[]>(draftData ? `/api/yahoo/league/${draftData.league_id}/teams` : null, fetcher);
+  const { data: team, error: teamError } = useSWRImmutable<Team>(draftData ? `/api/yahoo/user/league/${draftData.league_id}/team` : null, fetcher);
   const { data: currentPick, error: currentPickError } = useSWR<Pick>(`/api/db/draft/${draftId}/pick`, fetcher, { refreshInterval: 5000 });
 
   const debouncedSetLastUpdateTimestamp = useCallback(
@@ -133,9 +134,8 @@ const DraftPage: React.FC = () => {
       leagueKey={memoizedDraft?.league_id || ''}
       draftId={draftId}
       onPlayerSelect={handlePlayerSelect}
-      lastUpdateTimestamp={lastUpdateTimestamp}
     />
-  ), [memoizedDraft?.league_id, draftId, handlePlayerSelect, lastUpdateTimestamp]);
+  ), [memoizedDraft?.league_id, draftId, handlePlayerSelect]);
 
   const MemoizedDraftedPlayers = useMemo(() => (
     draftData && leagueSettings && team && (
