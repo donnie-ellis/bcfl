@@ -1,7 +1,5 @@
-// ./app/draft/[draftId]/kiosk/page.tsx
-
 'use client'
-
+// ./app/draft/[draftId]/kiosk/page.tsx
 import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
@@ -169,12 +167,13 @@ const KioskPage: React.FC = () => {
       <div className="flex-none w-full">
         <div className="p-4">
           <h2 className="text-2xl font-bold mb-4">Current Round</h2>
-            <RoundSquares
-              draft={memoizedDraft}
-              leagueSettings={leagueSettings}
-              currentRoundOnly={true}
-              isLoading={isLoading}
-            />
+          <RoundSquares
+            draft={memoizedDraft}
+            leagueSettings={leagueSettings}
+            currentRoundOnly={true}
+            isLoading={isLoading}
+            teams={teams}
+          />
         </div>
       </div>
 
