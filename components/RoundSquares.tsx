@@ -2,15 +2,30 @@
 import React from 'react';
 import { Draft, LeagueSettings, Team, Pick, Player } from '@/lib/types';
 import DraftSquare from "@/components/DraftSquare"
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface RoundSquaresProps {
-  draft: Draft & { picks: (Pick & { player: Player | null, team: Team })[] };
-  leagueSettings: LeagueSettings;
+  draft?: Draft & { picks: (Pick & { player: Player | null, team: Team | null })[] };
+  leagueSettings?: LeagueSettings;
   currentRoundOnly?: boolean;
-  onSquareHover?: (pick: Pick & { player: Player | null, team: Team }) => React.ReactNode;
+  onSquareHover?: (pick: Pick & { player: Player | null, team: Team | null }) => React.ReactNode;
+  isLoading?: boolean;
 }
 
-const RoundSquares: React.FC<RoundSquaresProps> = ({ draft, leagueSettings, currentRoundOnly = false, onSquareHover }) => {
+const RoundSquares: React.FC<RoundSquaresProps> = ({ draft, leagueSettings, currentRoundOnly = false, onSquareHover, isLoading }) => {
+  if (isLoading || !draft || !leagueSettings) {
+    // Render loading skeletons
+    return (
+      <div className="flex justify-between w-full">
+        {[...Array(10)].map((_, index) => (
+          <div key={index} className="flex-1 px-1">
+            <Skeleton className="h-24 w-full" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   const picksPerRound = draft.picks.length / draft.rounds;
   const currentRound = Math.ceil(draft.current_pick / picksPerRound);
 

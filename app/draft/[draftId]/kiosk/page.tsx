@@ -2,7 +2,7 @@
 
 'use client'
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
 import { League, Draft, LeagueSettings, Player, Team, Pick } from '@/lib/types';
@@ -21,11 +21,15 @@ const KioskPage: React.FC = () => {
   const draftId = params.draftId as string;
   const supabase = useSupabaseClient();
   const [isPickSubmitting, setIsPickSubmitting] = useState<boolean>(false);
-  const [lastUpdateTimestamp, setLastUpdateTimestamp] = useState<number>(Date.now());
+  const lastUpdateTimestampRef = useRef<number>(Date.now());
 
-  const debouncedSetLastUpdateTimestamp = useCallback(
-    debounce(() => setLastUpdateTimestamp(Date.now()), 500),
-    []
+  const setLastUpdateTimestamp = useCallback(() => {
+    lastUpdateTimestampRef.current = Date.now();
+  }, []);
+
+  const debouncedSetLastUpdateTimestamp = useMemo(
+    () => debounce(setLastUpdateTimestamp, 500),
+    [setLastUpdateTimestamp]
   );
 
   const { data: draftData, error: draftError, mutate: mutateDraft } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher, { refreshInterval: 5000 });
@@ -33,12 +37,13 @@ const KioskPage: React.FC = () => {
   const { data: leagueSettings, error: settingsError } = useSWR<LeagueSettings>(draftData ? `/api/db/league/${draftData.league_id}/settings` : null, fetcher);
   const { data: teams, error: teamsError } = useSWR<Team[]>(draftData ? `/api/yahoo/league/${draftData.league_id}/teams` : null, fetcher);
   const { data: currentPick, error: currentPickError, mutate: mutateCurrentPick } = useSWR<Pick>(`/api/db/draft/${draftId}/pick`, fetcher, { refreshInterval: 5000 });
-
-  // Fetch player data for picks
+  
   const { data: playerData, error: playerError } = useSWR<Player[]>(
     draftData ? `/api/db/players?ids=${draftData.picks.map(pick => pick.player_id).filter(Boolean).join(',')}` : null,
     fetcher
   );
+
+  const isLoading = !draftData || !leagueData || !leagueSettings || !teams || !currentPick || !playerData;
 
   const memoizedDraft = useMemo(() => {
     if (draftData && playerData && teams) {
@@ -68,14 +73,11 @@ const KioskPage: React.FC = () => {
           table: 'drafts', 
           filter: `id=eq.${draftId}` 
         }, (payload) => {
-          mutateDraft((prevDraft) => {
-            if (!prevDraft) return prevDraft;
-            return {
-              ...prevDraft,
-              current_pick: payload.new.current_pick,
-              status: payload.new.status
-            };
-          }, false); // false means don't revalidate immediately
+          mutateDraft((prevDraft) => prevDraft ? {
+            ...prevDraft,
+            current_pick: payload.new.current_pick,
+            status: payload.new.status
+          } : prevDraft);
           debouncedSetLastUpdateTimestamp();
         })
         .subscribe();
@@ -88,15 +90,12 @@ const KioskPage: React.FC = () => {
           table: 'picks', 
           filter: `draft_id=eq.${draftId}` 
         }, (payload) => {
-          mutateDraft((prevDraft) => {
-            if (!prevDraft) return prevDraft;
-            return {
-              ...prevDraft,
-              picks: prevDraft.picks.map(pick => 
-                pick.id === payload.new.id ? { ...pick, ...payload.new } : pick
-              )
-            };
-          }, false); // false means don't revalidate immediately
+          mutateDraft((prevDraft) => prevDraft ? {
+            ...prevDraft,
+            picks: prevDraft.picks.map(pick => 
+              pick.id === payload.new.id ? { ...pick, ...payload.new } : pick
+            )
+          } : prevDraft);
           mutateCurrentPick();
           debouncedSetLastUpdateTimestamp();
         })
@@ -146,16 +145,6 @@ const KioskPage: React.FC = () => {
     }
   };
 
-  const MemoizedRoundSquares = useMemo(() => (
-    memoizedDraft && leagueSettings ? (
-      <RoundSquares
-        draft={memoizedDraft}
-        leagueSettings={leagueSettings}
-        currentRoundOnly={true}
-      />
-    ) : null
-  ), [memoizedDraft, leagueSettings]);
-
   const MemoizedDraftedPlayers = useMemo(() => (
     memoizedDraft && leagueSettings && currentPick ? (
       <DraftedPlayers
@@ -163,16 +152,15 @@ const KioskPage: React.FC = () => {
         picks={memoizedPicks}
         leagueSettings={leagueSettings}
         teamKey={currentPick.team_key}
-        lastUpdateTimestamp={lastUpdateTimestamp}
+        lastUpdateTimestamp={lastUpdateTimestampRef.current}
       />
     ) : null
-  ), [memoizedDraft, leagueSettings, currentPick, draftId, memoizedPicks, lastUpdateTimestamp]);
+  ), [memoizedDraft, leagueSettings, currentPick, draftId, memoizedPicks]);
 
   if (draftError || leagueError || settingsError || teamsError || currentPickError || playerError) {
     return <div>Error loading draft data. Please try again.</div>;
   }
 
-  // Render the page content even if some data is still loading
   return (
     <div className="flex flex-col h-screen">
       {leagueData && memoizedDraft && (
@@ -181,7 +169,12 @@ const KioskPage: React.FC = () => {
       <div className="flex-none w-full">
         <div className="p-4">
           <h2 className="text-2xl font-bold mb-4">Current Round</h2>
-          {MemoizedRoundSquares}
+            <RoundSquares
+              draft={memoizedDraft}
+              leagueSettings={leagueSettings}
+              currentRoundOnly={true}
+              isLoading={isLoading}
+            />
         </div>
       </div>
 
