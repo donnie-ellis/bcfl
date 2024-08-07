@@ -1,4 +1,6 @@
 // ./components/PlayersList.tsx
+'use client'
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
@@ -89,6 +91,12 @@ const PlayersList: React.FC<PlayersListProps> = ({ leagueKey, draftId, onPlayerS
     });
   }, [players, searchTerm, selectedPositions, hideSelected, draftedPlayerIds]);
 
+  const handlePlayerClick = (player: Player) => {
+    if (!draftedPlayerIds.includes(player.id)) {
+      onPlayerSelect(player);
+    }
+  };
+
   return (
     <Card className="flex flex-col h-full">
       <CardHeader className="py-3">
@@ -113,7 +121,7 @@ const PlayersList: React.FC<PlayersListProps> = ({ leagueKey, draftId, onPlayerS
                 key={player.id}
                 player={player}
                 isDrafted={draftedPlayerIds.includes(player.id)}
-                onClick={() => onPlayerSelect(player)}
+                onClick={() => handlePlayerClick(player)}
                 fadeDrafted={true}
               />
             ))}
