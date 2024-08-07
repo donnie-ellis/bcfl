@@ -27,12 +27,12 @@ const DraftPage: React.FC = () => {
   const [isPickSubmitting, setIsPickSubmitting] = useState(false);
   const [lastUpdateTimestamp, setLastUpdateTimestamp] = useState<number>(Date.now());
 
-  const { data: draftData, error: draftError } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher, { refreshInterval: 5000 });
+  const { data: draftData, error: draftError } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher, { refreshInterval: 0 });
   const { data: leagueData, error: leagueError } = useSWRImmutable<League>(draftData ? `/api/db/league/${draftData.league_id}` : null, fetcher);
   const { data: leagueSettings, error: settingsError } = useSWRImmutable<LeagueSettings>(draftData ? `/api/db/league/${draftData.league_id}/settings` : null, fetcher);
   const { data: teams, error: teamsError } = useSWRImmutable<Team[]>(draftData ? `/api/yahoo/league/${draftData.league_id}/teams` : null, fetcher);
   const { data: team, error: teamError } = useSWRImmutable<Team>(draftData ? `/api/yahoo/user/league/${draftData.league_id}/team` : null, fetcher);
-  const { data: currentPick, error: currentPickError } = useSWR<Pick>(`/api/db/draft/${draftId}/pick`, fetcher, { refreshInterval: 5000 });
+  const { data: currentPick, error: currentPickError } = useSWR<Pick>(`/api/db/draft/${draftId}/pick`, fetcher, { refreshInterval: 0 });
 
   const debouncedSetLastUpdateTimestamp = useCallback(
     debounce(() => setLastUpdateTimestamp(Date.now()), 500),

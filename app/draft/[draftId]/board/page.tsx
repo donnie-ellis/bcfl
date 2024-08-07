@@ -31,7 +31,7 @@ const DraftBoardPage: React.FC = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [currentPick, setCurrentPick] = useState<Pick | null>(null);
 
-  const { data: draft, error: draftError, mutate: mutateDraft } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher, { refreshInterval: 5000 });
+  const { data: draft, error: draftError, mutate: mutateDraft } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher, { refreshInterval: 0 });
   const { data: league, error: leagueError } = useSWRImmutable<League>(draft ? `/api/db/league/${draft.league_id}` : null, fetcher);
   const { data: leagueSettings, error: settingsError } = useSWRImmutable<LeagueSettings>(draft ? `/api/db/league/${draft.league_id}/settings` : null, fetcher);
   const { data: isCommissioner, error: commissionerError } = useSWRImmutable<{ isCommissioner: boolean }>(draft ? `/api/db/league/${draft.league_id}/isCommissioner` : null, fetcher);
@@ -40,7 +40,7 @@ const DraftBoardPage: React.FC = () => {
   const { data: picks, error: picksError, mutate: mutatePicks } = useSWR<(Pick & { player: Player | null, team: Team | null })[]>(
     draft ? `/api/db/draft/${draftId}/picks` : null,
     fetcher,
-    { refreshInterval: 5000 }
+    { refreshInterval: 0 }
   );
 
   const memoizedDraft = useMemo(() => draft && picks ? { ...draft, picks } : null, [draft, picks]);

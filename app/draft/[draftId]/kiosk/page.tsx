@@ -31,11 +31,11 @@ const KioskPage: React.FC = () => {
     [setLastUpdateTimestamp]
   );
 
-  const { data: draftData, error: draftError, mutate: mutateDraft } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher, { refreshInterval: 5000 });
+  const { data: draftData, error: draftError, mutate: mutateDraft } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher, { refreshInterval: 0 });
   const { data: leagueData, error: leagueError } = useSWRImmutable<League>(draftData ? `/api/db/league/${draftData.league_id}` : null, fetcher);
   const { data: leagueSettings, error: settingsError } = useSWRImmutable<LeagueSettings>(draftData ? `/api/db/league/${draftData.league_id}/settings` : null, fetcher);
   const { data: teams, error: teamsError } = useSWRImmutable<Team[]>(draftData ? `/api/yahoo/league/${draftData.league_id}/teams` : null, fetcher);
-  const { data: currentPick, error: currentPickError, mutate: mutateCurrentPick } = useSWR<Pick>(`/api/db/draft/${draftId}/pick`, fetcher, { refreshInterval: 5000 });
+  const { data: currentPick, error: currentPickError, mutate: mutateCurrentPick } = useSWR<Pick>(`/api/db/draft/${draftId}/pick`, fetcher, { refreshInterval: 0 });
   
   const { data: playerData, error: playerError } = useSWR<Player[]>(
     draftData ? `/api/db/players?ids=${draftData.picks.map(pick => pick.player_id).filter(Boolean).join(',')}` : null,
