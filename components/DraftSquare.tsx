@@ -1,10 +1,11 @@
+// ./components/DraftSquare.tsx
 import React from 'react';
 import { Team, Pick, Player } from '@/lib/types';
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DraftSquareProps {
   pick: Pick & { player: Player | null, team: Team | null };
@@ -41,14 +42,24 @@ const DraftSquare: React.FC<DraftSquareProps> = ({ pick, isCurrentPick, onSquare
             </div>
             <div className="text-center text-xs mt-1">
               {pick.player ? (
-                <div className="flex items-center justify-center space-x-1">
-                  <p className="font-semibold truncate">{pick.player.full_name}</p>
-                  {pick.is_keeper && (
-                    <Badge variant="secondary" className="text-xs px-1 py-0">
-                      K
-                    </Badge>
-                  )}
-                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center justify-center space-x-1">
+                        <p className="font-semibold truncate">{pick.player.full_name}</p>
+                        {pick.is_keeper && (
+                          <Badge variant="secondary" className="text-xs px-1 py-0">
+                            K
+                          </Badge>
+                        )}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{pick.player.editorial_team_full_name}</p>
+                      <p>{pick.player.display_position}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               ) : (
                 <p className="text-gray-500"></p>
               )}
@@ -64,14 +75,16 @@ const DraftSquare: React.FC<DraftSquareProps> = ({ pick, isCurrentPick, onSquare
 
   if (onSquareHover) {
     return (
-      <HoverCard>
-        <HoverCardTrigger asChild>
-          <div><Square /></div>
-        </HoverCardTrigger>
-        <HoverCardContent className="w-80">
-          {onSquareHover(pick)}
-        </HoverCardContent>
-      </HoverCard>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div><Square /></div>
+          </TooltipTrigger>
+          <TooltipContent side="right" align="start" className="w-64">
+            {onSquareHover(pick)}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   }
 
