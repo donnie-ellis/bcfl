@@ -15,6 +15,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import PlayersList from '@/components/PlayersList';
 import SubmitPickButton from '@/components/SubmitPicksButton';
 import PlayerCard from '@/components/PlayerCard';
+import useSWR from 'swr';
 
 const DraftBoardPage: React.FC = () => {
   const params = useParams();
@@ -27,6 +28,7 @@ const DraftBoardPage: React.FC = () => {
   const [isCommissioner, setIsCommissioner] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [teams, setTeams] = useState<Team[] | null>(null);
 
   const fetchDraftData = useCallback(async () => {
     if (!supabase) return;
@@ -56,25 +58,28 @@ const DraftBoardPage: React.FC = () => {
 
       const leagueKey = draftData.league_id;
 
-      const [leagueResponse, settingsResponse, commissionerResponse] = await Promise.all([
+      const [leagueResponse, settingsResponse, commissionerResponse, teamsResponse] = await Promise.all([
         fetch(`/api/db/league/${leagueKey}`),
         fetch(`/api/db/league/${leagueKey}/settings`),
-        fetch(`/api/db/league/${leagueKey}/isCommissioner`)
+        fetch(`/api/db/league/${leagueKey}/isCommissioner`),
+        fetch(`/api/yahoo/league/${leagueKey}/teams`)
       ]);
 
-      if (!leagueResponse.ok || !settingsResponse.ok || !commissionerResponse.ok) {
+      if (!leagueResponse.ok || !settingsResponse.ok || !commissionerResponse.ok || !teamsResponse.ok) {
         throw new Error('Error fetching data');
       }
       
-      const [leagueData, settingsData, commissionerData] = await Promise.all([
+      const [leagueData, settingsData, commissionerData, teamsData] = await Promise.all([
         leagueResponse.json(),
         settingsResponse.json(),
-        commissionerResponse.json()
+        commissionerResponse.json(),
+        teamsResponse.json()
       ]);
 
       setLeague(leagueData);
       setLeagueSettings(settingsData);
       setIsCommissioner(commissionerData.isCommissioner);
+      setTeams(teamsData);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error("Failed to fetch draft data. Please try again.");
@@ -116,7 +121,7 @@ const DraftBoardPage: React.FC = () => {
             </SheetTrigger>
             <SheetContent className="w-full sm:max-w-md flex flex-col h-full">
               <SheetHeader className="flex-shrink-0">
-                <SheetTitle>Set Pick for {pick.team.name}</SheetTitle>
+                <SheetTitle>{pick.team ? 'Set Pick for ' + pick.team.name : 'loading...'}</SheetTitle>
               </SheetHeader>
               <div className="flex-grow flex flex-col overflow-hidden mt-4">
                 <div className="flex-grow overflow-hidden">
@@ -223,6 +228,7 @@ const DraftBoardPage: React.FC = () => {
                   leagueSettings={leagueSettings}
                   currentRoundOnly={false}
                   onSquareHover={handleSquareHover}
+                  teams={teams}
                 />
               </CardContent>
             </Card>

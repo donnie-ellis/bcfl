@@ -52,7 +52,7 @@ const DraftSquare: React.FC<DraftSquareProps> = React.memo(({ pick, isCurrentPic
             {pick.player ? (
               <p className="font-semibold truncate">{pick.player.full_name}</p>
             ) : pick.team ? (
-              <p className="text-gray-500">{pick.team.name} to pick</p>
+              <p className="text-gray-500">{pick.team.managers[0].nickname}</p>
             ) : (
               <Skeleton className="h-4 w-24 mx-auto" />
             )}
