@@ -14,7 +14,7 @@ import useSWR from 'swr';
 interface PlayersListProps {
   leagueKey: string;
   draftId: string;
-  draft: Draft;
+  draft: Draft | undefined;
   onPlayerSelect: (player: Player) => void;
 }
 
@@ -31,11 +31,11 @@ const PlayersList: React.FC<PlayersListProps> = ({ leagueKey, draftId, draft, on
   );
 
   const players = useMemo(() => playersData || [], [playersData]);
+  
   const draftedPlayerIds = useMemo(() => 
     draft.picks.filter(pick => pick.is_picked).map(pick => pick.player_id),
     [draft.picks]
   );
-
   const positions = useMemo(() => {
     const allPositions = players.flatMap(player => player.eligible_positions);
     return Array.from(new Set(allPositions)).filter(pos => pos !== 'IR' && pos !== 'BN' && pos !== 'W/R/T');

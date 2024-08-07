@@ -133,11 +133,10 @@ const DraftPage: React.FC = () => {
     <PlayersList
       leagueKey={memoizedDraft?.league_id || ''}
       draft={memoizedDraft}
-      picks={memoizedPicks}
       draftId={draftId}
       onPlayerSelect={handlePlayerSelect}
     />
-  ), [memoizedDraft?.league_id, draftId, handlePlayerSelect]);
+  ), [memoizedDraft, draftId, handlePlayerSelect]);
 
   const MemoizedDraftedPlayers = useMemo(() => (
     draftData && leagueSettings && team && (
