@@ -3,7 +3,6 @@
 export interface Player {
   id: number;
   player_key: string;
-  player_id: string;
   full_name: string;
   first_name: string;
   last_name: string;
@@ -15,55 +14,15 @@ export interface Player {
   editorial_player_key: string;
   editorial_team_key: string;
   editorial_team_full_name: string;
-  bye_weeks: Array<{ week: string }> | null;
+  bye_weeks: string[];
   uniform_number: string;
-  image_url: string;
-  injury_note: string;
   headshot_url: string;
-  notes?: string;
-  selected_position?: string;
-  percent_started?: number;
-  percent_owned?: number;
-  has_player_notes: boolean;
-  player_notes_last_timestamp?: Date;
-  preseason_rank?: number;
-  weekly_stats?: any;
-  season_stats?: any;
-  average_pick?: number;
-  average_round?: number;
+  adp?: number;
+  adp_formatted?: string;
+  source_id?: number;
+  draft_id?: number;
+  is_picked?: boolean;
   percent_drafted?: number;
-  status_full?: string;
-  on_disabled_list?: boolean;
-  is_undroppable?: boolean;
-  player_stats?: any;
-  player_advanced_stats?: any;
-  player_points?: any;
-  draft_analysis?: {
-    average_pick?: number;
-    average_round?: number;
-    average_cost?: number;
-    percent_drafted?: number;
-  };
-  league_ownership?: {
-    owned_by_team_key?: string;
-    ownership_type?: string;
-  };
-  rank?: number;
-  o_rank?: number;
-  psr_rank?: number;
-  ownership?: {
-    teams_owned?: number;
-    leagues_owned?: number;
-    leagues_total?: number;
-    percent_owned?: number;
-    value_month?: number;
-    value_season?: number;
-    value_14_days?: number;
-    value_last_month?: number;
-    value_to_date?: number;
-  };
-  is_drafted?: boolean;
-  is_keeper?: boolean;
 }
 
 export interface League {

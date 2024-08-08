@@ -7,6 +7,7 @@ import { getServerAuthSession } from "@/auth";
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
+// POST
 export async function POST(
   request: NextRequest,
   { params }: { params: { draftId: string } }
