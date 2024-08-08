@@ -1,5 +1,4 @@
 // ./app/draft/[draftId]/board/page.tsx
-
 'use client'
 
 import React, { useState, useCallback, useMemo } from 'react';
@@ -19,6 +18,7 @@ import PlayerCard from '@/components/PlayerCard';
 import { Switch } from "@/components/ui/switch";
 import useSWR from 'swr';
 import useSWRImmutable from 'swr/immutable';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -164,7 +164,7 @@ const DraftBoardPage: React.FC = () => {
     }
   }, [supabase, draftId, mutatePicks, mutateDraft]);
 
-  if (draftError || leagueError || settingsError || commissionerError || teamsError || picksError) {
+  if (draftError || leagueError || settingsError || teamsError || picksError) {
     return <div>Error loading draft data. Please try again.</div>;
   }
 
@@ -172,7 +172,44 @@ const DraftBoardPage: React.FC = () => {
     return <div>Loading...</div>;
   }
 
-  const rounds = Array.from({ length: memoizedDraft.rounds }, (_, i) => i + 1);
+  if (memoizedDraft.status === 'completed') {
+    return (
+      <div className="flex flex-col h-screen">
+        <DraftHeader league={league} draft={memoizedDraft} />
+        <Alert className="m-4">
+          <AlertTitle>Draft Completed</AlertTitle>
+          <AlertDescription>
+            The draft has been completed. You can review the final draft results below.
+          </AlertDescription>
+        </Alert>
+        <ScrollArea className="flex-grow">
+          <div className="p-4 space-y-8">
+            {memoizedDraft && memoizedDraft.picks && Array.from({ length: memoizedDraft.rounds }, (_, i) => i + 1).map((round) => (
+              <Card key={round}>
+                <CardHeader>
+                  <CardTitle>Round {round}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <RoundSquares
+                    draft={{
+                      ...memoizedDraft,
+                      picks: memoizedDraft.picks.filter(
+                        (pick) => pick.round_number === round
+                      ),
+                    }}
+                    leagueSettings={leagueSettings}
+                    currentRoundOnly={false}
+                    onSquareHover={handleSquareHover}
+                    teams={teams}
+                  />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </ScrollArea>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen">

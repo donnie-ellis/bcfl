@@ -44,7 +44,7 @@ const CurrentPickDetails: React.FC<CurrentPickDetailsProps> = ({
   useEffect(() => {
     // Find the previous pick for the current team
     const picks = draft.picks || [];
-    const teamPicks = picks.filter(pick => pick.team_key === currentTeam.team_key && pick.is_picked && pick.player);
+    const teamPicks = picks.filter(pick => pick.team_key === currentTeam?.team_key && pick.is_picked && pick.player);
     const previousTeamPick = teamPicks
       .filter(pick => pick.total_pick_number < currentPick.total_pick_number)
       .sort((a, b) => b.total_pick_number - a.total_pick_number)[0];
@@ -72,27 +72,27 @@ const CurrentPickDetails: React.FC<CurrentPickDetailsProps> = ({
   };
 
   const setTitle = (name: string) => {
-    if (name.endsWith('s')) {
+    if (name?.endsWith('s')) {
       return name + "'";
     } else {
       return name + "'s";
     };
   };
 
-  const remainingPicks = draft.picks.filter(pick => pick.team_key === currentTeam.team_key && !pick.is_picked).length
+  const remainingPicks = draft.picks.filter(pick => pick.team_key === currentTeam?.team_key && !pick.is_picked).length
 
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
         <CardTitle className="flex items-center space-x-4">
           <Avatar className="h-16 w-16">
-            <AvatarImage src={currentTeam.team_logos[0].url} alt={currentTeam.name} />
-            <AvatarFallback>{currentTeam.name[0]}</AvatarFallback>
+            <AvatarImage src={currentTeam?.team_logos[0].url} alt={currentTeam?.name} />
+            <AvatarFallback>{currentTeam?.name[0]}</AvatarFallback>
           </Avatar>
           <div>
-            <h2 className='text-2xl font-bold'>{setTitle(currentTeam.name) + ' draft summary'}</h2>
+            <h2 className='text-2xl font-bold'>{setTitle(currentTeam?.name) + ' draft summary'}</h2>
             <div className='flex space-x-2 text-sm'>
-              {currentTeam.managers.map((manager, index) => (
+              {currentTeam?.managers.map((manager, index) => (
                 <span key={index} className="flex items-center space-x-2">
                   <span>{manager.nickname}</span>
                   <Avatar className="h-4 w-4">
@@ -110,7 +110,7 @@ const CurrentPickDetails: React.FC<CurrentPickDetailsProps> = ({
           <div className="space-y-4">
             <TeamNeeds
               draftId={draftId}
-              teamKey={currentTeam.team_key}
+              teamKey={currentTeam?.team_key}
               leagueSettings={leagueSettings}
             />
             <div>
