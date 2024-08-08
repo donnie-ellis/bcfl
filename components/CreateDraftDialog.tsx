@@ -1,4 +1,3 @@
-// ./components/CreateDraftDialog.tsx
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -9,14 +8,8 @@ import { LeagueSettings, Team } from '@/lib/types';
 import { DragDropContext, Droppable, Draggable, DropResult, DroppableProvided, DroppableProps } from 'react-beautiful-dnd';
 import TeamCard from './TeamCard';
 import { Loader2 } from 'lucide-react';
-import { POST } from '@/app/api/auth/logout/route';
+import { toast } from "sonner";
 
-interface CreateDraftDialogProps {
-  leagueKey: string;
-  teams: Team[];
-  leagueSettings: LeagueSettings | null;
-  onDraftCreated: (newDrafts: any[]) => void;
-}
 const StrictModeDroppable = ({ children, ...props }: DroppableProps) => {
   const [enabled, setEnabled] = useState(false);
   useEffect(() => {
@@ -38,6 +31,7 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
   const [orderedTeams, setOrderedTeams] = useState<Team[]>([]);
   const [isCreatingDraft, setIsCreatingDraft] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
+  const [adpProgress, setAdpProgress] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -68,11 +62,10 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
       faab_balance: team.faab_balance,
     };
   }
-  
 
-const handleCreateDraft = async () => {
+  const handleCreateDraft = async () => {
     if (!draftName.trim()) {
-      alert('Please enter a draft name');
+      toast.error('Please enter a draft name');
       return;
     }
 
@@ -85,7 +78,7 @@ const handleCreateDraft = async () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(teams),
-      })
+      });
       if (!teamsResponse.ok) {
         throw new Error('Failed to update teams');
       }
@@ -96,7 +89,7 @@ const handleCreateDraft = async () => {
         headers: {
           'Content-Type': 'application/json',
         },
-      })
+      });
       if (!managerResponse.ok) {
         throw new Error('Failed to update managers');
       }
@@ -122,6 +115,8 @@ const handleCreateDraft = async () => {
 
       const { draftId, importJobId } = await response.json();
 
+      toast.success("Draft created successfully. Importing players...");
+
       // Start polling for import progress
       const pollInterval = setInterval(async () => {
         const progressResponse = await fetch(`/api/db/importJob/${importJobId}`);
@@ -130,30 +125,78 @@ const handleCreateDraft = async () => {
 
         if (status === 'complete') {
           clearInterval(pollInterval);
-          setIsCreatingDraft(false);
-          setIsDialogOpen(false);
-          setDraftName(''); // Clear the draft name input
-          // Fetch the updated list of drafts for the league
-          const draftsResponse = await fetch(`/api/db/league/${leagueKey}/drafts`);
-          if (draftsResponse.ok) {
-            const updatedDrafts = await draftsResponse.json();
-            onDraftCreated(updatedDrafts);
-          } else {
-            console.error('Failed to fetch updated drafts');
-          }
-          // Redirect to the new draft page
-          router.push(`/draft/${draftId}`);
+          toast.success("Players imported successfully. Fetching ADP data...");
+          await startAdpUpdate(draftId);
         }
       }, 2000);
     } catch (error) {
       console.error('Failed to create draft:', error);
+      toast.error("Failed to create draft. Please try again.");
       setIsCreatingDraft(false);
     }
   };
-  
+
+  const startAdpUpdate = async (draftId: string) => {
+    try {
+      const scoringType = leagueSettings?.stat_categories.find(cat => cat.name === 'Rec')?.value > 0 ? 'ppr' : 'standard';
+      const adpResponse = await fetch(`/api/db/draft/${draftId}/players/adp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          leagueId: leagueKey,
+          scoringType,
+          numTeams: leagueSettings?.num_teams || teams.length,
+        }),
+      });
+
+      if (!adpResponse.ok) {
+        const errorData = await adpResponse.json();
+        throw new Error(errorData.error || 'Failed to start ADP update');
+      }
+
+      const { jobId: adpJobId } = await adpResponse.json();
+
+      // Start polling for ADP update progress
+      const adpPollInterval = setInterval(async () => {
+        const progressResponse = await fetch(`/api/db/importJob/${adpJobId}`);
+        const { status, progress } = await progressResponse.json();
+        setAdpProgress(progress);
+
+        if (status === 'complete') {
+          clearInterval(adpPollInterval);
+          setAdpProgress(100);
+          finalizeDraftCreation(draftId);
+        }
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to update ADP:', error);
+      toast.error("Failed to update ADP. You can try again later.");
+      finalizeDraftCreation(draftId);
+    }
+  };
+
+  const finalizeDraftCreation = async (draftId: string) => {
+    setIsCreatingDraft(false);
+    setIsDialogOpen(false);
+    setDraftName('');
+    // Fetch the updated list of drafts for the league
+    const draftsResponse = await fetch(`/api/db/league/${leagueKey}/drafts`);
+    if (draftsResponse.ok) {
+      const updatedDrafts = await draftsResponse.json();
+      onDraftCreated(updatedDrafts);
+    } else {
+      console.error('Failed to fetch updated drafts');
+    }
+    toast.success("Draft creation completed. Redirecting to draft page...");
+    // Redirect to the new draft page
+    router.push(`/draft/${draftId}`);
+  };
+
   const handleDialogClose = (open: boolean) => {
     if (!open) {
-      setDraftName(''); // Clear the draft name input when closing the dialog
+      setDraftName('');
     }
     setIsDialogOpen(open);
   };
@@ -214,6 +257,12 @@ const handleCreateDraft = async () => {
               <Loader2 className="h-8 w-8 animate-spin mb-2 mx-auto" />
               <p>Creating draft and importing players...</p>
               <Progress value={importProgress} className="w-full mt-2" />
+              {importProgress === 100 && (
+                <>
+                  <p className="mt-2">Updating ADP data...</p>
+                  <Progress value={adpProgress} className="w-full mt-2" />
+                </>
+              )}
             </div>
           </div>
         )}
