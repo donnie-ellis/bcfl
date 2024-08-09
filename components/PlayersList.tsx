@@ -1,9 +1,9 @@
 // ./components/PlayersList.tsx
 'use client'
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Player, Draft } from '@/lib/types';
+import { Player } from '@/lib/types';
 import PlayerFilters from './PlayerFilters';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import PlayerCard from '@/components/PlayerCard';
@@ -12,53 +12,48 @@ import { motion, AnimatePresence } from "framer-motion";
 import useSWR from 'swr';
 
 interface PlayersListProps {
-  leagueKey: string;
   draftId: string;
-  draft: Draft | undefined;
   onPlayerSelect: (player: Player) => void;
 }
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
-const PlayersList: React.FC<PlayersListProps> = ({ leagueKey, draftId, draft, onPlayerSelect }) => {
+const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
   const [hideSelected, setHideSelected] = useState(true);
 
   const { data: playersData, error: playersError } = useSWR<Player[]>(
-    `/api/db/league/${leagueKey}/players?draftId=${draftId}`,
+    `/api/db/draft/${draftId}/players`,
     fetcher
   );
 
   const players = useMemo(() => playersData || [], [playersData]);
-  
-  const draftedPlayerIds = useMemo(() => 
-    draft.picks.filter(pick => pick.is_picked).map(pick => pick.player_id),
-    [draft.picks]
-  );
+
   const positions = useMemo(() => {
     const allPositions = players.flatMap(player => player.eligible_positions);
     return Array.from(new Set(allPositions)).filter(pos => pos !== 'IR' && pos !== 'BN' && pos !== 'W/R/T');
   }, [players]);
 
   const filteredPlayers = useMemo(() => {
-    return players.filter(player => {
-      const matchesSearch = player.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            player.display_position.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesPosition = selectedPositions.length === 0 || 
-                              player.eligible_positions.some(pos => selectedPositions.includes(pos));
-      const isSelected = draftedPlayerIds.includes(player.id);
-      const matchesHideSelected = !hideSelected || !isSelected;
+    return players
+      .filter(player => {
+        const matchesSearch = player.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                              player.display_position.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesPosition = selectedPositions.length === 0 || 
+                                player.eligible_positions.some(pos => selectedPositions.includes(pos));
+        const matchesHideSelected = !hideSelected || !player.is_picked;
 
-      return matchesSearch && matchesPosition && matchesHideSelected;
-    });
-  }, [players, draftedPlayerIds, searchTerm, selectedPositions, hideSelected]);
+        return matchesSearch && matchesPosition && matchesHideSelected;
+      })
+      .sort((a, b) => (a.adp || Infinity) - (b.adp || Infinity));
+  }, [players, searchTerm, selectedPositions, hideSelected]);
 
-  const handlePlayerClick = (player: Player) => {
-    if (!draftedPlayerIds.includes(player.id)) {
+  const handlePlayerClick = useCallback((player: Player) => {
+    if (!player.is_picked) {
       onPlayerSelect(player);
     }
-  };
+  }, [onPlayerSelect]);
 
   if (playersError) return <div>Error loading players</div>;
 
@@ -103,7 +98,7 @@ const PlayersList: React.FC<PlayersListProps> = ({ leagueKey, draftId, draft, on
                 >
                   <PlayerCard
                     player={player}
-                    isDrafted={draftedPlayerIds.includes(player.id)}
+                    isDrafted={player.is_picked}
                     onClick={() => handlePlayerClick(player)}
                     fadeDrafted={true}
                   />
@@ -115,6 +110,8 @@ const PlayersList: React.FC<PlayersListProps> = ({ leagueKey, draftId, draft, on
       </CardContent>
     </Card>
   );
-};
+});
+
+PlayersList.displayName = 'PlayersList';
 
 export default PlayersList;

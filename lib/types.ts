@@ -3,6 +3,7 @@
 export interface Player {
   id: number;
   player_key: string;
+  player_id: number;
   full_name: string;
   first_name: string;
   last_name: string;
@@ -16,13 +17,57 @@ export interface Player {
   editorial_team_full_name: string;
   bye_weeks: string[];
   uniform_number: string;
+  image_url: string;
+  created_at: Date;
+  updated_at: Date;
+  url: string;
+  status_full?: string;
+  injury_note: string;
+  is_keeper: {
+    cost: boolean | number;
+    kept: boolean;
+    status: string | boolean;
+  }
+  is_undroppable: boolean;
+  primary_position: string;
+  eligible_positions_to_add: string[];
+  has_player_notes: boolean;
+  player_notes_last_timestamp: Date;
+  ascii_first_name: string;
+  ascii_last_name: string;
   headshot_url: string;
+  headshot_size: string;
+  notes: string | null;
+  selected_position: string | null;
+  percent_started: null;
+  percent_owned: null;
+  preseason_rank: null;
+  weekly_stats: null;
+  season_stats: null;
+  on_disabled_list: null;
+  player_stats: null;
+  player_advanced_stats: null;
+  player_points: null;
+  draft_analysis: null;
+  league_ownership: null;
+  rank: null;
+  o_rank: null;
+  psr_rank: null;
+  ownership: null;
+  player_adp?: {
+    adp: number;
+    draft_id: number;
+    source_id: number;
+    adp_formatted: string;
+  }
   adp?: number;
   adp_formatted?: string;
   source_id?: number;
   draft_id?: number;
   is_picked?: boolean;
   percent_drafted?: number;
+  is_drafted: boolean;
+  average_draft_position?: number
 }
 
 export interface League {

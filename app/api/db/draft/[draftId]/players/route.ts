@@ -16,8 +16,8 @@ export async function GET(
       .from('players')
       .select(`
         *,
-        player_adp!inner(adp, adp_formatted, source_id, draft_id),
-        draft_players!inner(is_picked, percent_drafted)
+        player_adp:player_adp(adp, adp_formatted, source_id, draft_id),
+        draft_players:draft_players(is_picked, percent_drafted)
       `)
       .eq('player_adp.draft_id', draftId)
       .eq('draft_players.draft_id', draftId);
@@ -33,8 +33,6 @@ export async function GET(
       draft_id: player.player_adp?.[0]?.draft_id || null,
       is_picked: player.draft_players?.[0]?.is_picked || false,
       percent_drafted: player.draft_players?.[0]?.percent_drafted || null,
-      is_drafted: player.draft_players?.[0]?.is_picked || false,
-      average_draft_position: player.player_adp?.[0]?.adp || null,
     }));
 
     return NextResponse.json(players);
