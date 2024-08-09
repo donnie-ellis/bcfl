@@ -1,7 +1,7 @@
 // ./components/PlayersList.tsx
 'use client'
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Player } from '@/lib/types';
 import PlayerFilters from './PlayerFilters';
@@ -10,6 +10,7 @@ import PlayerCard from '@/components/PlayerCard';
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR from 'swr';
+import { useSupabaseClient } from '@/lib/useSupabaseClient';
 
 interface PlayersListProps {
   draftId: string;
@@ -22,11 +23,33 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
   const [hideSelected, setHideSelected] = useState(true);
+  const supabase = useSupabaseClient();
 
-  const { data: playersData, error: playersError } = useSWR<Player[]>(
+  const { data: playersData, error: playersError, mutate } = useSWR<Player[]>(
     `/api/db/draft/${draftId}/players`,
     fetcher
   );
+
+  useEffect(() => {
+    if (supabase && draftId) {
+      const subscription = supabase
+        .channel('picks_updates')
+        .on('postgres_changes', { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'picks', 
+          filter: `draft_id=eq.${draftId}` 
+        }, () => {
+          // Force update of players list when a pick is made
+          mutate();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(subscription);
+      };
+    }
+  }, [supabase, draftId, mutate]);
 
   const players = useMemo(() => playersData || [], [playersData]);
 
