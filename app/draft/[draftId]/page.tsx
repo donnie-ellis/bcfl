@@ -34,11 +34,6 @@ const DraftPage: React.FC = () => {
   const { data: team, error: teamError } = useSWRImmutable<Team>(draftData ? `/api/yahoo/user/league/${draftData.league_id}/team` : null, fetcher);
   const { data: currentPick, error: currentPickError } = useSWR<Pick>(`/api/db/draft/${draftId}/pick`, fetcher, { refreshInterval: 0 });
 
-  const debouncedSetLastUpdateTimestamp = useCallback(
-    debounce(() => setLastUpdateTimestamp(Date.now()), 500),
-    []
-  );
-
   const memoizedDraft = useMemo(() => draftData, [draftData]);
   const memoizedPicks = useMemo(() => memoizedDraft?.picks || [], [memoizedDraft?.picks]);
 
@@ -59,7 +54,6 @@ const DraftPage: React.FC = () => {
               status: payload.new.status
             });
           }
-          debouncedSetLastUpdateTimestamp();
         })
         .subscribe();
 
@@ -76,7 +70,6 @@ const DraftPage: React.FC = () => {
               pick.id === payload.new.id ? { ...pick, ...payload.new } : pick
             );
           }
-          debouncedSetLastUpdateTimestamp();
         })
         .subscribe();
 
@@ -85,7 +78,7 @@ const DraftPage: React.FC = () => {
         supabase.removeChannel(picksSubscription);
       };
     }
-  }, [draftId, supabase, debouncedSetLastUpdateTimestamp, draftData]);
+  }, [draftId, supabase, draftData]);
 
   const handlePlayerSelect = useCallback((player: Player) => {
     setSelectedPlayer(player);
@@ -120,7 +113,6 @@ const DraftPage: React.FC = () => {
       toast.success(`You've drafted ${selectedPlayer.full_name}!`);
 
       setSelectedPlayer(null);
-      debouncedSetLastUpdateTimestamp();
     } catch (error) {
       console.error('Error submitting pick:', error);
       toast.error("Failed to submit pick. Please try again.");
