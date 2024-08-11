@@ -1,7 +1,7 @@
 // ./app/api/cron/updatePlayers/route.ts
 
 import { NextRequest, NextResponse } from 'next/server'
-import { importPlayers } from '@/lib/playerImport'
+import { importPlayers } from '@/lib/playersImport'
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
