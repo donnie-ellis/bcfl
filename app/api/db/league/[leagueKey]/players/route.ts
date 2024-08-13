@@ -40,6 +40,7 @@ export async function GET(
       `);
 
     if (error) throw error;
+    if (!players) throw Error('No players returned');
 
     // If a draft ID is provided, fetch draft-specific information
     if (draftId) {

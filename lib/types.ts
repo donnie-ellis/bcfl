@@ -84,6 +84,17 @@ export interface League {
   start_week: number;
   end_week: number;
   is_finished: boolean;
+  weekly_deadline?: string;
+  league_type?: string;
+  renew?: string;
+  renewed?: string;
+  short_invitation_url?: string;
+  is_pro_league?: boolean;
+  is_cash_league?: boolean;
+  start_date?: string;
+  end_date?: string;
+  game_code?: string;
+  season?: number;
 }
 
 export interface LeagueSettings {
@@ -102,6 +113,7 @@ export interface LeagueSettings {
   waiver_rule: string;
   uses_fractional_points: boolean;
   uses_negative_points: boolean;
+  roster_positions: {};
 }
 
 export interface Team {
