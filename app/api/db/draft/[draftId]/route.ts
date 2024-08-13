@@ -1,6 +1,6 @@
 // ./app/api/draft/[draftId]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, PostgrestError } from '@supabase/supabase-js';
 import { getServerAuthSession } from "@/auth";
 import { requestYahoo } from '@/lib/yahoo';
 
@@ -102,7 +102,7 @@ export async function DELETE(
     }
 
     return NextResponse.json({ message: 'Draft deleted successfully' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unexpected error deleting draft:', error);
     return NextResponse.json({ error: 'An unexpected error occurred', details: error.message }, { status: 500 });
   }

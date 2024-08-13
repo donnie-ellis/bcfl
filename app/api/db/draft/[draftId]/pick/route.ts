@@ -3,12 +3,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
 import { getServerAuthSession } from "@/auth";
+import { Draft } from '@/lib/types';
+import { Database } from '@/lib/database.types';
+import { error } from 'console';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { draftId: string } }
 ) {
   const supabase = getServerSupabaseClient();
+  if (!supabase) throw error('Error getting supabase client');
+
   const { draftId } = params;
 
   try {
@@ -25,10 +31,11 @@ export async function GET(
       .from('picks')
       .select(`*`)
       .eq('draft_id', draftId)
-      .eq('total_pick_number', draft.current_pick)
+      .eq('total_pick_number', draft.current_pick as number)
       .single();
 
     if (pickError) throw pickError;
+    
 
     return NextResponse.json(currentPick);
   } catch (error) {
@@ -44,6 +51,8 @@ export async function POST(
   { params }: { params: { draftId: string } }
 ) {
   const supabase = getServerSupabaseClient();
+  if (!supabase) throw error('Error getting supabase client');
+
   const { draftId } = params;
   const { pickId, playerId } = await request.json();
 
@@ -70,14 +79,15 @@ export async function POST(
       .single();
 
     if (pickError) throw pickError;
+      if (!pick.drafts) throw Error('No draft data returned');
 
     // Check if the user is authorized to make this pick
-    const isAuthorized = await checkUserAuthorization(supabase, userGuid, pick.team_key, pick.drafts.league_id);
-    if (!isAuthorized) {
-      return NextResponse.json({ error: 'Unauthorized to make this pick' }, { status: 403 });
-    }
+      const isAuthorized = await checkUserAuthorization(supabase, userGuid, pick.team_key as string, pick.drafts.league_id as string);
+      if (!isAuthorized) {
+        return NextResponse.json({ error: 'Unauthorized to make this pick' }, { status: 403 });
+      }
 
-    // Call the submit_draft_pick function
+      // Call the submit_draft_pick function
     const { data, error } = await supabase.rpc('submit_draft_pick', {
       p_draft_id: parseInt(draftId),
       p_pick_id: pickId,
@@ -86,12 +96,6 @@ export async function POST(
     });
 
     if (error) throw error;
-
-    if (!data.success) {
-      return NextResponse.json({ error: data.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ message: data.message });
   } catch (error) {
     console.error('Error submitting pick:', error);
     return NextResponse.json({ error: 'Failed to submit pick', details: error }, { status: 500 });
@@ -104,6 +108,8 @@ export async function DELETE(
   { params }: { params: { draftId: string } }
 ) {
   const supabase = getServerSupabaseClient();
+  if (!supabase) throw error('Error getting supabase client');
+
   const { draftId } = params;
   const { pickId } = await request.json();
 
@@ -126,7 +132,7 @@ export async function DELETE(
     if (draftError) throw draftError;
 
     // Check if the user is a commissioner
-    const isCommissioner = await checkCommissionerStatus(supabase, userGuid, draft.league_id);
+    const isCommissioner = await checkCommissionerStatus(supabase, userGuid, draft.league_id as string);
     if (!isCommissioner) {
       return NextResponse.json({ error: 'Unauthorized to delete this pick' }, { status: 403 });
     }
@@ -182,7 +188,7 @@ export async function DELETE(
   }
 }
 
-async function checkUserAuthorization(supabase, userGuid: string, teamKey: string, leagueKey: string): Promise<boolean> {
+async function checkUserAuthorization(supabase: SupabaseClient<Database>, userGuid: string, teamKey: string, leagueKey: string): Promise<boolean> {
   // Check if the user is the team owner
   const { data: teamOwner, error: teamError } = await supabase
     .from('manager_team_league')
@@ -204,7 +210,7 @@ async function checkUserAuthorization(supabase, userGuid: string, teamKey: strin
   return await checkCommissionerStatus(supabase, userGuid, leagueKey);
 }
 
-async function checkCommissionerStatus(supabase, userGuid: string, leagueKey: string): Promise<boolean> {
+async function checkCommissionerStatus(supabase: SupabaseClient<Database>, userGuid: string, leagueKey: string): Promise<boolean> {
   const { data: manager, error } = await supabase
     .from('managers')
     .select('is_commissioner')

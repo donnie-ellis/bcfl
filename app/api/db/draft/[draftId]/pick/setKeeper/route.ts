@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
 import { getServerAuthSession } from "@/auth";
+import { SupabaseClient } from '@supabase/supabase-js';
+import { Database } from '@/lib/database.types';
 
 export async function PUT(
   request: NextRequest,
@@ -29,7 +31,7 @@ export async function PUT(
     if (draftError) throw draftError;
 
     // Check if the user is a commissioner
-    const isCommissioner = await checkCommissionerStatus(supabase, userGuid, draft.league_id);
+    const isCommissioner = await checkCommissionerStatus(supabase, userGuid, draft.league_id as string);
     if (!isCommissioner) {
       return NextResponse.json({ error: 'Unauthorized to change keeper status' }, { status: 403 });
     }
@@ -50,7 +52,7 @@ export async function PUT(
   }
 }
 
-async function checkCommissionerStatus(supabase, userGuid: string, leagueKey: string): Promise<boolean> {
+async function checkCommissionerStatus(supabase: SupabaseClient<Database>, userGuid: string, leagueKey: string): Promise<boolean> {
   const { data: manager, error } = await supabase
     .from('managers')
     .select('is_commissioner')

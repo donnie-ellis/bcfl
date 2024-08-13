@@ -99,7 +99,6 @@ export async function POST(
             adp_formatted: player.adp_formatted
           }, {
             onConflict: 'player_id,draft_id,source_id',
-            update: ['adp', 'adp_formatted', 'updated_at']
           });
 
         if (upsertError) {
