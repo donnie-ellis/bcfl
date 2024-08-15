@@ -6,25 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { LeagueSettings, Team, parseRosterPositions, RosterPosition } from '@/lib/types/';
-import { DragDropContext, Droppable, Draggable, DropResult, DroppableProvided, DroppableProps } from 'react-beautiful-dnd';
 import TeamCard from './TeamCard';
 import { Loader2 } from 'lucide-react';
 import { toast } from "sonner";
+import { Reorder } from 'framer-motion';
 
-const StrictModeDroppable = ({ children, ...props }: DroppableProps) => {
-  const [enabled, setEnabled] = useState(false);
-  useEffect(() => {
-    const animation = requestAnimationFrame(() => setEnabled(true));
-    return () => {
-      cancelAnimationFrame(animation);
-      setEnabled(false);
-    };
-  }, []);
-  if (!enabled) {
-    return null;
-  }
-  return <Droppable {...props}>{children}</Droppable>;
-};
 
 interface CreateDraftDialogProps {
   leagueKey: string;
@@ -45,14 +31,6 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
   useEffect(() => {
     setOrderedTeams(teams);
   }, [teams]);
-
-  const handleDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
-    const items = Array.from(orderedTeams);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-    setOrderedTeams(items);
-  };
 
   const handleCreateDraft = async () => {
     if (!draftName.trim()) {
@@ -127,7 +105,7 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
       setIsCreatingDraft(false);
     }
   };
-  
+
   const startAdpUpdate = async (draftId: string) => {
     try {
       if (!leagueSettings) throw Error('League settings not found');
@@ -204,32 +182,17 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
             className="mb-4"
             disabled={isCreatingDraft}
           />
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <StrictModeDroppable droppableId="teams">
-              {(provided: DroppableProvided) => (
-                <ul {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
-                  {orderedTeams.map((team, index) => (
-                    <Draggable key={team.team_key} draggableId={team.team_key} index={index}>
-                      {(provided) => (
-                        <li
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          className="p-2 bg-gray-100 rounded flex items-center"
-                        >
-                          <span className="mr-2">{index + 1}.</span>
-                          <div className="flex-grow">
-                            <TeamCard team={team} />
-                          </div>
-                        </li>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </ul>
-              )}
-            </StrictModeDroppable>
-          </DragDropContext>
+          <Reorder.Group axis='y' values={orderedTeams} onReorder={setOrderedTeams}>
+            <div className='space-y-2'>
+                {
+                  orderedTeams.map((team, index) => (
+                    <Reorder.Item key={team.team_id} value={team}>
+                      <TeamCard team={team} />
+                    </Reorder.Item>
+                  ))
+                }
+              </div>
+          </Reorder.Group>
           <Button onClick={handleCreateDraft} className="mt-4 w-full" disabled={isCreatingDraft}>
             {isCreatingDraft ? 'Creating Draft...' : 'Create Draft'}
           </Button>
