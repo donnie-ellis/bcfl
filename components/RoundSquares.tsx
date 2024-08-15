@@ -4,6 +4,7 @@ import { Draft, LeagueSettings, Team } from '@/lib/types/';
 import { PickWithPlayerAndTeam } from '@/lib/types/pick.types';
 import DraftSquare from "@/components/DraftSquare"
 import { Skeleton } from "@/components/ui/skeleton";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface RoundSquaresProps {
   draft: Draft & { picks: PickWithPlayerAndTeam[] };
@@ -43,15 +44,24 @@ const RoundSquares: React.FC<RoundSquaresProps> = ({
 
   return (
     <div className="flex justify-between w-full">
-      {picksToDisplay.map((pick) => (
-        <div key={pick.id} className="flex-1 px-1">
-          <DraftSquare
-            pick={pick as PickWithPlayerAndTeam}
-            isCurrentPick={pick.total_pick_number === draft.current_pick}
-            onSquareHover={onSquareHover}
-          />
-        </div>
-      ))}
+      <AnimatePresence>
+        {picksToDisplay.map((pick) => (
+          <motion.div
+            key={pick.id}
+            className="flex-1 px-1"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <DraftSquare
+              pick={pick as PickWithPlayerAndTeam}
+              isCurrentPick={pick.total_pick_number === draft.current_pick}
+              onSquareHover={onSquareHover}
+            />
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </div>
   );
 };
