@@ -1,74 +1,99 @@
-// ./api/yahoo/league/[leagueKey]/managers.route.ts
+// ./app/api/yahoo/league/[leagueKey]/managers/route.ts
 
-import { NextResponse } from 'next/server';
-import { requestYahoo, parseTeamData } from '@/lib/yahoo';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getServerAuthSession } from "@/auth";
+import { requestYahoo } from '@/lib/yahoo';
+import { ManagerData } from '@/lib/yahoo.types';
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
 export async function POST(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { leagueKey: string } }
 ) {
+  const session = await getServerAuthSession();
+  
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { leagueKey } = params;
 
   try {
-    // Fetch league data from Yahoo
-    const leagueData = await requestYahoo(`league/${leagueKey}/teams`);
-    
-    // Parse the team data, which includes manager information
-    const teams = await parseTeamData(leagueData);
+    // Fetch managers data from Yahoo
+    const data = await requestYahoo(`league/${leagueKey}/teams`);
+    const teams = data.fantasy_content.league[1].teams;
 
-    // Extract managers and their relationships with teams
-    const managersData = teams.flatMap(team => 
-      team.managers.map(manager => ({
-        manager: {
-          manager_id: manager.manager_id,
-          nickname: manager.nickname,
-          guid: manager.guid,
-          email: manager.email,
-          image_url: manager.image_url,
-          felo_score: manager.felo_score,
-          felo_tier: manager.felo_tier,
-          is_commissioner: manager.is_commissioner
-        },
-        relationship: {
-          manager_guid: manager.guid,
-          team_key: team.team_key,
-          league_key: leagueKey,
+    const managersData: ManagerData[] = [];
+
+    for (const key in teams) {
+      if (key !== 'count') {
+        const team = teams[key].team[0];
+        const teamKey = team.find((item: any) => item.team_key)?.team_key;
+        const managers = team.find((item: any) => item.managers)?.managers;
+
+        if (managers) {
+          managers.forEach((managerData: any) => {
+            const manager = managerData.manager;
+            managersData.push({
+              manager: {
+                manager_id: manager.manager_id,
+                nickname: manager.nickname,
+                guid: manager.guid,
+                is_commissioner: manager.is_commissioner === '1',
+                email: manager.email,
+                image_url: manager.image_url,
+                felo_score: manager.felo_score,
+                felo_tier: manager.felo_tier
+              },
+              relationship: {
+                manager_guid: manager.guid,
+                team_key: teamKey,
+                league_key: leagueKey
+              }
+            });
+          });
         }
-      }))
-    );
+      }
+    }
 
     // Upsert managers
-    const { error: managerError } = await supabase
-      .from('managers')
-      .upsert(
-        managersData.map(m => m.manager),
-        { onConflict: 'guid', ignoreDuplicates: false }
-      );
+    for (const managerData of managersData) {
+      const { error: managerError } = await supabase
+        .from('managers')
+        .upsert({
+          guid: managerData.manager.guid,
+          manager_id: managerData.manager.manager_id,
+          nickname: managerData.manager.nickname,
+          is_commissioner: managerData.manager.is_commissioner,
+          email: managerData.manager.email,
+          image_url: managerData.manager.image_url,
+          felo_score: managerData.manager.felo_score,
+          felo_tier: managerData.manager.felo_tier
+        }, {
+          onConflict: 'guid'
+        });
 
-    if (managerError) {
-      console.error('Error upserting managers:', managerError);
-      return NextResponse.json({ error: 'Failed to store managers' }, { status: 500 });
+      if (managerError) throw managerError;
+
+      // Upsert manager_team_league relationship
+      const { error: relationshipError } = await supabase
+        .from('manager_team_league')
+        .upsert({
+          manager_guid: managerData.relationship.manager_guid,
+          team_key: managerData.relationship.team_key,
+          league_key: managerData.relationship.league_key
+        }, {
+          onConflict: 'manager_guid,team_key,league_key'
+        });
+
+      if (relationshipError) throw relationshipError;
     }
 
-    // Insert manager-team-league relationships
-    const { error: relationshipError } = await supabase
-      .from('manager_team_league')
-      .upsert(
-        managersData.map(m => m.relationship),
-        { onConflict: ['manager_guid', 'team_key', 'league_key'], ignoreDuplicates: true }
-      );
-
-    if (relationshipError) {
-      console.error('Error inserting manager-team-league relationships:', relationshipError);
-      return NextResponse.json({ error: 'Failed to store manager-team-league relationships' }, { status: 500 });
-    }
-
-    return NextResponse.json({ message: 'Managers and relationships stored successfully' });
+    return NextResponse.json({ message: 'Managers updated successfully' });
   } catch (error) {
-    console.error('Error fetching or processing league data:', error);
-    return NextResponse.json({ error: 'Failed to fetch or process league data' }, { status: 500 });
+    console.error('Failed to update managers:', error);
+    return NextResponse.json({ error: 'Failed to update managers' }, { status: 500 });
   }
 }

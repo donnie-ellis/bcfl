@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerAuthSession } from "@/auth";
 import { requestYahoo, parseTeamData } from '@/lib/yahoo';
-import { Team } from '@/lib/types';
+import { Team } from '@/lib/yahoo.types';
 
 export async function GET(
   request: NextRequest,

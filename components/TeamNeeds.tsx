@@ -1,10 +1,10 @@
 // ./components/TeamNeeds.tsx
 import React, { useState, useEffect } from 'react';
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
-import { LeagueSettings, Pick, Player } from '@/lib/types';
+import { LeagueSettings } from '@/lib/types/league-settings.types';
+import { Pick, Player } from '@/lib/types/';
 import { Badge } from "@/components/ui/badge";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import PlayerCard from '@/components/PlayerCard';
+import { Json } from '@/lib/types/database.types';
 
 interface TeamNeedsProps {
   leagueSettings: LeagueSettings;
@@ -16,12 +16,41 @@ interface PositionNeed {
   position: string;
   needed: number;
   filled: number;
-  players: Player[];
+}
+
+interface RosterPosition {
+  position: string;
+  count: number;
 }
 
 const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draftId, teamKey }) => {
   const [positionNeeds, setPositionNeeds] = useState<PositionNeed[]>([]);
   const supabase = useSupabaseClient();
+
+  const parseRosterPositions = (rosterPositions: Json): RosterPosition[] => {
+    if (Array.isArray(rosterPositions)) {
+      return rosterPositions.reduce((acc: RosterPosition[], item) => {
+        if (
+          typeof item === 'object' &&
+          item !== null &&
+          'roster_position' in item &&
+          typeof item.roster_position === 'object' &&
+          item.roster_position !== null &&
+          'position' in item.roster_position &&
+          'count' in item.roster_position &&
+          typeof item.roster_position.position === 'string' &&
+          typeof item.roster_position.count === 'number'
+        ) {
+          acc.push({
+            position: item.roster_position.position,
+            count: item.roster_position.count
+          });
+        }
+        return acc;
+      }, []);
+    }
+    return [];
+  };
 
   useEffect(() => {
     if (!supabase || !teamKey) return;
@@ -35,25 +64,24 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draftId, teamKey 
         `)
         .eq('draft_id', draftId)
         .eq('team_key', teamKey)
-        .eq('is_picked', true)
-        .order('total_pick_number', { ascending: true });
+        .eq('is_picked', true);
 
       if (error) {
         console.error('Error fetching team picks:', error);
         return;
       }
 
-      updatePositionNeeds(picks);
+      updatePositionNeeds(picks as (Pick & { player: Player | null })[]);
     };
 
     const updatePositionNeeds = (picks: (Pick & { player: Player | null })[]) => {
-      const needs: PositionNeed[] = leagueSettings.roster_positions
-        .filter(pos => !['BN', 'IR'].includes(pos.roster_position.position))
+      const rosterPositions = parseRosterPositions(leagueSettings.roster_positions);
+      const needs: PositionNeed[] = rosterPositions
+        .filter(pos => !['BN', 'IR'].includes(pos.position))
         .map(pos => ({
-          position: pos.roster_position.position,
-          needed: pos.roster_position.count,
-          filled: 0,
-          players: []
+          position: pos.position,
+          needed: pos.count,
+          filled: 0
         }));
 
       const flexPositions = ['W/R/T', 'W/R'];
@@ -61,7 +89,7 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draftId, teamKey 
       const flexNeeds = needs.filter(need => flexPositions.includes(need.position));
 
       picks.forEach(pick => {
-        if (pick.player) {
+        if (pick.player && pick.player.eligible_positions) {
           const eligiblePositions = pick.player.eligible_positions;
           let positionFilled = false;
 
@@ -70,7 +98,6 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draftId, teamKey 
             const positionNeed = regularPositions.find(need => need.position === position);
             if (positionNeed && positionNeed.filled < positionNeed.needed) {
               positionNeed.filled++;
-              positionNeed.players.push(pick.player);
               positionFilled = true;
               break;
             }
@@ -80,14 +107,14 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draftId, teamKey 
           if (!positionFilled) {
             for (const flexNeed of flexNeeds) {
               if (flexNeed.position === 'W/R/T' && 
-                  (eligiblePositions.includes('WR') || eligiblePositions.includes('RB') || eligiblePositions.includes('TE'))) {
+                  (eligiblePositions.includes('WR') || eligiblePositions.includes('RB') || eligiblePositions.includes('TE')) && 
+                  flexNeed.filled < flexNeed.needed) {
                 flexNeed.filled++;
-                flexNeed.players.push(pick.player);
                 break;
               } else if (flexNeed.position === 'W/R' && 
-                         (eligiblePositions.includes('WR') || eligiblePositions.includes('RB'))) {
+                         (eligiblePositions.includes('WR') || eligiblePositions.includes('RB')) && 
+                         flexNeed.filled < flexNeed.needed) {
                 flexNeed.filled++;
-                flexNeed.players.push(pick.player);
                 break;
               }
             }
@@ -119,44 +146,22 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draftId, teamKey 
 
   const getSeverityColor = (needed: number, filled: number) => {
     const remaining = needed - filled;
-    if (remaining <= 0) return 'bg-green-500';
+    if (remaining === 0) return 'bg-green-500';
     if (remaining === 1) return 'bg-yellow-500';
     return 'bg-red-500';
   };
 
   return (
-    <div className="flex flex-wrap justify-between">
+    <div className="flex flex-wrap gap-2">
       {positionNeeds.map((need) => (
-        <HoverCard key={need.position}>
-          <HoverCardTrigger>
-            <div className="cursor-pointer flex-grow basis-0 min-w-[80px] m-1">
-              <Badge
-                variant="outline"
-                className={`flex items-center justify-between p-2 ${getSeverityColor(need.needed, need.filled)} w-full`}
-              >
-                <span className="font-bold text-xs">{need.position}</span>
-                <span className="text-xs">{need.filled}/{need.needed}</span>
-              </Badge>
-            </div>
-          </HoverCardTrigger>
-          <HoverCardContent className="w-80">
-            <h3 className="font-semibold mb-2">{need.position} Players</h3>
-            <div className="space-y-2">
-              {need.players.length > 0 ? (
-                need.players.map((player) => (
-                  <PlayerCard
-                    key={player.player_key}
-                    player={player}
-                    isDrafted={true}
-                    onClick={() => {}}
-                  />
-                ))
-              ) : (
-                <p className="text-sm text-gray-500">No players drafted for this position yet.</p>
-              )}
-            </div>
-          </HoverCardContent>
-        </HoverCard>
+        <Badge
+          key={need.position}
+          variant="outline"
+          className={`flex items-center justify-between p-2 ${getSeverityColor(need.needed, need.filled)} flex-grow basis-0 min-w-[80px]`}
+        >
+          <span className="font-bold text-xs">{need.position}</span>
+          <span className="text-xs">{need.filled}/{need.needed}</span>
+        </Badge>
       ))}
     </div>
   );

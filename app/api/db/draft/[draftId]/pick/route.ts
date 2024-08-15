@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
 import { getServerAuthSession } from "@/auth";
-import { Database } from '@/lib/database.types';
+import { Database } from '@/lib/types/database.types';
 import { error } from 'console';
 import { SupabaseClient } from '@supabase/supabase-js';
 

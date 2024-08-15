@@ -1,6 +1,6 @@
 'use client'
 import React from 'react';
-import { League } from '@/lib/types';
+import { League } from '@/lib/types/';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ExternalLink } from 'lucide-react';
@@ -19,10 +19,10 @@ const LeagueCard: React.FC<LeagueCardProps> = ({ league, onLeagueClick }) => (
       <CardTitle className="text-2xl font-bold">{league.name}</CardTitle>
     </CardHeader>
     <CardContent className="space-y-2">
-      <a href={league.url} target="_blank" rel="noopener noreferrer" className="flex items-center text-blue-500 hover:underline">
+      <a href={league.url || ''} target="_blank" rel="noopener noreferrer" className="flex items-center text-blue-500 hover:underline">
         League URL <ExternalLink className="ml-1 w-4 h-4" />
       </a>
-      <img src={league.logo_url} alt={league.name} className="mx-auto" />
+      <img src={league.logo_url || ''} alt={league.name} className="mx-auto" />
       <span>Scoring Type: 
         <Badge 
           variant="secondary">

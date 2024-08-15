@@ -1,6 +1,6 @@
 // ./components/PlayerCard.tsx
 import React from 'react';
-import { Player } from '@/lib/types';
+import { Player } from '@/lib/types/player.types';
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ import {
 
 interface PlayerCardProps {
   player: Player;
-  isDrafted: boolean;
+  isDrafted: boolean | undefined;
   onClick: () => void;
   fadeDrafted?: boolean;
 }
@@ -35,7 +35,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
           >
             <CardContent className="p-3 flex items-center space-x-3">
               <Avatar className="h-12 w-12 rounded">
-                <AvatarImage src={player.headshot_url || player.image_url} alt={player.full_name} />
+                <AvatarImage src={player.headshot_url as string || player.image_url as string} alt={player.full_name} />
                 <AvatarFallback>{player.full_name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
               </Avatar>
               <div className="flex-grow">
@@ -65,8 +65,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
             <p><strong>Position:</strong> {player.display_position}</p>
             <p><strong>Team:</strong> {player.editorial_team_full_name}</p>
             {player.bye_weeks && <p><strong>Bye Week:</strong> {player.bye_weeks}</p>}
-            {player.average_pick && <p><strong>ADP:</strong> {player.average_pick.toFixed(1)}</p>}
-            {player.percent_drafted && <p><strong>% Drafted:</strong> {player.percent_drafted.toFixed(1)}%</p>}
           </div>
         </TooltipContent>
       </Tooltip>

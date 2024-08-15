@@ -1,7 +1,15 @@
 import { getServerSession, type NextAuthOptions } from "next-auth";
 import { createClient } from '@supabase/supabase-js';
+import { JWT } from "next-auth/jwt";
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
+
+interface ExtendedJWT extends JWT {
+    accessToken?: string;
+    refreshToken?: string;
+    expiresAt?: number;
+    userId?: string;
+  }
 
 export const authOptions: NextAuthOptions = {
     session: {
@@ -96,7 +104,7 @@ export const authOptions: NextAuthOptions = {
 
             return true;
         },
-        async jwt({ token, account, user }) {
+        async jwt({ token, account, user}: { token: ExtendedJWT, account: any, user: any }) {
             if (account && user) {
                 token.accessToken = account.access_token;
                 token.refreshToken = account.refresh_token;
@@ -105,7 +113,7 @@ export const authOptions: NextAuthOptions = {
             }
 
             // If the token has expired, try to refresh it
-            if (token.expiresAt && Date.now() > token.expiresAt * 1000) {
+            if (token.expiresAt && typeof token.expiresAt === 'number' && Date.now() > token.expiresAt * 1000) {
                 try {
                     const response = await fetch(
                         "https://api.login.yahoo.com/oauth2/get_token",

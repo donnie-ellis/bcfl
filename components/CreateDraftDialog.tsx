@@ -1,10 +1,11 @@
+// ./components/CreateDraftDialog.tsx
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { LeagueSettings, Team } from '@/lib/types';
+import { LeagueSettings, Team } from '@/lib/types/';
 import { DragDropContext, Droppable, Draggable, DropResult, DroppableProvided, DroppableProps } from 'react-beautiful-dnd';
 import TeamCard from './TeamCard';
 import { Loader2 } from 'lucide-react';
@@ -24,6 +25,13 @@ const StrictModeDroppable = ({ children, ...props }: DroppableProps) => {
   }
   return <Droppable {...props}>{children}</Droppable>;
 };
+
+interface CreateDraftDialogProps {
+  leagueKey: string;
+  teams: Team[];
+  onDraftCreated: (drafts: any) => void;
+  leagueSettings: LeagueSettings | null;
+}
 
 const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams, onDraftCreated, leagueSettings }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -54,7 +62,7 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
       name: team.name,
       url: team.url,
       team_logos: team.team_logos,
-      waiver_priority: team.waiver_priority ? parseInt(team.waiver_priority) : null,
+      waiver_priority: team.waiver_priority ? parseInt(team.waiver_priority.toString()) : null,
       number_of_moves: team.number_of_moves,
       number_of_trades: team.number_of_trades,
       league_scoring_type: team.league_scoring_type,
@@ -138,7 +146,15 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
 
   const startAdpUpdate = async (draftId: string) => {
     try {
-      const scoringType = leagueSettings?.stat_categories.find(cat => cat.name === 'Rec')?.value > 0 ? 'ppr' : 'standard';
+      if (!leagueSettings) throw Error('League settings not found');
+      const scoringType = leagueSettings.stat_categories && 
+        Array.isArray(leagueSettings.stat_categories) &&
+        leagueSettings.stat_categories.some(cat => 
+          typeof cat === 'object' && cat !== null && 
+          'name' in cat && cat.name === 'Rec' && 
+          'value' in cat && typeof cat.value === 'number' && cat.value > 0
+        ) ? 'ppr' : 'standard';
+
       const adpResponse = await fetch(`/api/db/draft/${draftId}/players/adp`, {
         method: 'POST',
         headers: {
@@ -147,7 +163,7 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
         body: JSON.stringify({
           leagueId: leagueKey,
           scoringType,
-          numTeams: leagueSettings?.num_teams || teams.length,
+          numTeams: teams.length,
         }),
       });
 

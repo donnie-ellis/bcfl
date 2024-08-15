@@ -8,7 +8,7 @@ import PlayersList from '@/components/PlayersList';
 import DraftedPlayers from '@/components/DraftedPlayers';
 import DraftStatus from '@/components/DraftStatus';
 import PlayerDetails from '@/components/PlayerDetails';
-import { League, Draft, LeagueSettings, Player, Team, Pick } from '@/lib/types';
+import { League, Draft, LeagueSettings, Player, Team, Pick } from '@/lib/types/';
 import SubmitPickButton from '@/components/SubmitPicksButton';
 import { toast } from "sonner";
 import DraftHeader from '@/components/DraftHeader';
@@ -123,12 +123,11 @@ const DraftPage: React.FC = () => {
 
   const MemoizedPlayersList = useMemo(() => (
     <PlayersList
-      leagueKey={memoizedDraft?.league_id || ''}
-      draft={memoizedDraft}
       draftId={draftId}
       onPlayerSelect={handlePlayerSelect}
+      draft={memoizedDraft as Draft}
     />
-  ), [memoizedDraft, draftId, handlePlayerSelect]);
+  ), [draftId, handlePlayerSelect, memoizedDraft]);
 
   const MemoizedDraftedPlayers = useMemo(() => (
     draftData && leagueSettings && team && (

@@ -15,7 +15,7 @@ interface PlayerFiltersProps {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   selectedPositions: string[];
-  setSelectedPositions: (positions: string[]) => void;
+  setSelectedPositions: React.Dispatch<React.SetStateAction<string[]>>;
   hideSelected: boolean;
   setHideSelected: (hide: boolean) => void;
   positions: string[];
@@ -33,7 +33,7 @@ const PlayerFilters: React.FC<PlayerFiltersProps> = ({
   const [isOpen, setIsOpen] = React.useState(false);
 
   const handlePositionToggle = (position: string) => {
-    setSelectedPositions(prev => 
+    setSelectedPositions(prev =>
       prev.includes(position)
         ? prev.filter(p => p !== position)
         : [...prev, position]

@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Draft, LeagueSettings, Team } from '@/lib/types';
+import { Draft, LeagueSettings, Team } from '@/lib/types/';
 import TeamCard from '@/components/TeamCard';
 import {
   HoverCard,
@@ -45,8 +45,7 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams,
       </Card>
     );
   }
-
-  const currentPick = draft.current_pick;
+  const currentPick = draft.current_pick || 0;
   const totalTeams = teams.length;
   const round = Math.ceil(currentPick / totalTeams);
   const pickInRound = ((currentPick - 1) % totalTeams) + 1;
@@ -99,7 +98,7 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams,
           <Progress value={progress} className="w-full" />
           <TeamNeeds 
             teamKey={team?.team_key}
-            draftId={draft.id}
+            draftId={draft.id.toString()}
             leagueSettings={leagueSettings}
           />
         </div>

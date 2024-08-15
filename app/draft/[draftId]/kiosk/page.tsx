@@ -4,7 +4,9 @@
 import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
-import { League, Draft, LeagueSettings, Player, Team, Pick } from '@/lib/types';
+import { League, Draft, LeagueSettings } from '@/lib/types/';
+import { Pick, Player, Team } from '@/lib/types/';
+import { PickWithPlayerAndTeam } from '@/lib/types/pick.types';
 import RoundSquares from '@/components/RoundSquares';
 import CurrentPickDetails from '@/components/CurrentPickDetails';
 import { toast } from "sonner";
@@ -16,6 +18,9 @@ import { debounce } from 'lodash';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+// Define a type for the memoized draft to include the extended picks
+type MemoizedDraft = Omit<Draft, 'picks'> & { picks: PickWithPlayerAndTeam[] };
 
 const KioskPage: React.FC = () => {
   const params = useParams();
@@ -47,7 +52,7 @@ const KioskPage: React.FC = () => {
 
   const isLoading = !draftData || !leagueData || !leagueSettings || !teams || !currentPick || !playerData;
 
-  const memoizedDraft = useMemo(() => {
+  const memoizedDraft = useMemo<MemoizedDraft | undefined>(() => {
     if (draftData && playerData && teams) {
       const playerMap = new Map(playerData.map(player => [player.id, player]));
       const teamMap = new Map(teams.map(team => [team.team_key, team]));
@@ -55,15 +60,15 @@ const KioskPage: React.FC = () => {
         ...draftData,
         picks: draftData.picks.map(pick => ({
           ...pick,
-          player: pick.player_id ? playerMap.get(pick.player_id) || null : null,
+          player: pick.player_id ? playerMap.get(Number(pick.player_id)) || null : null,
           team: teamMap.get(pick.team_key) || null
-        }))
+        })) as PickWithPlayerAndTeam[]
       };
     }
-    return draftData;
+    return undefined;
   }, [draftData, playerData, teams]);
 
-  const memoizedPicks = useMemo(() => memoizedDraft?.picks || [], [memoizedDraft?.picks]);
+  const memoizedPicks = useMemo<PickWithPlayerAndTeam[]>(() => memoizedDraft?.picks || [], [memoizedDraft?.picks]);
 
   React.useEffect(() => {
     if (draftId && supabase) {
@@ -74,11 +79,11 @@ const KioskPage: React.FC = () => {
           schema: 'public', 
           table: 'drafts', 
           filter: `id=eq.${draftId}` 
-        }, (payload) => {
+        }, (payload: { new: Partial<Draft> }) => {
           mutateDraft((prevDraft) => prevDraft ? {
             ...prevDraft,
-            current_pick: payload.new.current_pick,
-            status: payload.new.status
+            current_pick: payload.new.current_pick || prevDraft.current_pick,
+            status: payload.new.status || prevDraft.status
           } : prevDraft);
           debouncedSetLastUpdateTimestamp();
         })
@@ -91,13 +96,13 @@ const KioskPage: React.FC = () => {
           schema: 'public', 
           table: 'picks', 
           filter: `draft_id=eq.${draftId}` 
-        }, (payload) => {
-          mutateDraft((prevDraft) => prevDraft ? {
+        }, (payload: { new: Partial<Pick> }) => {
+          mutateDraft((prevDraft): Draft | undefined => prevDraft ? {
             ...prevDraft,
             picks: prevDraft.picks.map(pick => 
               pick.id === payload.new.id ? { ...pick, ...payload.new } : pick
             )
-          } : prevDraft);
+          } : undefined);
           mutateCurrentPick();
           debouncedSetLastUpdateTimestamp();
         })
@@ -171,7 +176,7 @@ const KioskPage: React.FC = () => {
     return <div>Loading...</div>;
   }
 
-  if (memoizedDraft.status === 'completed') {
+  if (memoizedDraft?.status === 'completed') {
     return (
       <Alert>
         <AlertTitle>Draft Completed</AlertTitle>
@@ -190,13 +195,15 @@ const KioskPage: React.FC = () => {
       <div className="flex-none w-full">
         <div className="p-4">
           <h2 className="text-2xl font-bold mb-4">Current Round</h2>
-          <RoundSquares
-            draft={memoizedDraft}
-            leagueSettings={leagueSettings}
-            currentRoundOnly={true}
-            isLoading={isLoading}
-            teams={teams}
-          />
+          {memoizedDraft && leagueSettings && teams && (
+            <RoundSquares
+              draft={memoizedDraft}
+              leagueSettings={leagueSettings}
+              currentRoundOnly={true}
+              isLoading={isLoading}
+              teams={teams}
+            />
+          )}
         </div>
       </div>
 
@@ -205,11 +212,11 @@ const KioskPage: React.FC = () => {
           {MemoizedDraftedPlayers}
         </div>
         <div className="w-1/2 p-4">
-          {currentPick && leagueSettings && teams && (
+          {currentPick && leagueSettings && teams && memoizedDraft && (
             <CurrentPickDetails
-              currentTeam={teams.find(team => team.team_key === currentPick.team_key) || null}
+              currentTeam={teams.find(team => team.team_key === currentPick.team_key)}
               currentPick={currentPick}
-              previousPick={memoizedPicks.find(pick => pick.total_pick_number === memoizedDraft?.current_pick - 1) as Pick & { player: Player } | null}
+              previousPick={memoizedPicks.find(pick => pick.total_pick_number === (memoizedDraft.current_pick || 0) - 1) || null}
               leagueKey={leagueData?.league_key || ''}
               draftId={draftId}
               leagueSettings={leagueSettings}

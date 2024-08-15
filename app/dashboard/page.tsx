@@ -1,4 +1,4 @@
-// ./app/dashboard/page.tsx
+ // ./app/dashboard/page.tsx
 'use client'
 
 import React, { useState, useEffect } from 'react';
@@ -20,7 +20,11 @@ import { ChevronDown, Trash2 } from "lucide-react";
 import Profile from '@/components/Profile';
 import LeagueList from '@/components/LeagueList';
 import CreateDraftDialog from '@/components/CreateDraftDialog';
-import { League, Team, LeagueSettings, RosterPosition, Manager } from '@/lib/types';
+import { League } from '@/lib/types/league.types';
+import { Team, TeamLogo, parseTeamLogos } from '@/lib/types/team.types';
+import { LeagueSettings, parseRosterPositions, parseStatCategories, RosterPosition, StatCategory } from '@/lib/types/league-settings.types';
+import { Manager } from '@/lib/types/manager.types';
+import { Draft } from '@/lib/types/draft.types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,19 +36,20 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Json } from '@/lib/types/database.types';
 
-const DashboardPage = () => {
+const DashboardPage: React.FC = () => {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("leagues");
+  const [activeTab, setActiveTab] = useState<string>("leagues");
   const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
   const [leagues, setLeagues] = useState<League[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [team, setTeam] = useState<Team | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
-  const [isCommissioner, setIsCommissioner] = useState(false);
+  const [isCommissioner, setIsCommissioner] = useState<boolean>(false);
   const [leagueSettings, setLeagueSettings] = useState<LeagueSettings | null>(null);
-  const [drafts, setDrafts] = useState<any[]>([]);
-  const [isLeagueDataLoading, setIsLeagueDataLoading] = useState(false);
+  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [isLeagueDataLoading, setIsLeagueDataLoading] = useState<boolean>(false);
 
   useEffect(() => {
     const loadLeagues = async () => {
@@ -54,7 +59,7 @@ const DashboardPage = () => {
         if (!response.ok) {
           throw new Error('Failed to fetch leagues');
         }
-        const fetchedLeagues = await response.json();
+        const fetchedLeagues: League[] = await response.json();
         setLeagues(fetchedLeagues);
       } catch (error) {
         console.error("Failed to fetch leagues:", error);
@@ -96,7 +101,7 @@ const DashboardPage = () => {
         setLeagueSettings(settingsData);
       }
       if (draftsResponse.ok) {
-        const draftsData = await draftsResponse.json();
+        const draftsData: Draft[] = await draftsResponse.json();
         setDrafts(draftsData);
       }
     } catch (error) {
@@ -125,8 +130,7 @@ const DashboardPage = () => {
         throw new Error('Failed to delete draft');
       }
 
-      // Remove the deleted draft from the state
-      setDrafts(drafts.filter(draft => draft.id !== draftId));
+      setDrafts(drafts.filter(draft => draft.id.toString() !== draftId));
     } catch (error) {
       console.error('Error deleting draft:', error);
       alert('Failed to delete draft. Please try again.');
@@ -146,7 +150,7 @@ const DashboardPage = () => {
       <Card 
         key={draft.id} 
         className="mb-4 cursor-pointer transition-shadow hover:shadow-lg"
-        onClick={() => handleDraftClick(draft.id)}
+        onClick={() => handleDraftClick(draft.id.toString())}
       >
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>{draft.name}</CardTitle>
@@ -157,14 +161,14 @@ const DashboardPage = () => {
                   variant="destructive" 
                   size="sm"
                   onClick={(e) => {
-                    e.stopPropagation(); // Prevent card click when clicking delete button
+                    e.stopPropagation();
                   }}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent onClick={(e) => e.stopPropagation()}> {/* Prevent card click when dialog is open */}
+              <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you sure you want to delete this draft?</AlertDialogTitle>
                   <AlertDialogDescription>
@@ -173,7 +177,7 @@ const DashboardPage = () => {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => handleDeleteDraft(draft.id)}>
+                  <AlertDialogAction onClick={() => handleDeleteDraft(draft.id.toString())}>
                     Delete
                   </AlertDialogAction>
                 </AlertDialogFooter>
@@ -182,25 +186,26 @@ const DashboardPage = () => {
           )}
         </CardHeader>
         <CardContent>
-          <p>Start Time: {new Date(draft.created_at).toLocaleString()}</p>
-          <p>Last Update: {new Date(draft.updated_at).toLocaleString()}</p>
-          <p>Current Pick: Team {draft.current_pick}</p>
-          <p>Picks Left: {draft.total_picks - draft.current_pick}</p>
+          <p>Start Time: {draft.created_at ? new Date(draft.created_at).toLocaleString() : 'N/A'}</p>
+          <p>Last Update: {draft.updated_at ? new Date(draft.updated_at).toLocaleString() : 'N/A'}</p>
+          <p>Current Pick: Team {draft.current_pick || 'N/A'}</p>
+          <p>Picks Left: {draft.total_picks - (draft.current_pick || 0)}</p>
           <Progress 
-            value={(draft.current_pick / draft.total_picks) * 100} 
+            value={((draft.current_pick || 0) / draft.total_picks) * 100} 
             className="mt-2"
           />
         </CardContent>
       </Card>
     ));
   };
+
   const renderManagerInfo = (managers: Manager[]) => (
     <div className="space-y-2">
       {managers.map((manager, index) => (
         <div key={index} className="flex items-center space-x-2">
           <img
-            src={manager.image_url}
-            alt={manager.nickname}
+            src={manager.image_url || ''}
+            alt={manager.nickname || ''}
             className="w-8 h-8 rounded-full"
           />
           <div>
@@ -218,7 +223,8 @@ const DashboardPage = () => {
     <Table>
       <TableBody>
         {teams.map((team) => {
-          const logo = team.team_logos?.find(l => l.size === 'large') || team.team_logos?.[0];
+          const logos: TeamLogo[] = parseTeamLogos(team.team_logos);
+          const logo = logos.find(l => l.size === 'large') || logos[0];
           
           return (
             <TableRow key={team.team_key}>
@@ -242,7 +248,7 @@ const DashboardPage = () => {
                   </HoverCardTrigger>
                   <HoverCardContent className="w-80">
                     <h3 className="font-semibold mb-2">Team Managers</h3>
-                    {renderManagerInfo(team.managers)}
+                    {renderManagerInfo(team.managers || [])}
                   </HoverCardContent>
                 </HoverCard>
               </TableCell>
@@ -253,50 +259,54 @@ const DashboardPage = () => {
     </Table>
   );
   
-  const renderRosterPositions = (positions: RosterPosition[]) => (
-    <ul className="space-y-1">
-      {positions.map((pos, index) => (
-        <li key={index}>
-          <Badge variant="outline">{pos.roster_position.position}</Badge>
-          <span className="ml-2">{pos.roster_position.count}</span>
-          {pos.roster_position.position_type && (
-            <span className="ml-2 text-sm text-gray-500">({pos.roster_position.position_type})</span>
-          )}
-        </li>
-      ))}
-    </ul>
-  );
+  const renderRosterPositions = (positions: Json) => {
+    const parsedPositions = parseRosterPositions(positions);
+    return (
+      <ul className="space-y-1">
+        {parsedPositions.map((pos, index) => (
+          <li key={index}>
+            <Badge variant="outline">{pos.roster_position.position}</Badge>
+            <span className="ml-2">{pos.roster_position.count}</span>
+            {pos.roster_position.position_type && (
+              <span className="ml-2 text-sm text-gray-500">({pos.roster_position.position_type})</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    );
+  };
 
-  const renderStatCategories = (categories: any[]) => (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Category</TableHead>
-          <TableHead>Points</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {categories.map((cat, index) => {
-          let displayValue = 'N/A';
-          if (cat.value !== null) {
-            if (cat.name.toLowerCase().includes('yards') || cat.name.toLowerCase().includes('yds')) {
-              // For yard-based categories
-              displayValue = `${Math.round(1 / cat.value)} "${cat.display_name}" = 1 point`;
-            } else {
-              // For other categories
-              displayValue = Math.round(cat.value).toString();
+  const renderStatCategories = (categories: Json) => {
+    const parsedCategories = parseStatCategories(categories);
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Category</TableHead>
+            <TableHead>Points</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {parsedCategories.map((cat, index) => {
+            let displayValue = 'N/A';
+            if (cat.value !== null && cat.value !== undefined) {
+              if (cat.name.toLowerCase().includes('yards') || cat.name.toLowerCase().includes('yds')) {
+                displayValue = `${Math.round(1 / cat.value)} "${cat.display_name}" = 1 point`;
+              } else {
+                displayValue = Math.round(cat.value).toString();
+              }
             }
-          }
-          return (
-            <TableRow key={index}>
-              <TableCell>{cat.display_name}</TableCell>
-              <TableCell>{displayValue}</TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
-  );
+            return (
+              <TableRow key={index}>
+                <TableCell>{cat.display_name}</TableCell>
+                <TableCell>{displayValue}</TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    );
+  };
 
   return (
     <div className="container mx-auto p-4">
@@ -346,7 +356,7 @@ const DashboardPage = () => {
                       <CreateDraftDialog 
                         leagueKey={selectedLeague.league_key} 
                         teams={teams} 
-                        onDraftCreated={(updatedDrafts) => setDrafts(updatedDrafts)}
+                        onDraftCreated={(updatedDrafts: Draft[]) => setDrafts(updatedDrafts)}
                         leagueSettings={leagueSettings}
                       />
                     )}

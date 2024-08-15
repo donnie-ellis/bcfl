@@ -1,20 +1,24 @@
 // ./components/DraftSquare.tsx
 import React from 'react';
-import { Team, Pick, Player } from '@/lib/types';
+import { PickWithPlayerAndTeam } from '@/lib/types/pick.types';
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { parseTeamLogos, TeamLogo } from '@/lib/types/team.types';
 
 interface DraftSquareProps {
-  pick: Pick & { player: Player | null, team: Team | null };
+  pick: PickWithPlayerAndTeam;
   isCurrentPick?: boolean;
-  onSquareHover?: (pick: Pick & { player: Player | null, team: Team | null }) => React.ReactNode;
+  onSquareHover?: (pick: PickWithPlayerAndTeam) => React.ReactNode;
   isLoading?: boolean;
 }
 
 const DraftSquare: React.FC<DraftSquareProps> = ({ pick, isCurrentPick, onSquareHover, isLoading }) => {
+  const teamLogos: TeamLogo[] = parseTeamLogos(pick.team.team_logos);
+  const teamLogoUrl = teamLogos.length > 0 ? teamLogos[0].url : '';
+
   const Square = () => (
     <Card className={`w-full h-full ${isCurrentPick ? 'border-2 border-blue-500' : ''}`}>
       <CardContent className="p-2 h-full flex flex-col justify-between">
@@ -28,16 +32,16 @@ const DraftSquare: React.FC<DraftSquareProps> = ({ pick, isCurrentPick, onSquare
           <>
             <div className="text-xs">
               <p className="font-bold">Pick {pick.pick_number}</p>
-              <p className="truncate">{pick.team?.name || 'Unknown Team'}</p>
+              <p className="truncate">{pick.team.name}</p>
             </div>
             <div className="flex items-center justify-center flex-grow">
               <Avatar className="h-12 w-12">
                 {pick.player ? (
-                  <AvatarImage src={pick.player.headshot_url || pick.player.image_url} alt={pick.player.full_name} />
+                  <AvatarImage src={pick.player.headshot_url || pick.player.image_url || ''} alt={pick.player.full_name} />
                 ) : (
-                  <AvatarImage src={pick.team?.team_logos?.[0]?.url} alt={pick.team?.name} />
+                  <AvatarImage src={teamLogoUrl} alt={pick.team.name} />
                 )}
-                <AvatarFallback>{pick.team?.name?.[0] || '?'}</AvatarFallback>
+                <AvatarFallback>{pick.team.name[0]}</AvatarFallback>
               </Avatar>
             </div>
             <div className="text-center text-xs mt-1">
