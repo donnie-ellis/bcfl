@@ -830,7 +830,7 @@ export type Database = {
           team_logos: Json | null
           updated_at: string | null
           url: string | null
-          waiver_priority: number | null
+          waiver_priority: string | null
         }
         Insert: {
           created_at?: string | null
@@ -848,7 +848,7 @@ export type Database = {
           team_logos?: Json | null
           updated_at?: string | null
           url?: string | null
-          waiver_priority?: number | null
+          waiver_priority?: string | null
         }
         Update: {
           created_at?: string | null
@@ -866,7 +866,7 @@ export type Database = {
           team_logos?: Json | null
           updated_at?: string | null
           url?: string | null
-          waiver_priority?: number | null
+          waiver_priority?: string | null
         }
         Relationships: [
           {

@@ -1,4 +1,5 @@
 // ./components/CreateDraftDialog.tsx
+
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -79,20 +80,40 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
 
     setIsCreatingDraft(true);
     try {
-      // Update the teams in the DB
-      const teamsResponse = await fetch(`api/db/league/${leagueKey}/teams`, {
+      // First, ensure the league exists in the database
+      const leagueResponse = await fetch(`/api/yahoo/league/${leagueKey}`);
+      if (!leagueResponse.ok) {
+        throw new Error('Failed to fetch league data');
+      }
+      const leagueData = await leagueResponse.json();
+
+      // Update or insert the league
+      const leagueUpsertResponse = await fetch(`/api/db/league/${leagueKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(teams),
+        body: JSON.stringify(leagueData),
+      });
+      if (!leagueUpsertResponse.ok) {
+        throw new Error('Failed to upsert league');
+      }
+
+      // Update the teams in the DB
+      const teamsToUpsert = orderedTeams.map(team => prepareTeamForUpsert(team, leagueKey));
+      const teamsResponse = await fetch(`/api/db/league/${leagueKey}/teams`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(teamsToUpsert),
       });
       if (!teamsResponse.ok) {
         throw new Error('Failed to update teams');
       }
 
       // Update the managers in the DB
-      const managerResponse = await fetch(`api/yahoo/league/${leagueKey}/managers`, {
+      const managerResponse = await fetch(`/api/yahoo/league/${leagueKey}/managers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
