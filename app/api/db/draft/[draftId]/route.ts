@@ -6,6 +6,7 @@ import { requestYahoo } from '@/lib/yahoo';
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
+// GET
 export async function GET(request: NextRequest, { params }: { params: { draftId: string } }) {
   const { draftId } = params;
 
@@ -46,6 +47,7 @@ export async function GET(request: NextRequest, { params }: { params: { draftId:
   }
 }
 
+// DELETE
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { draftId: string } }
@@ -108,6 +110,8 @@ export async function DELETE(
   }
 }
 
+// TODO: Move this to a yahoo api call
+// Helper function to verify if the calling user is a commissioner
 async function checkCommissioner(leagueKey: string): Promise<boolean> {
   try {
     const path = `league/${leagueKey}/teams`;

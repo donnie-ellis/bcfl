@@ -8,6 +8,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 const supabase = createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
+// TODO: This isn't used or needed I think
+// GET
 export async function GET(
   request: NextRequest,
   { params }: { params: { leagueKey: string } }
@@ -30,6 +32,7 @@ export async function GET(
   }
 }
 
+// POST
 export async function POST(request: NextRequest) {
   const body: {
     leagueKey: string;
