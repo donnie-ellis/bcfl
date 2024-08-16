@@ -23,7 +23,7 @@ const RoundSquares: React.FC<RoundSquaresProps> = ({
   teams,
   isLoading 
 }) => {
-  if (isLoading || !draft || !leagueSettings || !teams) {
+  if (!draft || !leagueSettings || !teams) {
     return (
       <div className="flex justify-between w-full">
         {[...Array(10)].map((_, index) => (
@@ -36,12 +36,13 @@ const RoundSquares: React.FC<RoundSquaresProps> = ({
   }
 
   const picksPerRound = draft.picks.length / draft.rounds;
-  const currentRound = Math.ceil(draft.current_pick || 0 / picksPerRound);
+  const currentPickNumber = draft.current_pick ?? 1;
+  const currentRound = Math.ceil(currentPickNumber / picksPerRound);
 
   const picksToDisplay = currentRoundOnly
     ? draft.picks.filter(pick => pick.round_number === currentRound)
     : draft.picks;
-
+  
   return (
     <div className="flex justify-between w-full">
       <AnimatePresence>
