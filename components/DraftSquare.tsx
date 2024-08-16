@@ -16,8 +16,8 @@ interface DraftSquareProps {
 }
 
 const DraftSquare: React.FC<DraftSquareProps> = ({ pick, isCurrentPick, onSquareHover, isLoading }) => {
-  const teamLogos: TeamLogo[] = parseTeamLogos(pick.team.team_logos);
-  const teamLogoUrl = teamLogos.length > 0 ? teamLogos[0].url : '';
+    const teamLogos: TeamLogo[] = parseTeamLogos(pick.team?.team_logos);
+    const teamLogoUrl = teamLogos.length > 0 ? teamLogos[0].url : '';
 
   const Square = () => (
     <Card className={`w-full h-full ${isCurrentPick ? 'border-2 border-blue-500' : ''}`}>
@@ -32,16 +32,16 @@ const DraftSquare: React.FC<DraftSquareProps> = ({ pick, isCurrentPick, onSquare
           <>
             <div className="text-xs">
               <p className="font-bold">Pick {pick.pick_number}</p>
-              <p className="truncate">{pick.team.name}</p>
+              <p className="truncate">{pick.team?.name}</p>
             </div>
             <div className="flex items-center justify-center flex-grow">
               <Avatar className="h-12 w-12">
                 {pick.player ? (
                   <AvatarImage src={pick.player.headshot_url || pick.player.image_url || ''} alt={pick.player.full_name} />
                 ) : (
-                  <AvatarImage src={teamLogoUrl} alt={pick.team.name} />
+                  <AvatarImage src={teamLogoUrl} alt={pick.team?.name} />
                 )}
-                <AvatarFallback>{pick.team.name[0]}</AvatarFallback>
+                <AvatarFallback>{pick.team?.name[0]}</AvatarFallback>
               </Avatar>
             </div>
             <div className="text-center text-xs mt-1">

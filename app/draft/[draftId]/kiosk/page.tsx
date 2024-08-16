@@ -13,8 +13,11 @@ import { toast } from "sonner";
 import DraftedPlayers from '@/components/DraftedPlayers';
 import DraftHeader from '@/components/DraftHeader';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import useSWR from 'swr';
 
 type MemoizedDraft = Omit<Draft, 'picks'> & { picks: PickWithPlayerAndTeam[] };
+
+const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 const KioskPage: React.FC = () => {
   const params = useParams();
@@ -23,191 +26,98 @@ const KioskPage: React.FC = () => {
   const supabase = useSupabaseClient();
   const [isPickSubmitting, setIsPickSubmitting] = useState<boolean>(false);
 
-  const [draftData, setDraftData] = useState<Draft | null>(null);
-  const [leagueData, setLeagueData] = useState<League | null>(null);
-  const [leagueSettings, setLeagueSettings] = useState<LeagueSettings | null>(null);
-  const [teams, setTeams] = useState<Team[] | null>(null);
-  const [currentPick, setCurrentPick] = useState<Pick | null>(null);
-  const [playerData, setPlayerData] = useState<Player[] | null>(null);
+  const { data: draftData, mutate: mutateDraft } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher);
+  const { data: leagueData } = useSWR<League>(draftData ? `/api/db/league/${draftData.league_id}` : null, fetcher);
+  const { data: leagueSettings } = useSWR<LeagueSettings>(draftData ? `/api/db/league/${draftData.league_id}/settings` : null, fetcher);
+  const { data: teams } = useSWR<Team[]>(draftData ? `/api/yahoo/league/${draftData.league_id}/teams` : null, fetcher);
+  const { data: players } = useSWR<Player[]>(`/api/db/league/${draftData?.league_id}/players`, fetcher);
 
-  const isLoading = !draftData || !leagueData || !leagueSettings || !teams || !currentPick || !playerData;
+  const [currentPick, setCurrentPick] = useState<PickWithPlayerAndTeam | null>(null);
+  const [picks, setPicks] = useState<PickWithPlayerAndTeam[]>([]);
 
-  const fetchInitialData = useCallback(async () => {
-    if (!supabase || !draftId) {
-      console.error('Supabase client or draftId not available');
-      toast.error('Unable to initialize data fetching');
-      return;
-    }
+  const isLoading = !draftData || !leagueData || !leagueSettings || !teams || !players || !currentPick;
+  if (!supabase) throw Error('Supabase isn\'t loaded');
   
-    try {
-      console.log('Fetching draft data...');
-      const { data: draft, error: draftError } = await supabase
-        .from('drafts')
-        .select('*')
-        .eq('id', draftId)
-        .single();
-      
-      if (draftError) throw draftError;
-      console.log('Draft data:', draft);
-  
-      // Fetch picks separately
-      console.log('Fetching picks data...');
-      const { data: picksData, error: picksError } = await supabase
-        .from('picks')
-        .select(`
-          *,
-          player:players(*),
-          team:teams(*)
-        `)
-        .eq('draft_id', draftId)
-        .order('total_pick_number', { ascending: true });
-  
-      if (picksError) throw picksError;
-      console.log('Picks data:', picksData);
-  
-      // Combine draft data with picks
-      const draftWithPicks: Draft = {
-        ...draft,
-        picks: picksData
+  useEffect(() => {
+    if (draftData && players && teams) {
+      const fetchPicks = async () => {
+        const { data: picksData, error } = await supabase
+          .from('picks')
+          .select('*')
+          .eq('draft_id', draftId)
+          .order('total_pick_number', { ascending: true });
+
+        if (error) {
+          console.error('Error fetching picks:', error);
+          return;
+        }
+
+        const picksWithDetails: PickWithPlayerAndTeam[] = picksData.map(pick => ({
+          ...pick,
+          player: pick.player_id ? players.find(p => p.id === pick.player_id) || {} as Player : {} as Player,
+          team: teams.find(t => t.team_key === pick.team_key) || {} as Team
+        }));
+
+        setPicks(picksWithDetails);
+
+        const currentPickData = picksWithDetails.find(p => p.total_pick_number === draftData.current_pick) || null;
+        setCurrentPick(currentPickData);
       };
-      setDraftData(draftWithPicks);
-  
-      console.log('Fetching related data...');
-      const [leagueResponse, settingsResponse, teamsResponse, currentPickResponse, playersResponse] = await Promise.all([
-        supabase.from('leagues').select('*').eq('league_key', draft.league_id).single(),
-        supabase.from('league_settings').select('*').eq('league_key', draft.league_id).single(),
-        supabase.from('teams').select('*').eq('league_id', draft.league_id),
-        supabase.from('picks').select('*').eq('draft_id', draftId).eq('total_pick_number', draft.current_pick).single(),
-        supabase.from('players').select('*')
-      ]);
-  
-      console.log('League data:', leagueResponse.data);
-      console.log('Settings data:', settingsResponse.data);
-      console.log('Teams data:', teamsResponse.data);
-      console.log('Current pick data:', currentPickResponse.data);
-      console.log('Players data:', playersResponse.data);
-  
-      if (leagueResponse.data) setLeagueData(leagueResponse.data);
-      if (settingsResponse.data) setLeagueSettings(settingsResponse.data);
-      if (teamsResponse.data) setTeams(teamsResponse.data);
-      if (currentPickResponse.data) setCurrentPick(currentPickResponse.data);
-      if (playersResponse.data) setPlayerData(playersResponse.data);
-  
-      if (leagueResponse.error) console.error('League error:', leagueResponse.error);
-      if (settingsResponse.error) console.error('Settings error:', settingsResponse.error);
-      if (teamsResponse.error) console.error('Teams error:', teamsResponse.error);
-      if (currentPickResponse.error) console.error('Current pick error:', currentPickResponse.error);
-      if (playersResponse.error) console.error('Players error:', playersResponse.error);
-  
-    } catch (error) {
-      console.error('Error fetching initial data:', error);
-      toast.error('Failed to load draft data. Please try refreshing the page.');
+
+      fetchPicks();
     }
-  }, [supabase, draftId]);
+  }, [draftData, players, teams, draftId, supabase]);
 
   useEffect(() => {
-    fetchInitialData();
-  }, [fetchInitialData]);
+    if (!supabase || !draftId || !players || !teams || !draftData) return;
 
-  useEffect(() => {
-    if (!supabase || !draftId) return;
+    const picksSubscription = supabase
+      .channel(`picks_${draftId}`)
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'picks', 
+        filter: `draft_id=eq.${draftId}` 
+      }, async (payload) => {
+        const updatedPick = payload.new as Pick;
 
-    const draftSubscription = supabase
-  .channel(`draft_${draftId}`)
-  .on('postgres_changes', { 
-    event: 'UPDATE', 
-    schema: 'public', 
-    table: 'drafts', 
-    filter: `id=eq.${draftId}` 
-  }, async (payload) => {
-    setDraftData((prevDraft) => prevDraft ? { ...prevDraft, ...payload.new } : null);
+        setPicks(prevPicks => prevPicks.map(pick => 
+          pick.id === updatedPick.id 
+            ? {
+                ...pick,
+                ...updatedPick,
+                player: players.find(p => p.id === updatedPick.player_id) || {} as Player,
+                team: teams.find(t => t.team_key === updatedPick.team_key) || {} as Team
+              }
+            : pick
+        ));
 
-    // If the current_pick has changed, fetch the new current pick
-    if (payload.new.current_pick !== draftData?.current_pick) {
-      const { data: newCurrentPick, error } = await supabase
-        .from('picks')
-        .select('*')
-        .eq('draft_id', draftId)
-        .eq('total_pick_number', payload.new.current_pick)
-        .single();
-
-      if (error) {
-        console.error('Error fetching new current pick:', error);
-      } else {
-        setCurrentPick(newCurrentPick);
-      }
-    }
-  })
-  .subscribe();
-
-  const picksSubscription = supabase
-  .channel(`picks_${draftId}`)
-  .on('postgres_changes', { 
-    event: 'UPDATE', 
-    schema: 'public', 
-    table: 'picks', 
-    filter: `draft_id=eq.${draftId}` 
-  }, async (payload) => {
-    // Fetch the updated pick with player and team information
-    const { data: updatedPick, error } = await supabase
-      .from('picks')
-      .select(`
-        *,
-        player:players(*),
-        team:teams(*)
-      `)
-      .eq('id', payload.new.id)
-      .single();
-
-    if (error) {
-      console.error('Error fetching updated pick:', error);
-      return;
-    }
-
-    setDraftData((prevDraft) => {
-      if (!prevDraft) return prevDraft;
-      const updatedPicks = prevDraft.picks.map(pick => 
-        pick.id === updatedPick.id ? updatedPick : pick
-      );
-      return { ...prevDraft, picks: updatedPicks };
-    });
-
-    if (updatedPick.total_pick_number === draftData?.current_pick) {
-      setCurrentPick(updatedPick);
-    }
-  })
-  .subscribe();
+        // Update current pick and draft data
+        if (updatedPick.is_picked && draftData.current_pick !== null) {
+          const nextPickNumber = draftData.current_pick + 1;
+          const nextPick = picks.find(p => p.total_pick_number === nextPickNumber) || null;
+          setCurrentPick(nextPick);
+          mutateDraft({ ...draftData, current_pick: nextPickNumber }, false);
+        }
+      })
+      .subscribe();
 
     return () => {
-      supabase.removeChannel(draftSubscription);
       supabase.removeChannel(picksSubscription);
     };
-  }, [supabase, draftId, draftData]);
+  }, [supabase, draftId, draftData, players, teams, picks, mutateDraft]);
 
   const memoizedDraft = useMemo<MemoizedDraft | undefined>(() => {
-    if (draftData && playerData && teams) {
+    if (draftData && picks.length > 0) {
       return {
         ...draftData,
-        picks: draftData.picks.map(pick => ({
-          ...pick,
-          player: pick.player || null,
-          team: pick.team || null
-        })) as PickWithPlayerAndTeam[]
+        picks: picks
       };
     }
     return undefined;
-  }, [draftData, playerData, teams]);
-
-  const memoizedPicks = useMemo<PickWithPlayerAndTeam[]>(() => memoizedDraft?.picks || [], [memoizedDraft?.picks]);
-
-  useEffect(() => {
-    if (memoizedDraft && memoizedDraft.status === 'completed') {
-      router.push(`/draft/${draftId}/board`);
-    }
-  }, [memoizedDraft, draftId, router]);
+  }, [draftData, picks]);
 
   const handleSubmitPick = async (player: Player) => {
-    if (!supabase) throw Error('Supabase is not initialized');
     setIsPickSubmitting(true);
     if (!currentPick || !memoizedDraft) {
       toast.error("Unable to submit pick. Please try again.");
@@ -219,7 +129,7 @@ const KioskPage: React.FC = () => {
       const response = await fetch(`/api/db/draft/${draftId}/pick`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'applicatoin/json',
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           pickId: currentPick.id,
@@ -230,26 +140,21 @@ const KioskPage: React.FC = () => {
         throw new Error('Failed to submit pick');
       }
       
-      toast.success(`You've drafted ${player.full_name}!`);
+      toast.success(`${player.full_name} has been drafted!`);
 
     } catch (error) {
       console.error('Error submitting pick:', error);
       toast.error("Failed to submit pick. Please try again.");
-      // Rollback the transaction if there was an error
     } finally {
       setIsPickSubmitting(false);
     }
   };
 
-  const MemoizedDraftedPlayers = useMemo(() => (
-    memoizedDraft && leagueSettings && currentPick ? (
-      <DraftedPlayers
-        picks={memoizedPicks}
-        teamKey={currentPick.team_key}
-        teamName={teams?.find(team => team.team_key === currentPick.team_key)?.name}
-      />
-    ) : null
-  ), [memoizedDraft, leagueSettings, currentPick, memoizedPicks, teams]);
+  useEffect(() => {
+    if (memoizedDraft && memoizedDraft.status === 'completed') {
+      router.push(`/draft/${draftId}/board`);
+    }
+  }, [memoizedDraft, draftId, router]);
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -288,14 +193,23 @@ const KioskPage: React.FC = () => {
 
       <div className="flex-grow overflow-hidden flex">
         <div className="w-1/2 p-4">
-          {MemoizedDraftedPlayers}
+          {memoizedDraft && currentPick && (
+            <DraftedPlayers
+              picks={memoizedDraft.picks}
+              teamKey={currentPick.team_key}
+              teamName={teams?.find(team => team.team_key === currentPick.team_key)?.name}
+            />
+          )}
         </div>
         <div className="w-1/2 p-4">
           {currentPick && leagueSettings && teams && memoizedDraft && (
             <CurrentPickDetails
               currentTeam={teams.find(team => team.team_key === currentPick.team_key)}
               currentPick={currentPick}
-              previousPick={memoizedPicks.find(pick => pick.total_pick_number === (memoizedDraft.current_pick || 0) - 1) || null}
+              previousPick={memoizedDraft.picks.find(pick => 
+                memoizedDraft.current_pick !== null && 
+                pick.total_pick_number === (memoizedDraft.current_pick - 1)
+              ) || null}
               leagueKey={leagueData?.league_key || ''}
               draftId={draftId}
               leagueSettings={leagueSettings}
