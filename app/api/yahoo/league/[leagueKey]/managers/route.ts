@@ -8,6 +8,66 @@ import { ManagerData } from '@/lib/yahoo.types';
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
+// GET
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { leagueKey: string } }
+) {
+  const session = await getServerAuthSession();
+  
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { leagueKey } = params;
+
+  try {
+    // Fetch managers data from Yahoo
+    const data = await requestYahoo(`league/${leagueKey}/teams`);
+    const teams = data.fantasy_content.league[1].teams;
+
+    const managersData: ManagerData[] = [];
+
+    for (const key in teams) {
+      if (key !== 'count') {
+        const team = teams[key].team[0];
+        const teamKey = team.find((item: any) => item.team_key)?.team_key;
+        const managers = team.find((item: any) => item.managers)?.managers;
+
+        if (managers) {
+          managers.forEach((managerData: any) => {
+            const manager = managerData.manager;
+            managersData.push({
+              manager: {
+                manager_id: manager.manager_id,
+                nickname: manager.nickname,
+                guid: manager.guid,
+                is_commissioner: manager.is_commissioner === '1',
+                email: manager.email,
+                image_url: manager.image_url,
+                felo_score: manager.felo_score,
+                felo_tier: manager.felo_tier
+              },
+              relationship: {
+                manager_guid: manager.guid,
+                team_key: teamKey,
+                league_key: leagueKey
+              }
+            });
+          });
+        }
+      }
+    }
+
+    return NextResponse.json(managersData);
+  } catch (error) {
+    console.error('Failed to fetch managers:', error);
+    return NextResponse.json({ error: 'Failed to fetch managers' }, { status: 500 });
+  }
+}
+
+// POST
+// TODO: This is not used anymore I think.  Get rid of it if not.
 export async function POST(
   request: NextRequest,
   { params }: { params: { leagueKey: string } }

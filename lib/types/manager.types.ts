@@ -50,3 +50,12 @@ export interface ManagerStats {
   ties: number;
   championships: number;
 }
+
+export interface ManagerData {
+  manager: Manager;
+  relationship: {
+    manager_guid: string;
+    team_key: string;
+    league_key: string;
+  };
+}

@@ -70,18 +70,27 @@ export async function POST(request: NextRequest) {
       throw new Error('No draft ID returned');
     }
 
+    const draftId = data[0].created_draft_id;
+    const debugInfo = data[0].debug_info;
+
+    console.log('Debug info:', debugInfo);
+
     // Start the player import process here
     const importJobId = uuidv4();
     importPlayers(leagueKey, importJobId);
 
     return NextResponse.json({ 
-      draftId: data[0].created_draft_id, 
+      draftId: draftId, 
       importJobId: importJobId,
-      message: 'Draft created successfully' 
+      message: 'Draft created successfully',
+      debugInfo: debugInfo
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating draft:', error);
-    return NextResponse.json({ error: 'Failed to create draft' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Failed to create draft', 
+      details: error.message || String(error)
+    }, { status: 500 });
   }
 }
 
