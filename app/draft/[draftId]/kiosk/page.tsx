@@ -216,69 +216,26 @@ const KioskPage: React.FC = () => {
     }
   
     try {
-      // Start a transaction
-      const { error: beginError } = await supabase.rpc('begin_transaction');
-      if (beginError) throw beginError;
-  
-      // Update the pick
-      const { data: updatedPick, error: pickError } = await supabase
-        .from('picks')
-        .update({ 
-          player_id: player.id, 
-          is_picked: true 
-        })
-        .eq('id', currentPick.id)
-        .select()
-        .single();
-  
-      if (pickError) throw pickError;
-  
-      // Calculate the next pick number
-      const nextPickNumber = memoizedDraft.current_pick || 0 + 1;
-  
-      // Update the draft's current_pick
-      const { error: draftError } = await supabase
-        .from('drafts')
-        .update({ current_pick: nextPickNumber })
-        .eq('id', memoizedDraft.id);
-  
-      if (draftError) throw draftError;
-  
-      // Commit the transaction
-      const { error: commitError } = await supabase.rpc('commit_transaction');
-      if (commitError) throw commitError;
-  
-      toast.success(`${player.full_name} has been drafted!`);
-  
-      // Update local state
-      setDraftData(prevDraft => {
-        if (!prevDraft) return prevDraft;
-        return {
-          ...prevDraft,
-          current_pick: nextPickNumber,
-          picks: prevDraft.picks.map(pick => 
-            pick.id === updatedPick.id ? updatedPick : pick
-          )
-        };
+      const response = await fetch(`/api/db/draft/${draftId}/pick`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'applicatoin/json',
+        },
+        body: JSON.stringify({
+          pickId: currentPick.id,
+          playerId: player.id
+        }),
       });
-  
-      // Fetch the next pick
-      const { data: nextPick, error: nextPickError } = await supabase
-        .from('picks')
-        .select('*')
-        .eq('draft_id', memoizedDraft.id)
-        .eq('total_pick_number', nextPickNumber)
-        .single();
-  
-      if (nextPickError) throw nextPickError;
-  
-      setCurrentPick(nextPick);
-  
+      if (!response.ok) {
+        throw new Error('Failed to submit pick');
+      }
+      
+      toast.success(`You've drafted ${player.full_name}!`);
+
     } catch (error) {
       console.error('Error submitting pick:', error);
       toast.error("Failed to submit pick. Please try again.");
       // Rollback the transaction if there was an error
-      await supabase.rpc('rollback_transaction');
     } finally {
       setIsPickSubmitting(false);
     }
