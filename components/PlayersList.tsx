@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Player, Draft } from '@/lib/types/';
+import { Player, Draft, Pick } from '@/lib/types/';
 import PlayerFilters from './PlayerFilters';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import PlayerCard from '@/components/PlayerCard';
@@ -26,9 +26,16 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
   const [hideSelected, setHideSelected] = useState(true);
   const supabase = useSupabaseClient();
 
-  const { data: playersData, error: playersError, mutate } = useSWR<Player[]>(
+  const { data: playersData, error: playersError, mutate: mutatePlayers } = useSWR<Player[]>(
     `/api/db/draft/${draftId}/players`,
-    fetcher
+    fetcher,
+    { revalidateOnFocus: false, revalidateOnReconnect: false }
+  );
+
+  const { data: picksData, error: picksError, mutate: mutatePicks } = useSWR<Pick[]>(
+    `/api/db/draft/${draftId}/picks`,
+    fetcher,
+    { revalidateOnFocus: false, revalidateOnReconnect: false }
   );
 
   useEffect(() => {
@@ -41,8 +48,8 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
           table: 'picks', 
           filter: `draft_id=eq.${draftId}` 
         }, () => {
-          // Force update of players list when a pick is made
-          mutate();
+          // Only update picks data when a pick is made
+          mutatePicks();
         })
         .subscribe();
 
@@ -50,9 +57,20 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
         supabase.removeChannel(subscription);
       };
     }
-  }, [supabase, draftId, mutate]);
+  }, [supabase, draftId, mutatePicks]);
 
-  const players = useMemo(() => playersData || [], [playersData]);
+  const players = useMemo(() => {
+    if (!playersData || !picksData) return [];
+    
+    // Create a map of drafted player IDs
+    const draftedPlayerIds = new Set(picksData.filter(pick => pick.player_id).map(pick => pick.player_id));
+
+    // Update the is_drafted status of players
+    return playersData.map(player => ({
+      ...player,
+      is_drafted: draftedPlayerIds.has(player.id)
+    }));
+  }, [playersData, picksData]);
 
   const positions = useMemo(() => {
     const allPositions = players.flatMap(player => player.eligible_positions || []);
@@ -79,7 +97,7 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
     }
   }, [onPlayerSelect]);
 
-  if (playersError) return <div>Error loading players</div>;
+  if (playersError || picksError) return <div>Error loading data</div>;
 
   return (
     <Card className="flex flex-col h-full">
