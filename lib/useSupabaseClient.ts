@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { useSession } from 'next-auth/react';
-import { Database } from '@/lib/database.types';
 
 let supabase: SupabaseClient | null = null;
 

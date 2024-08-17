@@ -13,7 +13,7 @@ function prepareTeamForUpsert(team: Team, leagueId: string) {
     name: team.name,
     url: team.url,
     team_logos: team.team_logos,
-    waiver_priority: team.waiver_priority ? parseInt(team.waiver_priority) : null,
+    waiver_priority: team.waiver_priority,
     number_of_moves: team.number_of_moves,
     number_of_trades: team.number_of_trades,
     league_scoring_type: team.league_scoring_type,

@@ -1,6 +1,6 @@
 'use client'
 import React from 'react';
-import { League } from '@/lib/types';
+import { League } from '@/lib/types/';
 import LeagueCard from './LeagueCard';
 import { ScrollArea } from "@/components/ui/scroll-area";
 

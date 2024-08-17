@@ -1,6 +1,6 @@
 // ./components/PlayerDetails.tsx
 import React from 'react';
-import { Player } from '@/lib/types';
+import { Player } from '@/lib/types/';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -62,7 +62,7 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
     <Card className="h-full overflow-auto">
       <CardHeader className="flex flex-row items-center space-x-4">
         <Avatar className="h-20 w-20">
-          <AvatarImage src={player.headshot_url} alt={player.full_name} />
+          <AvatarImage src={player.headshot_url as string} alt={player.full_name} />
           <AvatarFallback>{player.full_name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
         </Avatar>
         <div>
@@ -74,9 +74,9 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
         <div>
           <h3 className="font-semibold mb-2">Position</h3>
           <div className="flex flex-wrap gap-2">
-            {player.eligible_positions.map((position, index) => (
+            {player.eligible_positions ? player.eligible_positions.map((position, index) => (
               <Badge key={index} variant="secondary">{position}</Badge>
-            ))}
+            )) : ''}
           </div>
         </div>
         <div>
@@ -96,11 +96,6 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
         )}
         <div>
           <h3 className="font-semibold mb-2">Draft Analysis</h3>
-          <ul className="space-y-1">
-            <li><strong>Average Draft Position:</strong> {player.average_pick?.toFixed(2) || 'N/A'}</li>
-            <li><strong>Average Draft Round:</strong> {player.average_round?.toFixed(2) || 'N/A'}</li>
-            <li><strong>Percent Drafted:</strong> {player.percent_drafted?.toFixed(2)}%</li>
-          </ul>
         </div>
       </CardContent>
     </Card>

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
-import { Pick, Player } from '@/lib/types';
+import { Pick, Player } from '@/lib/types/';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,8 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = React.memo(({
   const [playerDetails, setPlayerDetails] = useState<Record<string, Player>>({});
   const [loadingPlayerIds, setLoadingPlayerIds] = useState<number[]>([]);
   const supabase = useSupabaseClient();
+
+  if (!picks) throw Error('Picks are not present');
 
   const teamPicks = useMemo(() => {
     return picks
@@ -92,7 +94,7 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = React.memo(({
     <Card className={`mb-2 cursor-pointer hover:bg-gray-100 transition-all`}>
       <CardContent className="p-3 flex items-center space-x-3">
         <Avatar className="h-12 w-12 rounded">
-          <AvatarImage src={player.headshot_url || player.image_url} alt={player.full_name} />
+          <AvatarImage src={player.headshot_url as string || player.image_url as string} alt={player.full_name} />
           <AvatarFallback>{player.full_name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
         </Avatar>
         <div className="flex-grow">

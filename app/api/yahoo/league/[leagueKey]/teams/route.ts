@@ -2,7 +2,7 @@
 // Required fields in query: leagueKey
 import { NextRequest, NextResponse } from 'next/server';
 import { requestYahoo, parseTeamData } from '@/lib/yahoo';
-import { Team } from '@/lib/types';
+import { Team } from '@/lib/yahoo.types';
 
 export async function GET(request: NextRequest, { params }: { params: { leagueKey: string } }) {
   const leagueKey = params.leagueKey;

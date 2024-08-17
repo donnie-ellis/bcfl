@@ -1,7 +1,7 @@
 // GET /api/yahoo/user/leagues
 import { NextRequest, NextResponse } from 'next/server';
 import { requestYahoo } from '@/lib/yahoo';
-import { League } from '@/lib/types';
+import { League } from '@/lib/yahoo.types';
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,7 +29,6 @@ export async function GET(request: NextRequest) {
           start_date: item.start_date,
           end_date: item.end_date,
           is_cash_league: item.is_cash_league,
-          is_plus_league: item.is_plus_league,
           is_pro_league: item.is_pro_league,
           game_code: item.game_code,
           league_type: item.league_type,
@@ -39,7 +38,6 @@ export async function GET(request: NextRequest) {
           logo_url: item.logo_url,
           weekly_deadline: item.weekly_deadline,
           season: item.season,
-          felo_tier: item.felo_tier,
         };
         leagues.push(league);
       });

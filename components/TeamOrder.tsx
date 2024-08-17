@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult, DroppableProps } from 'react-beautiful-dnd';
 import { Button } from "@/components/ui/button";
 import TeamCard from './TeamCard';
-import { Team } from '@/lib/types';
+import { Team } from '@/lib/types/';
 import { GripVertical } from 'lucide-react';
 
 interface TeamOrderProps {

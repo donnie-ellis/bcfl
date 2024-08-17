@@ -1,29 +1,23 @@
+// ./components/CreateDraftDialog.tsx
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { LeagueSettings, Team } from '@/lib/types';
-import { DragDropContext, Droppable, Draggable, DropResult, DroppableProvided, DroppableProps } from 'react-beautiful-dnd';
+import { LeagueSettings, parseRosterPositions, Team } from '@/lib/types/';
+import { League, Manager } from '@/lib/yahoo.types';
 import TeamCard from './TeamCard';
 import { Loader2 } from 'lucide-react';
 import { toast } from "sonner";
+import { Reorder } from 'framer-motion';
 
-const StrictModeDroppable = ({ children, ...props }: DroppableProps) => {
-  const [enabled, setEnabled] = useState(false);
-  useEffect(() => {
-    const animation = requestAnimationFrame(() => setEnabled(true));
-    return () => {
-      cancelAnimationFrame(animation);
-      setEnabled(false);
-    };
-  }, []);
-  if (!enabled) {
-    return null;
-  }
-  return <Droppable {...props}>{children}</Droppable>;
-};
+interface CreateDraftDialogProps {
+  leagueKey: string;
+  teams: Team[];
+  onDraftCreated: (drafts: any) => void;
+  leagueSettings: LeagueSettings | null;
+}
 
 const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams, onDraftCreated, leagueSettings }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -38,30 +32,72 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
     setOrderedTeams(teams);
   }, [teams]);
 
-  const handleDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
-    const items = Array.from(orderedTeams);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-    setOrderedTeams(items);
+  const fetchYahooData = async () => {
+    try {
+      const [leagueResponse, settingsResponse, managersResponse] = await Promise.all([
+        fetch(`/api/yahoo/league/${leagueKey}`),
+        fetch(`/api/yahoo/league/${leagueKey}/leagueSettings`),
+        fetch(`/api/yahoo/league/${leagueKey}/managers`)
+      ]);
+
+      if (!leagueResponse.ok || !settingsResponse.ok || !managersResponse.ok) {
+        throw new Error('Failed to fetch Yahoo data');
+      }
+
+      const league: League = await leagueResponse.json();
+      const fetchedLeagueSettings: LeagueSettings = await settingsResponse.json();
+      const managers: Manager[] = await managersResponse.json();
+
+      return { league, leagueSettings: fetchedLeagueSettings, managers };
+    } catch (error) {
+      console.error('Error fetching Yahoo data:', error);
+      throw error;
+    }
   };
 
-  function prepareTeamForUpsert(team: Team, leagueId: string) {
-    return {
-      league_id: leagueId,
-      team_key: team.team_key,
-      team_id: team.team_id,
-      name: team.name,
-      url: team.url,
-      team_logos: team.team_logos,
-      waiver_priority: team.waiver_priority ? parseInt(team.waiver_priority) : null,
-      number_of_moves: team.number_of_moves,
-      number_of_trades: team.number_of_trades,
-      league_scoring_type: team.league_scoring_type,
-      has_draft_grade: team.has_draft_grade,
-      faab_balance: team.faab_balance,
-    };
-  }
+  const upsertData = async (league: League, leagueSettings: LeagueSettings, managers: Manager[]) => {
+    try {
+      // Upsert league
+      const leagueResponse = await fetch(`/api/db/league/${leagueKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(league)
+      });
+
+      if (!leagueResponse.ok) throw new Error('Failed to upsert league');
+
+      // Upsert league settings
+      const settingsResponse = await fetch(`/api/db/league/${leagueKey}/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(leagueSettings)
+      });
+
+      if (!settingsResponse.ok) throw new Error('Failed to upsert league settings');
+
+      // Upsert managers
+      const managersResponse = await fetch(`/api/db/league/${leagueKey}/managers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(managers)
+      });
+
+      if (!managersResponse.ok) throw new Error('Failed to upsert managers');
+      
+      // Upsert teams
+      const teamsResponse = await fetch(`/api/db/league/${leagueKey}/teams`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(teams)
+      });
+
+      if (!teamsResponse.ok) throw new Error('Failed to upsert teams');
+
+    } catch (error) {
+      console.error('Error upserting data:', error);
+      throw error;
+    }
+  };
 
   const handleCreateDraft = async () => {
     if (!draftName.trim()) {
@@ -71,30 +107,34 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
 
     setIsCreatingDraft(true);
     try {
-      // Update the teams in the DB
-      const teamsResponse = await fetch(`api/db/league/${leagueKey}/teams`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(teams),
-      });
-      if (!teamsResponse.ok) {
-        throw new Error('Failed to update teams');
+      // Fetch Yahoo data
+      const yahooData = await fetchYahooData();
+
+      // Upsert data
+      await upsertData(yahooData.league, yahooData.leagueSettings, yahooData.managers);
+
+      const draftOrder = orderedTeams.reduce((acc, team, index) => {
+        acc[team.team_key] = index + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const orderedTeamsJson = orderedTeams.map(team => ({
+        team_key: team.team_key,
+        name: team.name
+      }));
+
+      // Calculate the number of rounds and total picks
+      const defaultRosterSize = 15; // Default roster size if we can't determine it from settings
+      let rosterSize = defaultRosterSize;
+
+      if (yahooData.leagueSettings && yahooData.leagueSettings.roster_positions) {
+        const parsedRosterPositions = parseRosterPositions(yahooData.leagueSettings.roster_positions);
+        rosterSize = parsedRosterPositions.reduce((sum, pos) => sum + pos.roster_position.count, 0);
       }
 
-      // Update the managers in the DB
-      const managerResponse = await fetch(`api/yahoo/league/${leagueKey}/managers`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      if (!managerResponse.ok) {
-        throw new Error('Failed to update managers');
-      }
+      const rounds = rosterSize;
+      const totalPicks = rosterSize * teams.length;
 
-      // Create the Draft in the DB
       const response = await fetch('/api/db/draft', {
         method: 'POST',
         headers: {
@@ -103,8 +143,11 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
         body: JSON.stringify({
           leagueKey,
           draftName,
-          orderedTeams: orderedTeams.map(team => team.team_key),
-          leagueSettings
+          rounds,
+          totalPicks,
+          draftOrder: JSON.stringify(draftOrder),
+          orderedTeams: JSON.stringify(orderedTeamsJson),
+          status: 'pending'
         }),
       });
 
@@ -132,13 +175,23 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
     } catch (error) {
       console.error('Failed to create draft:', error);
       toast.error("Failed to create draft. Please try again.");
+    } finally {
       setIsCreatingDraft(false);
     }
   };
 
   const startAdpUpdate = async (draftId: string) => {
     try {
-      const scoringType = leagueSettings?.stat_categories.find(cat => cat.name === 'Rec')?.value > 0 ? 'ppr' : 'standard';
+      if (!leagueSettings) throw Error('League settings not found');
+      
+      const scoringType = leagueSettings.stat_categories && 
+        Array.isArray(leagueSettings.stat_categories) &&
+        leagueSettings.stat_categories.some(cat => 
+          typeof cat === 'object' && cat !== null && 
+          'name' in cat && cat.name === 'Rec' && 
+          'value' in cat && typeof cat.value === 'number' && cat.value > 0
+        ) ? 'ppr' : 'standard';
+
       const adpResponse = await fetch(`/api/db/draft/${draftId}/players/adp`, {
         method: 'POST',
         headers: {
@@ -147,27 +200,36 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
         body: JSON.stringify({
           leagueId: leagueKey,
           scoringType,
-          numTeams: leagueSettings?.num_teams || teams.length,
+          numTeams: teams.length,
         }),
       });
 
       if (!adpResponse.ok) {
-        const errorData = await adpResponse.json();
-        throw new Error(errorData.error || 'Failed to start ADP update');
+        throw new Error('Failed to start ADP update');
       }
 
-      const { jobId: adpJobId } = await adpResponse.json();
+      const { jobId } = await adpResponse.json();
 
-      // Start polling for ADP update progress
-      const adpPollInterval = setInterval(async () => {
-        const progressResponse = await fetch(`/api/db/importJob/${adpJobId}`);
+      const toastId = toast.loading("Updating ADP...", {
+        duration: Infinity,
+        description: <Progress value={0} className="w-full mt-2" />,
+      });
+
+      // Poll for job progress
+      const pollInterval = setInterval(async () => {
+        const progressResponse = await fetch(`/api/db/importJob/${jobId}`);
         const { status, progress } = await progressResponse.json();
-        setAdpProgress(progress);
 
         if (status === 'complete') {
-          clearInterval(adpPollInterval);
-          setAdpProgress(100);
+          clearInterval(pollInterval);
+          toast.success("ADP update completed", { id: toastId });
           finalizeDraftCreation(draftId);
+        } else {
+          toast.loading("Updating ADP...", {
+            id: toastId,
+            description: <Progress value={progress} className="w-full mt-2" />,
+          });
+          setAdpProgress(progress);
         }
       }, 2000);
     } catch (error) {
@@ -221,32 +283,15 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
             className="mb-4"
             disabled={isCreatingDraft}
           />
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <StrictModeDroppable droppableId="teams">
-              {(provided: DroppableProvided) => (
-                <ul {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
-                  {orderedTeams.map((team, index) => (
-                    <Draggable key={team.team_key} draggableId={team.team_key} index={index}>
-                      {(provided) => (
-                        <li
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          className="p-2 bg-gray-100 rounded flex items-center"
-                        >
-                          <span className="mr-2">{index + 1}.</span>
-                          <div className="flex-grow">
-                            <TeamCard team={team} />
-                          </div>
-                        </li>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </ul>
-              )}
-            </StrictModeDroppable>
-          </DragDropContext>
+          <Reorder.Group axis='y' values={orderedTeams} onReorder={setOrderedTeams}>
+            <div className='space-y-2'>
+              {orderedTeams.map((team) => (
+                <Reorder.Item key={team.team_id} value={team}>
+                  <TeamCard team={team} />
+                </Reorder.Item>
+              ))}
+            </div>
+          </Reorder.Group>
           <Button onClick={handleCreateDraft} className="mt-4 w-full" disabled={isCreatingDraft}>
             {isCreatingDraft ? 'Creating Draft...' : 'Create Draft'}
           </Button>

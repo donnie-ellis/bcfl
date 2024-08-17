@@ -8,15 +8,21 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { AnimatePresence, motion } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import PlayerCard from '@/components/PlayerCard';
-import PlayerList from '@/components/PlayersList';
+import PlayersList from '@/components/PlayersList';
 import SubmitPickButton from '@/components/SubmitPicksButton';
-import { Team, Pick, Player, LeagueSettings, Draft } from '@/lib/types';
-import TeamNeeds from './TeamNeeds';
+import { Draft } from '@/lib/types/draft.types';
+import { Team } from '@/lib/types/team.types';
+import { Pick } from '@/lib/types/pick.types';
+import { Player } from '@/lib/types/player.types';
+import { LeagueSettings } from '@/lib/types/league-settings.types';
+import { Manager } from '@/lib/types/manager.types';
+import TeamNeeds from '@/components/TeamNeeds'
+import { Json } from '@/lib/types/database.types';
 
 interface CurrentPickDetailsProps {
-  currentTeam: Team;
+  currentTeam: Team | undefined;
   currentPick: Pick;
-  previousPick: Pick & { player: Player } | null;
+  previousPick: Pick | null;
   leagueKey: string;
   draftId: string;
   leagueSettings: LeagueSettings;
@@ -38,25 +44,26 @@ const CurrentPickDetails: React.FC<CurrentPickDetailsProps> = ({
 }) => {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [teamPreviousPick, setTeamPreviousPick] = useState<Pick & { player: Player } | null>(null);
-  const [previousFivePicks, setPreviousFivePicks] = useState<(Pick & { player: Player | null })[]>([]);
+  const [teamPreviousPick, setTeamPreviousPick] = useState<Pick | null>(null);
+  const [previousFivePicks, setPreviousFivePicks] = useState<Pick[]>([]);
 
   useEffect(() => {
-    // Find the previous pick for the current team
-    const picks = draft.picks || [];
-    const teamPicks = picks.filter(pick => pick.team_key === currentTeam?.team_key && pick.is_picked && pick.player);
+    if (!currentTeam) return;
+
+    const teamPicks = draft.picks
+      .filter(pick => pick.team_key === currentTeam.team_key && pick.is_picked);
+
     const previousTeamPick = teamPicks
       .filter(pick => pick.total_pick_number < currentPick.total_pick_number)
       .sort((a, b) => b.total_pick_number - a.total_pick_number)[0];
     
-    setTeamPreviousPick(previousTeamPick as Pick & { player: Player } | null);
+    setTeamPreviousPick(previousTeamPick || null);
 
-    // Find the previous 5 picks (excluding the immediate previous pick)
     const allPreviousPicks = teamPicks
       .filter(pick => pick.total_pick_number < currentPick.total_pick_number)
       .sort((a, b) => b.total_pick_number - a.total_pick_number);
 
-    setPreviousFivePicks(allPreviousPicks.slice(1, 6) as (Pick & { player: Player | null })[]);
+    setPreviousFivePicks(allPreviousPicks.slice(1, 6));
   }, [currentTeam, currentPick, draft.picks]);
 
   const handlePlayerSelect = (player: Player) => {
@@ -71,33 +78,43 @@ const CurrentPickDetails: React.FC<CurrentPickDetailsProps> = ({
     }
   };
 
-  const setTitle = (name: string) => {
-    if (name?.endsWith('s')) {
-      return name + "'";
-    } else {
-      return name + "'s";
-    };
+  const setTitle = (name: string | undefined) => {
+    if (!name) return '';
+    return name.endsWith('s') ? name + "'" : name + "'s";
   };
 
-  const remainingPicks = draft.picks.filter(pick => pick.team_key === currentTeam?.team_key && !pick.is_picked).length
+  const getTeamLogoUrl = (teamLogos: Json): string => {
+    if (Array.isArray(teamLogos) && teamLogos.length > 0 && typeof teamLogos[0] === 'object' && teamLogos[0] !== null) {
+      return (teamLogos[0] as { url?: string }).url || '';
+    }
+    return '';
+  };
+
+  const remainingPicks = currentTeam 
+    ? draft.picks.filter(pick => pick.team_key === currentTeam.team_key && !pick.is_picked).length
+    : 0;
+
+  if (!currentTeam) {
+    return <div>Loading team details...</div>;
+  }
 
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
         <CardTitle className="flex items-center space-x-4">
           <Avatar className="h-16 w-16">
-            <AvatarImage src={currentTeam?.team_logos[0].url} alt={currentTeam?.name} />
-            <AvatarFallback>{currentTeam?.name[0]}</AvatarFallback>
+            <AvatarImage src={getTeamLogoUrl(currentTeam.team_logos)} alt={currentTeam.name} />
+            <AvatarFallback>{currentTeam.name[0]}</AvatarFallback>
           </Avatar>
           <div>
-            <h2 className='text-2xl font-bold'>{setTitle(currentTeam?.name) + ' draft summary'}</h2>
+            <h2 className='text-2xl font-bold'>{setTitle(currentTeam.name) + ' draft summary'}</h2>
             <div className='flex space-x-2 text-sm'>
-              {currentTeam?.managers.map((manager, index) => (
+              {currentTeam.managers?.map((manager: Manager, index: number) => (
                 <span key={index} className="flex items-center space-x-2">
-                  <span>{manager.nickname}</span>
+                  <span>{manager.nickname ?? 'Unknown'}</span>
                   <Avatar className="h-4 w-4">
-                    <AvatarImage src={manager.image_url} alt={manager.nickname} />
-                    <AvatarFallback>{manager.nickname[0]}</AvatarFallback>
+                    <AvatarImage src={manager.image_url as string} alt={manager.nickname ?? 'Unknown'} />
+                    <AvatarFallback>{(manager.nickname ?? 'U')[0]}</AvatarFallback>
                   </Avatar>
                 </span>
               ))}
@@ -110,12 +127,12 @@ const CurrentPickDetails: React.FC<CurrentPickDetailsProps> = ({
           <div className="space-y-4">
             <TeamNeeds
               draftId={draftId}
-              teamKey={currentTeam?.team_key}
+              teamKey={currentTeam.team_key}
               leagueSettings={leagueSettings}
             />
             <div>
               <h3 className="font-semibold mb-2">Previous Team Pick:</h3>
-              {teamPreviousPick && teamPreviousPick.player ? (
+              {teamPreviousPick && 'player' in teamPreviousPick && teamPreviousPick.player ? (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -130,7 +147,7 @@ const CurrentPickDetails: React.FC<CurrentPickDetailsProps> = ({
                     <TooltipContent side="right" align="start" className="w-64">
                       <h4 className="font-semibold mb-2">Previous 5 Picks:</h4>
                       {previousFivePicks.map((pick) => (
-                        pick.player && (
+                        'player' in pick && pick.player && (
                           <div key={pick.id} className="mb-2">
                             <p className="text-sm">{pick.player.full_name} - {pick.player.editorial_team_full_name}</p>
                             <p className="text-xs text-gray-500">Round {pick.round_number}, Pick {pick.pick_number}</p>
@@ -158,8 +175,7 @@ const CurrentPickDetails: React.FC<CurrentPickDetailsProps> = ({
                 <div className="mt-4 h-full flex flex-col">
                   <div className="flex-grow overflow-hidden">
                     <ScrollArea className="h-[calc(100vh-200px)]">
-                      <PlayerList
-                        leagueKey={leagueKey}
+                      <PlayersList
                         draftId={draftId}
                         onPlayerSelect={handlePlayerSelect}
                         draft={draft}

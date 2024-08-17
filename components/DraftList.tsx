@@ -1,7 +1,7 @@
 // ./components/DraftList.tsx
 import React from 'react';
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Draft, Team, Pick, Player } from '@/lib/types';
+import { Draft, Team, Pick, Player } from '@/lib/types/';
 import PlayerCard from '@/components/PlayerCard';
 
 interface DraftListProps {

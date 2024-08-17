@@ -1,10 +1,10 @@
 // ./app/draft/[draftId]/board/page.tsx
 'use client'
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
-import { League, Draft, LeagueSettings, Team, Pick, Player } from '@/lib/types';
+import { League, Draft, LeagueSettings, Team, Pick, Player, PickWithPlayerAndTeam } from '@/lib/types/';
 import DraftHeader from '@/components/DraftHeader';
 import RoundSquares from '@/components/RoundSquares';
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -17,7 +17,6 @@ import SubmitPickButton from '@/components/SubmitPicksButton';
 import PlayerCard from '@/components/PlayerCard';
 import { Switch } from "@/components/ui/switch";
 import useSWR from 'swr';
-import useSWRImmutable from 'swr/immutable';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -29,23 +28,106 @@ const DraftBoardPage: React.FC = () => {
 
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [currentPick, setCurrentPick] = useState<Pick | null>(null);
+  const [currentPick, setCurrentPick] = useState<PickWithPlayerAndTeam | null>(null);
+  const [picks, setPicks] = useState<PickWithPlayerAndTeam[]>([]);
 
-  const { data: draft, error: draftError, mutate: mutateDraft } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher, { refreshInterval: 0 });
-  const { data: league, error: leagueError } = useSWRImmutable<League>(draft ? `/api/db/league/${draft.league_id}` : null, fetcher);
-  const { data: leagueSettings, error: settingsError } = useSWRImmutable<LeagueSettings>(draft ? `/api/db/league/${draft.league_id}/settings` : null, fetcher);
-  const { data: isCommissioner, error: commissionerError } = useSWRImmutable<{ isCommissioner: boolean }>(draft ? `/api/db/league/${draft.league_id}/isCommissioner` : null, fetcher);
-  const { data: teams, error: teamsError } = useSWRImmutable<Team[]>(draft ? `/api/yahoo/league/${draft.league_id}/teams` : null, fetcher);
+  const { data: draft, error: draftError, mutate: mutateDraft } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher);
+  const { data: league, error: leagueError } = useSWR<League>(draft ? `/api/db/league/${draft.league_id}` : null, fetcher);
+  const { data: leagueSettings, error: settingsError } = useSWR<LeagueSettings>(draft ? `/api/db/league/${draft.league_id}/settings` : null, fetcher);
+  const { data: isCommissioner, error: commissionerError } = useSWR<{ isCommissioner: boolean }>(draft ? `/api/db/league/${draft.league_id}/isCommissioner` : null, fetcher);
+  const { data: teams, error: teamsError } = useSWR<Team[]>(draft ? `/api/yahoo/league/${draft.league_id}/teams` : null, fetcher);
+  const { data: players, error: playersError } = useSWR<Player[]>(draft ? `/api/db/league/${draft.league_id}/players` : null, fetcher);
 
-  const { data: picks, error: picksError, mutate: mutatePicks } = useSWR<(Pick & { player: Player | null, team: Team | null })[]>(
-    draft ? `/api/db/draft/${draftId}/picks` : null,
-    fetcher,
-    { refreshInterval: 0 }
-  );
+  useEffect(() => {
+    if (draft && players && teams && supabase) {
+      const fetchPicks = async () => {
+        const { data: picksData, error } = await supabase
+          .from('picks')
+          .select('*')
+          .eq('draft_id', draftId)
+          .order('total_pick_number', { ascending: true });
+  
+        if (error) {
+          console.error('Error fetching picks:', error);
+          return;
+        }
+  
+        const picksWithDetails: PickWithPlayerAndTeam[] = picksData
+          .map(pick => {
+            const player = pick.player_id ? players.find(p => p.id === pick.player_id) || null : null;
+            const team = teams.find(t => t.team_key === pick.team_key);
+            
+            if (team) {
+              return {
+                ...pick,
+                player,
+                team
+              };
+            }
+            return null;
+          })
+          .filter((pick): pick is PickWithPlayerAndTeam => pick !== null);
+  
+        setPicks(picksWithDetails);
+        setCurrentPick(picksWithDetails.find(p => p.total_pick_number === draft.current_pick) || null);
+      };
+  
+      fetchPicks();
+    }
+  }, [draft, players, teams, draftId, supabase]);
+  
+  useEffect(() => {
+    if (!supabase || !draftId || !players || !teams || !draft) return;
+  
+    const picksSubscription = supabase
+      .channel(`picks_${draftId}`)
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'picks', 
+        filter: `draft_id=eq.${draftId}` 
+      }, async (payload) => {
+        const updatedPick = payload.new as Pick;
+        const player = updatedPick.player_id ? players.find(p => p.id === updatedPick.player_id) || null : null;
+        const team = teams.find(t => t.team_key === updatedPick.team_key);
+  
+        if (team) {
+          const updatedPickWithDetails: PickWithPlayerAndTeam = {
+            ...updatedPick,
+            player,
+            team
+          };
+  
+          setPicks(prevPicks => prevPicks.map(pick => 
+            pick.id === updatedPick.id ? updatedPickWithDetails : pick
+          ));
+  
+          if (updatedPick.is_picked && draft.current_pick !== null) {
+            const nextPickNumber = draft.current_pick + 1;
+            setCurrentPick(picks.find(p => p.total_pick_number === nextPickNumber) || null);
+            mutateDraft({ ...draft, current_pick: nextPickNumber }, false);
+          }
+  
+          if (updatedPick.is_picked && player) {
+            toast.success(`${team.name} drafted ${player.full_name}`);
+          }
+        }
+      })
+      .subscribe();
+  
+    return () => {
+      supabase.removeChannel(picksSubscription);
+    };
+  }, [supabase, draftId, draft, players, teams, picks, mutateDraft]);
 
-  const memoizedDraft = useMemo(() => draft && picks ? { ...draft, picks } : null, [draft, picks]);
+  const memoizedDraft = useMemo(() => {
+    if (draft && picks.length > 0) {
+      return { ...draft, picks };
+    }
+    return null;
+  }, [draft, picks]);
 
-  const handleSquareHover = useCallback((pick: Pick & { player: Player | null, team: Team }) => {
+  const handleSquareHover = useCallback((pick: PickWithPlayerAndTeam) => {
     if (!isCommissioner?.isCommissioner) return null;
 
     const handleKeeperChange = async (checked: boolean) => {
@@ -63,7 +145,7 @@ const DraftBoardPage: React.FC = () => {
         }
 
         toast.success(`Keeper status ${checked ? 'set' : 'unset'} successfully`);
-        mutatePicks();
+        // The pick will be updated through the Supabase subscription
       } catch (error) {
         console.error('Error updating keeper status:', error);
         toast.error("Failed to update keeper status. Please try again.");
@@ -76,7 +158,7 @@ const DraftBoardPage: React.FC = () => {
         {pick.player && (
           <div className="flex items-center space-x-2">
             <Switch
-              checked={pick.is_keeper}
+              checked={pick.is_keeper || false}
               onCheckedChange={handleKeeperChange}
               id={`keeper-switch-${pick.id}`}
             />
@@ -93,9 +175,9 @@ const DraftBoardPage: React.FC = () => {
         )}
       </div>
     );
-  }, [isCommissioner, draftId, mutatePicks]);
+  }, [isCommissioner, draftId]);
 
-  const handleDeletePick = async (pick: Pick) => {
+  const handleDeletePick = async (pick: PickWithPlayerAndTeam) => {
     try {
       const response = await fetch(`/api/db/draft/${draftId}/pick`, {
         method: 'DELETE',
@@ -108,7 +190,7 @@ const DraftBoardPage: React.FC = () => {
         throw new Error('Failed to delete pick');
       }
       toast.success("Pick deleted successfully");
-      mutatePicks();
+      // The pick will be updated through the Supabase subscription
     } catch (error) {
       console.error('Error deleting pick:', error);
       toast.error("Failed to delete pick. Please try again.");
@@ -132,50 +214,32 @@ const DraftBoardPage: React.FC = () => {
       if (!response.ok) {
         throw new Error('Failed to set pick');
       }
-      toast.success(`Pick set successfully: ${selectedPlayer.full_name}`);
       setIsSheetOpen(false);
       setSelectedPlayer(null);
-      setCurrentPick(null);
-      mutatePicks();
+      // The pick will be updated through the Supabase subscription
     } catch (error) {
       console.error('Error setting pick:', error);
       toast.error("Failed to set pick. Please try again.");
     }
   };
 
-  React.useEffect(() => {
-    if (supabase) {
-      const subscription = supabase
-        .channel('draft_updates')
-        .on('postgres_changes', { 
-          event: '*', 
-          schema: 'public', 
-          table: 'picks', 
-          filter: `draft_id=eq.${draftId}` 
-        }, () => {
-          mutatePicks();
-          mutateDraft();
-        })
-        .subscribe();
+  const MemoizedDraftHeader = useMemo(() => {
+    if (!league || !memoizedDraft) return null;
+    return <DraftHeader league={league} draft={memoizedDraft} />;
+  }, [league, memoizedDraft]);
 
-      return () => {
-        subscription.unsubscribe();
-      };
-    }
-  }, [supabase, draftId, mutatePicks, mutateDraft]);
-
-  if (draftError || leagueError || settingsError || teamsError || picksError) {
+  if (draftError || leagueError || settingsError || teamsError || playersError) {
     return <div>Error loading draft data. Please try again.</div>;
   }
 
-  if (!memoizedDraft || !league || !leagueSettings || !isCommissioner || !teams || !picks) {
+  if (!memoizedDraft || !league || !leagueSettings || !isCommissioner || !teams || !players) {
     return <div>Loading...</div>;
   }
 
   if (memoizedDraft.status === 'completed') {
     return (
       <div className="flex flex-col h-screen">
-        <DraftHeader league={league} draft={memoizedDraft} />
+        {MemoizedDraftHeader}
         <Alert className="m-4">
           <AlertTitle>Draft Completed</AlertTitle>
           <AlertDescription>
@@ -184,7 +248,7 @@ const DraftBoardPage: React.FC = () => {
         </Alert>
         <ScrollArea className="flex-grow">
           <div className="p-4 space-y-8">
-            {memoizedDraft && memoizedDraft.picks && Array.from({ length: memoizedDraft.rounds }, (_, i) => i + 1).map((round) => (
+            {Array.from({ length: memoizedDraft.rounds }, (_, i) => i + 1).map((round) => (
               <Card key={round}>
                 <CardHeader>
                   <CardTitle>Round {round}</CardTitle>
@@ -201,6 +265,7 @@ const DraftBoardPage: React.FC = () => {
                     currentRoundOnly={false}
                     onSquareHover={handleSquareHover}
                     teams={teams}
+                    currentRound={round}
                   />
                 </CardContent>
               </Card>
@@ -213,10 +278,10 @@ const DraftBoardPage: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen">
-      <DraftHeader league={league} draft={memoizedDraft} />
+      {MemoizedDraftHeader}
       <ScrollArea className="flex-grow">
         <div className="p-4 space-y-8">
-          {memoizedDraft && memoizedDraft.picks && Array.from({ length: memoizedDraft.rounds }, (_, i) => i + 1).map((round) => (
+          {Array.from({ length: memoizedDraft.rounds }, (_, i) => i + 1).map((round) => (
             <Card key={round}>
               <CardHeader>
                 <CardTitle>Round {round}</CardTitle>
@@ -233,6 +298,7 @@ const DraftBoardPage: React.FC = () => {
                   currentRoundOnly={false}
                   onSquareHover={handleSquareHover}
                   teams={teams}
+                  currentRound={round}
                 />
               </CardContent>
             </Card>
@@ -248,7 +314,6 @@ const DraftBoardPage: React.FC = () => {
             <div className="flex-grow overflow-hidden">
               <ScrollArea className="h-[calc(100vh-300px)]">
                 <PlayersList
-                  leagueKey={memoizedDraft.league_id}
                   draftId={draftId}
                   onPlayerSelect={setSelectedPlayer}
                   draft={memoizedDraft}
@@ -260,13 +325,14 @@ const DraftBoardPage: React.FC = () => {
                 <PlayerCard
                   player={selectedPlayer}
                   isDrafted={false}
-                  onClick={() => {}}
+                  onClick={() => { }}
                 />
                 <SubmitPickButton
                   isCurrentUserPick={true}
                   selectedPlayer={selectedPlayer}
                   currentPick={currentPick}
                   onSubmitPick={handleSetPick}
+                  isPickSubmitting={false}
                 />
               </div>
             )}
