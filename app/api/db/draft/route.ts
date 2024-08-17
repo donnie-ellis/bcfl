@@ -71,9 +71,6 @@ export async function POST(request: NextRequest) {
     }
 
     const draftId = data[0].created_draft_id;
-    const debugInfo = data[0].debug_info;
-
-    console.log('Debug info:', debugInfo);
 
     // Start the player import process here
     const importJobId = uuidv4();
@@ -83,7 +80,6 @@ export async function POST(request: NextRequest) {
       draftId: draftId, 
       importJobId: importJobId,
       message: 'Draft created successfully',
-      debugInfo: debugInfo
     });
   } catch (error: any) {
     console.error('Error creating draft:', error);

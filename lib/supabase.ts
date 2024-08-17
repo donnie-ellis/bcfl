@@ -57,7 +57,7 @@ export async function ensureLeagueExists(leagueKey: string, leagueData: Partial<
     team_id: team.team_id,
     url: team.url ?? null,
     team_logos: team.team_logos,
-    waiver_priority: team.waiver_priority ? parseInt(team.waiver_priority.toString()) : null,
+    waiver_priority: team.waiver_priority ? team.waiver_priority.toString() : null,
     number_of_moves: team.number_of_moves ?? null,
     number_of_trades: team.number_of_trades ?? null,
     league_scoring_type: team.league_scoring_type ?? null,
