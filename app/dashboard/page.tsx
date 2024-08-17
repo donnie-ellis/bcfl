@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -87,7 +88,15 @@ const DashboardPage: React.FC = () => {
       if (teamResponse.ok) {
         const teamData: Team = await teamResponse.json();
         setTeam(teamData);
+        
+        // Update the session with league_key and team_key
+        await update({
+          ...session,
+          league_key: league.league_key,
+          team_key: teamData.team_key
+        });
       }
+
       if (commissionerResponse.ok) {
         const { isCommissioner } = await commissionerResponse.json();
         setIsCommissioner(isCommissioner);
