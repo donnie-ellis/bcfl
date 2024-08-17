@@ -2,7 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requestYahoo } from '@/lib/yahoo';
-import { League } from '@/lib/types';
+import { League } from '@/lib/yahoo.types';
 
 export async function GET(
   request: NextRequest,
@@ -33,12 +33,10 @@ export async function GET(
       renewed: leagueData.renewed,
       game_code: leagueData.game_code,
       is_cash_league: leagueData.is_cash_league === '1',
-      is_plus_league: leagueData.is_plus_league === '1',
       is_pro_league: leagueData.is_pro_league === '1',
       season: parseInt(leagueData.season),
       start_date: leagueData.start_date,
       start_week: parseInt(leagueData.start_week),
-      felo_tier: leagueData.felo_tier || '',
       end_date: leagueData.end_date,
       weekly_deadline: leagueData.weekly_deadline
     };

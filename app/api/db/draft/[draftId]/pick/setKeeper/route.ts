@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
 import { getServerAuthSession } from "@/auth";
 import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from '@/lib/database.types';
+import { Database } from '@/lib/types/database.types';
 
 export async function PUT(
   request: NextRequest,

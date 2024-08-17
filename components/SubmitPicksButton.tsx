@@ -1,7 +1,7 @@
 // ./components/SubmitPickButton.tsx
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Player, Pick } from '@/lib/types';
+import { Player, Pick } from '@/lib/types/';
 import { Loader2 } from 'lucide-react';
 
 interface SubmitPickButtonProps {

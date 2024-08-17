@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
 import { getServerAuthSession } from "@/auth";
-import { Database } from '@/lib/database.types';
+import { Database } from '@/lib/types/database.types';
 import { error } from 'console';
 import { SupabaseClient } from '@supabase/supabase-js';
 
@@ -78,15 +78,15 @@ export async function POST(
       .single();
 
     if (pickError) throw pickError;
-      if (!pick.drafts) throw Error('No draft data returned');
+    if (!pick.drafts) throw Error('No draft data returned');
 
     // Check if the user is authorized to make this pick
-      const isAuthorized = await checkUserAuthorization(supabase, userGuid, pick.team_key as string, pick.drafts.league_id as string);
-      if (!isAuthorized) {
-        return NextResponse.json({ error: 'Unauthorized to make this pick' }, { status: 403 });
-      }
+    const isAuthorized = await checkUserAuthorization(supabase, userGuid, pick.team_key as string, pick.drafts.league_id as string);
+    if (!isAuthorized) {
+      return NextResponse.json({ error: 'Unauthorized to make this pick' }, { status: 403 });
+    }
 
-      // Call the submit_draft_pick function
+    // Call the submit_draft_pick function
     const { data, error } = await supabase.rpc('submit_draft_pick', {
       p_draft_id: parseInt(draftId),
       p_pick_id: pickId,
@@ -95,6 +95,26 @@ export async function POST(
     });
 
     if (error) throw error;
+
+    // Fetch the updated pick data
+    const { data: updatedPick, error: updatedPickError } = await supabase
+      .from('picks')
+      .select(`
+        *,
+        player:players(*),
+        team:teams(*)
+      `)
+      .eq('id', pickId)
+      .single();
+
+    if (updatedPickError) throw updatedPickError;
+
+    // Return the updated pick data
+    return NextResponse.json({ 
+      message: 'Pick submitted successfully', 
+      pick: updatedPick 
+    });
+
   } catch (error) {
     console.error('Error submitting pick:', error);
     return NextResponse.json({ error: 'Failed to submit pick', details: error }, { status: 500 });

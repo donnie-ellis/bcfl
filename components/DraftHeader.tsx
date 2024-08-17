@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import Profile from '@/components/Profile';
-import { League, Draft } from '@/lib/types';
+import { League, Draft } from '@/lib/types/';
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,6 +15,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import useSWR from 'swr';
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
+import { error } from 'console';
 
 interface DraftHeaderProps {
   league: League | null | undefined;
@@ -88,7 +89,7 @@ const DraftHeader: React.FC<DraftHeaderProps> = ({ league, draft, additionalCont
           });
         }
       }, 2000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update ADP:', error);
       if (error.message === 'Unauthorized. Commissioner access required.') {
         toast.error("You must be a commissioner to update ADP.");
@@ -155,7 +156,7 @@ const DraftHeader: React.FC<DraftHeaderProps> = ({ league, draft, additionalCont
             <Link href="/dashboard" className="hover:opacity-80 transition-opacity">
               <Avatar className='h-12 w-12'>
                 <AvatarFallback>{league.name?.[0]}</AvatarFallback>
-                <AvatarImage src={league.logo_url} alt={league.name} />
+                <AvatarImage src={league.logo_url as string} alt={league.name} />
               </Avatar>
             </Link>
             <span className="hidden md:inline">{`${league.name} ${draft.name} Draft`}</span>
