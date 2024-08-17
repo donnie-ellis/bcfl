@@ -1,10 +1,8 @@
-// ./components/RoundSquares.tsx
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Draft, LeagueSettings, Team } from '@/lib/types/';
 import { PickWithPlayerAndTeam } from '@/lib/types/pick.types';
 import DraftSquare from "@/components/DraftSquare"
 import { Skeleton } from "@/components/ui/skeleton";
-import { motion, AnimatePresence } from "framer-motion";
 
 interface RoundSquaresProps {
   draft: Draft & { picks: PickWithPlayerAndTeam[] };
@@ -13,16 +11,26 @@ interface RoundSquaresProps {
   onSquareHover?: (pick: PickWithPlayerAndTeam) => React.ReactNode;
   teams: Team[] | null;
   isLoading?: boolean;
+  currentRound: number;
 }
 
-const RoundSquares: React.FC<RoundSquaresProps> = ({ 
+const RoundSquares: React.FC<RoundSquaresProps> = React.memo(({ 
   draft, 
   leagueSettings, 
   currentRoundOnly = false, 
   onSquareHover,
   teams,
-  isLoading 
+  isLoading,
+  currentRound
 }) => {
+  const picksToDisplay = useMemo(() => {
+    if (!draft || !leagueSettings || !teams) return [];
+
+    return currentRoundOnly
+      ? draft.picks.filter(pick => pick.round_number === currentRound)
+      : draft.picks;
+  }, [draft, leagueSettings, teams, currentRoundOnly, currentRound]);
+
   if (!draft || !leagueSettings || !teams) {
     return (
       <div className="flex justify-between w-full">
@@ -35,36 +43,22 @@ const RoundSquares: React.FC<RoundSquaresProps> = ({
     );
   }
 
-  const picksPerRound = draft.picks.length / draft.rounds;
-  const currentPickNumber = draft.current_pick ?? 1;
-  const currentRound = Math.ceil(currentPickNumber / picksPerRound);
-
-  const picksToDisplay = currentRoundOnly
-    ? draft.picks.filter(pick => pick.round_number === currentRound)
-    : draft.picks;
-  
   return (
     <div className="flex justify-between w-full">
-      <AnimatePresence>
-        {picksToDisplay.map((pick) => (
-          <motion.div
-            key={pick.id}
-            className="flex-1 px-1"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <DraftSquare
-              pick={pick as PickWithPlayerAndTeam}
-              isCurrentPick={pick.total_pick_number === draft.current_pick}
-              onSquareHover={onSquareHover}
-            />
-          </motion.div>
-        ))}
-      </AnimatePresence>
+      {picksToDisplay.map((pick) => (
+        <div key={pick.id} className="flex-1 px-1">
+          <DraftSquare
+            pick={pick as PickWithPlayerAndTeam}
+            isCurrentPick={pick.total_pick_number === draft.current_pick}
+            onSquareHover={onSquareHover}
+            isLoading={isLoading}
+          />
+        </div>
+      ))}
     </div>
   );
-};
+});
+
+RoundSquares.displayName = 'RoundSquares';
 
 export default RoundSquares;

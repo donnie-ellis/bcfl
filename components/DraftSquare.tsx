@@ -1,5 +1,4 @@
-// ./components/DraftSquare.tsx
-import React from 'react';
+import React, { memo } from 'react';
 import { PickWithPlayerAndTeam } from '@/lib/types/pick.types';
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -15,9 +14,9 @@ interface DraftSquareProps {
   isLoading?: boolean;
 }
 
-const DraftSquare: React.FC<DraftSquareProps> = ({ pick, isCurrentPick, onSquareHover, isLoading }) => {
-    const teamLogos: TeamLogo[] = parseTeamLogos(pick.team?.team_logos);
-    const teamLogoUrl = teamLogos.length > 0 ? teamLogos[0].url : '';
+const DraftSquare: React.FC<DraftSquareProps> = memo(({ pick, isCurrentPick, onSquareHover, isLoading }) => {
+  const teamLogos: TeamLogo[] = parseTeamLogos(pick.team?.team_logos || []);
+  const teamLogoUrl = teamLogos.length > 0 ? teamLogos[0].url : '';
 
   const Square = () => (
     <Card className={`w-full h-full ${isCurrentPick ? 'border-2 border-blue-500' : ''}`}>
@@ -36,12 +35,12 @@ const DraftSquare: React.FC<DraftSquareProps> = ({ pick, isCurrentPick, onSquare
             </div>
             <div className="flex items-center justify-center flex-grow">
               <Avatar className="h-12 w-12">
-                {pick.player ? (
+                {pick.is_picked ? (
                   <AvatarImage src={pick.player.headshot_url || pick.player.image_url || ''} alt={pick.player.full_name} />
                 ) : (
                   <AvatarImage src={teamLogoUrl} alt={pick.team?.name} />
                 )}
-                <AvatarFallback>{pick.team?.name[0]}</AvatarFallback>
+                <AvatarFallback>{pick.team?.name?.[0] || '?'}</AvatarFallback>
               </Avatar>
             </div>
             <div className="text-center text-xs mt-1">
@@ -93,6 +92,8 @@ const DraftSquare: React.FC<DraftSquareProps> = ({ pick, isCurrentPick, onSquare
   }
 
   return <Square />;
-};
+});
+
+DraftSquare.displayName = 'DraftSquare';
 
 export default DraftSquare;

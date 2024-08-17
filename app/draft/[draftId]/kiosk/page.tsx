@@ -31,15 +31,13 @@ const KioskPage: React.FC = () => {
   const { data: leagueSettings } = useSWR<LeagueSettings>(draftData ? `/api/db/league/${draftData.league_id}/settings` : null, fetcher);
   const { data: teams } = useSWR<Team[]>(draftData ? `/api/yahoo/league/${draftData.league_id}/teams` : null, fetcher);
   const { data: players } = useSWR<Player[]>(`/api/db/league/${draftData?.league_id}/players`, fetcher);
-
   const [currentPick, setCurrentPick] = useState<PickWithPlayerAndTeam | null>(null);
   const [picks, setPicks] = useState<PickWithPlayerAndTeam[]>([]);
 
   const isLoading = !draftData || !leagueData || !leagueSettings || !teams || !players || !currentPick;
-  if (!supabase) throw Error('Supabase isn\'t loaded');
   
   useEffect(() => {
-    if (draftData && players && teams) {
+    if (draftData && players && teams && supabase) {
       const fetchPicks = async () => {
         const { data: picksData, error } = await supabase
           .from('picks')
@@ -117,6 +115,13 @@ const KioskPage: React.FC = () => {
     return undefined;
   }, [draftData, picks]);
 
+  const currentRound = useMemo(() => {
+    if (memoizedDraft && memoizedDraft.current_pick && teams) {
+      return Math.ceil(memoizedDraft.current_pick / teams.length);
+    }
+    return 1;
+  }, [memoizedDraft, teams]);
+
   const handleSubmitPick = async (player: Player) => {
     setIsPickSubmitting(true);
     if (!currentPick || !memoizedDraft) {
@@ -178,7 +183,7 @@ const KioskPage: React.FC = () => {
       )}
       <div className="flex-none w-full">
         <div className="p-4">
-          <h2 className="text-2xl font-bold mb-4">Current Round</h2>
+          <h2 className="text-2xl font-bold mb-4">Round {currentRound}</h2>
           {memoizedDraft && leagueSettings && teams && (
             <RoundSquares
               draft={memoizedDraft}
@@ -186,6 +191,7 @@ const KioskPage: React.FC = () => {
               currentRoundOnly={true}
               isLoading={isLoading}
               teams={teams}
+              currentRound={currentRound}
             />
           )}
         </div>
