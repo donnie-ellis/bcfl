@@ -1,0 +1,1 @@
+ALTER TABLE "public"."teams" ADD PRIMARY KEY ("team_key");

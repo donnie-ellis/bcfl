@@ -1,0 +1,1 @@
+ALTER TABLE drafts ADD CONSTRAINT unique_league_draft UNIQUE (league_id, name);
