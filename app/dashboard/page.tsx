@@ -38,6 +38,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Json } from '@/lib/types/database.types';
+import { toast } from 'sonner';
 
 const DashboardPage: React.FC = () => {
   const router = useRouter();
@@ -89,6 +90,7 @@ const DashboardPage: React.FC = () => {
         const teamData: Team = await teamResponse.json();
         setTeam(teamData);
       }
+
       if (commissionerResponse.ok) {
         const { isCommissioner } = await commissionerResponse.json();
         setIsCommissioner(isCommissioner);
@@ -122,6 +124,7 @@ const DashboardPage: React.FC = () => {
   };
 
   const handleDeleteDraft = async (draftId: string) => {
+    const toastId = toast.loading("Deleting draft...");
     try {
       const response = await fetch(`/api/db/draft/${draftId}`, {
         method: 'DELETE',
@@ -132,9 +135,10 @@ const DashboardPage: React.FC = () => {
       }
 
       setDrafts(drafts.filter(draft => draft.id.toString() !== draftId));
+      toast.success("Draft deleted successfully", { id: toastId });
     } catch (error) {
       console.error('Error deleting draft:', error);
-      alert('Failed to delete draft. Please try again.');
+      toast.error("Failed to delete draft. Please try again.", { id: toastId });
     }
   };
 
@@ -357,7 +361,10 @@ const DashboardPage: React.FC = () => {
                       <CreateDraftDialog 
                         leagueKey={selectedLeague.league_key} 
                         teams={teams} 
-                        onDraftCreated={(updatedDrafts: Draft[]) => setDrafts(updatedDrafts)}
+                        onDraftCreated={(updatedDrafts: Draft[]) => {
+                          setDrafts(updatedDrafts);
+                          toast.success("Draft created successfully");
+                        }}
                         leagueSettings={leagueSettings}
                       />
                     )}

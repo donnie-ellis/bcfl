@@ -106,11 +106,13 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
     }
 
     setIsCreatingDraft(true);
+    const toastId = toast.loading("Creating draft...");
+
     try {
-      // Fetch Yahoo data
+      toast.loading("Fetching Yahoo data...", { id: toastId });
       const yahooData = await fetchYahooData();
 
-      // Upsert data
+      toast.loading("Upserting data...", { id: toastId });
       await upsertData(yahooData.league, yahooData.leagueSettings, yahooData.managers);
 
       const draftOrder = orderedTeams.reduce((acc, team, index) => {
@@ -123,8 +125,7 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
         name: team.name
       }));
 
-      // Calculate the number of rounds and total picks
-      const defaultRosterSize = 15; // Default roster size if we can't determine it from settings
+      const defaultRosterSize = 15;
       let rosterSize = defaultRosterSize;
 
       if (yahooData.leagueSettings && yahooData.leagueSettings.roster_positions) {
@@ -135,6 +136,7 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
       const rounds = rosterSize;
       const totalPicks = rosterSize * teams.length;
 
+      toast.loading("Creating draft in database...", { id: toastId });
       const response = await fetch('/api/db/draft', {
         method: 'POST',
         headers: {
@@ -158,7 +160,7 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
 
       const { draftId, importJobId } = await response.json();
 
-      toast.success("Draft created successfully. Importing players...");
+      toast.success("Draft created successfully. Importing players...", { id: toastId });
 
       // Start polling for import progress
       const pollInterval = setInterval(async () => {
@@ -168,19 +170,21 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
 
         if (status === 'complete') {
           clearInterval(pollInterval);
-          toast.success("Players imported successfully. Fetching ADP data...");
-          await startAdpUpdate(draftId);
+          toast.success("Players imported successfully. Fetching ADP data...", { id: toastId });
+          await startAdpUpdate(draftId, toastId);
+        } else {
+          toast.loading(`Importing players... ${progress}%`, { id: toastId });
         }
       }, 2000);
     } catch (error) {
       console.error('Failed to create draft:', error);
-      toast.error("Failed to create draft. Please try again.");
+      toast.error("Failed to create draft. Please try again.", { id: toastId });
     } finally {
       setIsCreatingDraft(false);
     }
   };
 
-  const startAdpUpdate = async (draftId: string) => {
+  const startAdpUpdate = async (draftId: string, toastId: string | number) => {
     try {
       if (!leagueSettings) throw Error('League settings not found');
       
@@ -210,11 +214,6 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
 
       const { jobId } = await adpResponse.json();
 
-      const toastId = toast.loading("Updating ADP...", {
-        duration: Infinity,
-        description: <Progress value={0} className="w-full mt-2" />,
-      });
-
       // Poll for job progress
       const pollInterval = setInterval(async () => {
         const progressResponse = await fetch(`/api/db/importJob/${jobId}`);
@@ -223,23 +222,20 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
         if (status === 'complete') {
           clearInterval(pollInterval);
           toast.success("ADP update completed", { id: toastId });
-          finalizeDraftCreation(draftId);
+          finalizeDraftCreation(draftId, toastId);
         } else {
-          toast.loading("Updating ADP...", {
-            id: toastId,
-            description: <Progress value={progress} className="w-full mt-2" />,
-          });
+          toast.loading(`Updating ADP... ${progress}%`, { id: toastId });
           setAdpProgress(progress);
         }
       }, 2000);
     } catch (error) {
       console.error('Failed to update ADP:', error);
-      toast.error("Failed to update ADP. You can try again later.");
-      finalizeDraftCreation(draftId);
+      toast.error("Failed to update ADP. You can try again later.", { id: toastId });
+      finalizeDraftCreation(draftId, toastId);
     }
   };
 
-  const finalizeDraftCreation = async (draftId: string) => {
+  const finalizeDraftCreation = async (draftId: string, toastId: string | number) => {
     setIsCreatingDraft(false);
     setIsDialogOpen(false);
     setDraftName('');
@@ -251,7 +247,7 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
     } else {
       console.error('Failed to fetch updated drafts');
     }
-    toast.success("Draft creation completed. Redirecting to draft page...");
+    toast.success("Draft creation completed. Redirecting to draft page...", { id: toastId });
     // Redirect to the new draft page
     router.push(`/draft/${draftId}`);
   };
@@ -266,7 +262,7 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
   return (
     <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
       <DialogTrigger asChild>
-        <Button variant="outline">Create a new draft</Button>
+        <Button variant="outline" disabled={isCreatingDraft}>Create a new draft</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-hidden">
         <DialogHeader>
