@@ -88,15 +88,7 @@ const DashboardPage: React.FC = () => {
       if (teamResponse.ok) {
         const teamData: Team = await teamResponse.json();
         setTeam(teamData);
-        
-        // Update the session with league_key and team_key
-        await update({
-          ...session,
-          league_key: league.league_key,
-          team_key: teamData.team_key
-        });
       }
-
       if (commissionerResponse.ok) {
         const { isCommissioner } = await commissionerResponse.json();
         setIsCommissioner(isCommissioner);
