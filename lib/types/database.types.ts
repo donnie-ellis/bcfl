@@ -276,7 +276,7 @@ export type Database = {
           {
             foreignKeyName: "league_settings_league_key_fkey"
             columns: ["league_key"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "leagues"
             referencedColumns: ["league_key"]
           },
@@ -1008,33 +1008,6 @@ export type Database = {
               draft_id: number
             }[]
           }
-      get_players_with_adp: {
-        Args: {
-          p_draft_id: number
-        }
-        Returns: {
-          id: number
-          player_key: string
-          full_name: string
-          first_name: string
-          last_name: string
-          editorial_team_abbr: string
-          display_position: string
-          position_type: string
-          eligible_positions: string[]
-          status: string
-          editorial_player_key: string
-          editorial_team_key: string
-          editorial_team_full_name: string
-          bye_weeks: string[]
-          uniform_number: string
-          image_url: string
-          adp: number
-          adp_formatted: string
-          source_id: number
-          draft_id: number
-        }[]
-      }
       remove_current_pick_column: {
         Args: Record<PropertyKey, never>
         Returns: undefined
