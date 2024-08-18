@@ -14,7 +14,7 @@ export async function importPlayers(leagueKey: string, jobId?: string): Promise<
     let totalImported = 0;
 
     while (true) {
-      const { players, nextStart } = await fetchAllPlayers(leagueKey, start);
+      const { players, nextStart } = await fetchAllPlayers(leagueKey, start, 400);
 
       if (players.length > 0) {
         await importPlayerBatch(players, jobId, totalImported);
