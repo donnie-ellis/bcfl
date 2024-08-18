@@ -1,6 +1,6 @@
 // ./components/PlayerCard.tsx
 import React from 'react';
-import { Player } from '@/lib/types/player.types';
+import { PlayerWithADP, Player } from '@/lib/types/player.types';
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/tooltip";
 
 interface PlayerCardProps {
-  player: Player;
+  player: PlayerWithADP | Player;
   isDrafted: boolean | undefined;
   onClick: () => void;
   fadeDrafted?: boolean;
@@ -35,8 +35,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
           >
             <CardContent className="p-3 flex items-center space-x-3">
               <Avatar className="h-12 w-12 rounded">
-                <AvatarImage src={player.headshot_url as string || player.image_url as string} alt={player.full_name} />
-                <AvatarFallback>{player.full_name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                <AvatarImage src={player.headshot_url as string} alt={player.full_name || 'N/A'} />
+                <AvatarFallback>{player.full_name || 'NA'.split(' ').map(n => n[0]).join('')}</AvatarFallback>
               </Avatar>
               <div className="flex-grow">
                 <p className="font-semibold">{player.full_name}</p>
@@ -47,11 +47,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
                   )}
                 </p>
               </div>
-              {player.rank && (
-                <Badge variant="secondary" className="ml-2">
-                  #{player.rank}
-                </Badge>
-              )}
               {isDrafted && (
                 <Badge variant="destructive" className="ml-2">
                   Drafted

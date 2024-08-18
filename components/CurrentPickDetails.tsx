@@ -13,7 +13,7 @@ import SubmitPickButton from '@/components/SubmitPicksButton';
 import { Draft } from '@/lib/types/draft.types';
 import { Team } from '@/lib/types/team.types';
 import { Pick } from '@/lib/types/pick.types';
-import { Player } from '@/lib/types/player.types';
+import { PlayerWithADP } from '@/lib/types/player.types';
 import { LeagueSettings } from '@/lib/types/league-settings.types';
 import { Manager } from '@/lib/types/manager.types';
 import TeamNeeds from '@/components/TeamNeeds'
@@ -26,7 +26,7 @@ interface CurrentPickDetailsProps {
   leagueKey: string;
   draftId: string;
   leagueSettings: LeagueSettings;
-  onSubmitPick: (player: Player) => void;
+  onSubmitPick: (player: PlayerWithADP) => void;
   isPickSubmitting?: boolean;
   draft: Draft;
 }
@@ -42,7 +42,7 @@ const CurrentPickDetails: React.FC<CurrentPickDetailsProps> = ({
   isPickSubmitting = false,
   draft
 }) => {
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<PlayerWithADP | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [teamPreviousPick, setTeamPreviousPick] = useState<Pick | null>(null);
   const [previousFivePicks, setPreviousFivePicks] = useState<Pick[]>([]);
@@ -66,7 +66,7 @@ const CurrentPickDetails: React.FC<CurrentPickDetailsProps> = ({
     setPreviousFivePicks(allPreviousPicks.slice(1, 6));
   }, [currentTeam, currentPick, draft.picks]);
 
-  const handlePlayerSelect = (player: Player) => {
+  const handlePlayerSelect = (player: PlayerWithADP) => {
     setSelectedPlayer(player);
   };
 

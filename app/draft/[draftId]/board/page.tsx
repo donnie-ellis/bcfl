@@ -4,7 +4,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
-import { League, Draft, LeagueSettings, Team, Pick, Player, PickWithPlayerAndTeam } from '@/lib/types/';
+import { League, Draft, LeagueSettings, Team, Pick, Player, PickWithPlayerAndTeam, PlayerWithADP } from '@/lib/types/';
 import DraftHeader from '@/components/DraftHeader';
 import RoundSquares from '@/components/RoundSquares';
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -26,7 +26,7 @@ const DraftBoardPage: React.FC = () => {
   const draftId = params.draftId as string;
   const supabase = useSupabaseClient();
 
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<PlayerWithADP | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [currentPick, setCurrentPick] = useState<PickWithPlayerAndTeam | null>(null);
   const [picks, setPicks] = useState<PickWithPlayerAndTeam[]>([]);

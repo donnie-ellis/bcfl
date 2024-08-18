@@ -4,7 +4,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
-import { League, Draft, LeagueSettings } from '@/lib/types/';
+import { League, Draft, LeagueSettings, PlayerWithADP } from '@/lib/types/';
 import { Pick, Player, Team } from '@/lib/types/';
 import { PickWithPlayerAndTeam } from '@/lib/types/pick.types';
 import RoundSquares from '@/components/RoundSquares';
@@ -122,7 +122,7 @@ const KioskPage: React.FC = () => {
     return 1;
   }, [memoizedDraft, teams]);
 
-  const handleSubmitPick = async (player: Player) => {
+  const handleSubmitPick = async (player: PlayerWithADP) => {
     setIsPickSubmitting(true);
     if (!currentPick || !memoizedDraft) {
       toast.error("Unable to submit pick. Please try again.");

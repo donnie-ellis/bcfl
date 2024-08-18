@@ -1,12 +1,12 @@
 // ./components/SubmitPickButton.tsx
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Player, Pick } from '@/lib/types/';
+import { Pick, PlayerWithADP } from '@/lib/types/';
 import { Loader2 } from 'lucide-react';
 
 interface SubmitPickButtonProps {
   isCurrentUserPick: boolean;
-  selectedPlayer: Player | null;
+  selectedPlayer: PlayerWithADP | null;
   currentPick: Pick | null;
   onSubmitPick: () => void;
   isPickSubmitting: boolean;
@@ -19,7 +19,7 @@ const SubmitPickButton: React.FC<SubmitPickButtonProps> = ({
   onSubmitPick,
   isPickSubmitting
 }) => {
-  const isDisabled = !isCurrentUserPick || !selectedPlayer || !currentPick || selectedPlayer.is_drafted || isPickSubmitting;
+  const isDisabled = !isCurrentUserPick || !selectedPlayer || !currentPick || selectedPlayer.is_picked || isPickSubmitting;
   const buttonText = !isCurrentUserPick
     ? 'Waiting for your turn...'
     : isPickSubmitting
