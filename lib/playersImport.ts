@@ -1,8 +1,7 @@
 // ./lib/playersImport.ts
 import { getServerSupabaseClient } from './serverSupabaseClient';
 import { fetchAllPlayers, fetchPlayerDetails } from '@/lib/yahoo';
-import { PlayerInsert } from '@/lib/types/';
-import { Player } from './yahoo.types';
+import { PlayerInsert, Player } from '@/lib/types/';
 
 const BATCH_SIZE = 100;
 
