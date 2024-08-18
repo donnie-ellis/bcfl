@@ -6,8 +6,18 @@ import { importPlayers, getJobStatus } from '@/lib/playersImport';
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
+// POST
 export async function POST(request: NextRequest) {
-  const body = await request.json();
+  const body: {
+    leagueKey: string;
+    draftName: string;
+    rounds: number;
+    totalPicks: number;
+    draftOrder: string;
+    orderedTeams: string;
+    status: string;
+  } = await request.json();
+
   const { leagueKey, draftName, rounds, totalPicks, draftOrder, orderedTeams, status } = body;
 
   if (!leagueKey || !draftName || !rounds || !totalPicks || !draftOrder || !orderedTeams || !status) {
@@ -15,14 +25,17 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const parsedDraftOrder = JSON.parse(draftOrder);
+    const parsedOrderedTeams = JSON.parse(orderedTeams);
+
     const { data, error } = await supabase.rpc('create_draft_with_picks', {
       p_league_id: leagueKey,
       p_name: draftName,
       p_rounds: rounds,
       p_total_picks: totalPicks,
-      p_draft_order: JSON.parse(draftOrder),
+      p_draft_order: parsedDraftOrder,
       p_status: status,
-      p_ordered_teams: JSON.parse(orderedTeams),
+      p_ordered_teams: parsedOrderedTeams,
     });
 
     if (error) throw error;
@@ -33,11 +46,11 @@ export async function POST(request: NextRequest) {
 
     const draftId = data[0].created_draft_id;
 
-    // Start the player import process
+    // Start the player import process here
     const importJobId = uuidv4();
     importPlayers(leagueKey, importJobId).catch(error => {
       console.error('Error during player import:', error);
-      // Optionally update the job status to 'error' here
+      // You might want to update the job status to 'error' here as well
     });
 
     return NextResponse.json({ 
@@ -53,6 +66,9 @@ export async function POST(request: NextRequest) {
     }, { status: 500 });
   }
 }
+
+// Alias PUT to POST for consistency
+export const PUT = POST;
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
