@@ -434,8 +434,8 @@ export async function parsePlayerData(playerData: any[]): Promise<PlayerInsert> 
           player.has_player_notes = item[key] === 1;
           break;
         case 'headshot':
-          player.headshot_url = item[key].url;
-          player.headshot_size = item[key].size;
+          player.headshot_url = item[key].url ?? '';
+          player.headshot_size = item[key].size ?? '';
           break;
         case 'is_keeper':
           player.is_keeper = item[key] as Json;
@@ -463,7 +463,7 @@ export async function fetchAllPlayers(leagueKey: string, start: number = 0, coun
   if (!players || players.count === 0) {
     return { players: [], nextStart: null };
   }
-  console.log(`Received ${players.length.toString()} players from yahoo.`)
+  console.log(`Received ${players.count.toString()} players from yahoo.`)
   const parsedPlayers: PlayerInsert[] = [];
   for (const key in players) {
     if (key !== 'count') {
