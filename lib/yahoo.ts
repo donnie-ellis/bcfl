@@ -4,8 +4,7 @@
 import { getServerAuthSession } from "@/auth"
 import { createClient } from '@supabase/supabase-js'
 import {LeagueSettings, Team, Manager } from '@/lib/yahoo.types'
-import { Player, Json, PlayerInsert } from "./types"
-import { it } from "node:test"
+import { Json, PlayerInsert } from "./types"
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
