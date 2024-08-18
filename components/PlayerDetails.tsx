@@ -1,12 +1,12 @@
 // ./components/PlayerDetails.tsx
 import React from 'react';
-import { Player } from '@/lib/types/';
+import { PlayerWithADP } from '@/lib/types/';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface PlayerDetailsProps {
-  player: Player | null;
+  player: PlayerWithADP | null;
 }
 
 const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
@@ -62,8 +62,8 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
     <Card className="h-full overflow-auto">
       <CardHeader className="flex flex-row items-center space-x-4">
         <Avatar className="h-20 w-20">
-          <AvatarImage src={player.headshot_url as string} alt={player.full_name} />
-          <AvatarFallback>{player.full_name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+          <AvatarImage src={player.headshot_url as string} alt={player.full_name || 'NA'} />
+          <AvatarFallback>{player.full_name || 'NA'.split(' ').map(n => n[0]).join('')}</AvatarFallback>
         </Avatar>
         <div>
           <CardTitle className="text-2xl">{player.full_name}</CardTitle>
@@ -85,17 +85,8 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
             <li><strong>Uniform Number:</strong> {player.uniform_number || 'N/A'}</li>
             <li><strong>Bye Week:</strong> {formatByeWeeks(player.bye_weeks)}</li>
             <li><strong>Status:</strong> {player.status || 'Active'}</li>
-            {player.injury_note && <li><strong>Injury Note:</strong> {player.injury_note}</li>}
+            <li><strong>ADP:</strong> {player.adp_formatted}</li>
           </ul>
-        </div>
-        {player.notes && (
-          <div>
-            <h3 className="font-semibold mb-2">Player Notes</h3>
-            <p className="text-sm">{player.notes}</p>
-          </div>
-        )}
-        <div>
-          <h3 className="font-semibold mb-2">Draft Analysis</h3>
         </div>
       </CardContent>
     </Card>

@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Player, Draft, Pick } from '@/lib/types/';
+import { PlayerWithADP, Draft, Pick } from '@/lib/types/';
 import PlayerFilters from './PlayerFilters';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import PlayerCard from '@/components/PlayerCard';
@@ -14,11 +14,15 @@ import { useSupabaseClient } from '@/lib/useSupabaseClient';
 
 interface PlayersListProps {
   draftId: string;
-  onPlayerSelect: (player: Player) => void;
+  onPlayerSelect: (player: PlayerWithADP) => void;
   draft: Draft;
 }
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
+
+interface EnhancedPlayerWithADP extends PlayerWithADP {
+  is_drafted?: boolean;
+}
 
 const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerSelect, draft }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -26,7 +30,7 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
   const [hideSelected, setHideSelected] = useState(true);
   const supabase = useSupabaseClient();
 
-  const { data: playersData, error: playersError, mutate: mutatePlayers } = useSWR<Player[]>(
+  const { data: playersData, error: playersError, mutate: mutatePlayers } = useSWR<PlayerWithADP[]>(
     `/api/db/draft/${draftId}/players`,
     fetcher,
     { revalidateOnFocus: false, revalidateOnReconnect: false }
@@ -48,7 +52,6 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
           table: 'picks', 
           filter: `draft_id=eq.${draftId}` 
         }, () => {
-          // Only update picks data when a pick is made
           mutatePicks();
         })
         .subscribe();
@@ -59,13 +62,11 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
     }
   }, [supabase, draftId, mutatePicks]);
 
-  const players = useMemo(() => {
+  const players: EnhancedPlayerWithADP[] = useMemo(() => {
     if (!playersData || !picksData) return [];
     
-    // Create a map of drafted player IDs
     const draftedPlayerIds = new Set(picksData.filter(pick => pick.player_id).map(pick => pick.player_id));
 
-    // Update the is_drafted status of players
     return playersData.map(player => ({
       ...player,
       is_drafted: draftedPlayerIds.has(player.id)
@@ -80,18 +81,22 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
   const filteredPlayers = useMemo(() => {
     return players
       .filter(player => {
-        const matchesSearch = player.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                              (player.display_position && player.display_position.toLowerCase().includes(searchTerm.toLowerCase()));
+        const matchesSearch = (player.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                              (player.display_position || '').toLowerCase().includes(searchTerm.toLowerCase());
         const matchesPosition = selectedPositions.length === 0 || 
                                 (player.eligible_positions && player.eligible_positions.some(pos => selectedPositions.includes(pos)));
         const matchesHideSelected = !hideSelected || !player.is_drafted;
 
         return matchesSearch && matchesPosition && matchesHideSelected;
       })
-      .sort((a, b) => (a.average_draft_position || Infinity) - (b.average_draft_position || Infinity));
+      .sort((a, b) => {
+        const adpA = a.adp !== null ? a.adp : Infinity;
+        const adpB = b.adp !== null ? b.adp : Infinity;
+        return adpA - adpB;
+      });
   }, [players, searchTerm, selectedPositions, hideSelected]);
 
-  const handlePlayerClick = useCallback((player: Player) => {
+  const handlePlayerClick = useCallback((player: EnhancedPlayerWithADP) => {
     if (!player.is_drafted) {
       onPlayerSelect(player);
     }

@@ -8,7 +8,7 @@ import PlayersList from '@/components/PlayersList';
 import DraftedPlayers from '@/components/DraftedPlayers';
 import DraftStatus from '@/components/DraftStatus';
 import PlayerDetails from '@/components/PlayerDetails';
-import { League, Draft, LeagueSettings, Player, Team, Pick } from '@/lib/types/';
+import { League, Draft, LeagueSettings, Player, Team, Pick, PlayerWithADP } from '@/lib/types/';
 import { PickWithPlayerAndTeam } from '@/lib/types/pick.types';
 import SubmitPickButton from '@/components/SubmitPicksButton';
 import { toast } from "sonner";
@@ -22,7 +22,7 @@ const DraftPage: React.FC = () => {
   const draftId = params.draftId as string;
   const supabase = useSupabaseClient();
 
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<PlayerWithADP | null>(null);
   const [isPickSubmitting, setIsPickSubmitting] = useState(false);
   const [picks, setPicks] = useState<PickWithPlayerAndTeam[]>([]);
   const [currentPick, setCurrentPick] = useState<PickWithPlayerAndTeam | null>(null);
@@ -103,7 +103,7 @@ const DraftPage: React.FC = () => {
     };
   }, [supabase, draftId, draftData, players, teams, picks, mutateDraft]);
 
-  const handlePlayerSelect = useCallback((player: Player) => {
+  const handlePlayerSelect = useCallback((player: PlayerWithADP) => {
     setSelectedPlayer(player);
   }, []);
 
