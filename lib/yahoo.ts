@@ -5,6 +5,7 @@ import { getServerAuthSession } from "@/auth"
 import { createClient } from '@supabase/supabase-js'
 import {LeagueSettings, Team, Manager } from '@/lib/yahoo.types'
 import { Player, Json } from "./types"
+import { it } from "node:test"
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
@@ -301,8 +302,7 @@ export async function parseLeagueSettings(data: any): Promise<LeagueSettings> {
 }
 
 export async function parsePlayerData(playerData: any[]): Promise<Player> {
-  const player: Player = {
-    id: 0, // This will be set by the database
+  const player: Omit<Player, 'id'> = {
     player_key: '',
     player_id: '',
     full_name: '',
@@ -339,11 +339,11 @@ export async function parsePlayerData(playerData: any[]): Promise<Player> {
     player_advanced_stats: null,
     player_points: null,
     season_stats: null,
+    selected_position: '',
     weekly_stats: null,
     league_ownership: null,
     bye_weeks: [],
     preseason_rank: null,
-    selected_position: null,
     rank: null,
     o_rank: null,
     psr_rank: null,
@@ -359,23 +359,53 @@ export async function parsePlayerData(playerData: any[]): Promise<Player> {
       const key = Object.keys(item)[0];
       switch(key) {
         case 'player_key':
+          player.player_key = item[key];
+          break;
         case 'player_id':
+          player.player_id = item[key];
+          break;
         case 'editorial_team_abbr':
+          player.editorial_team_abbr = item[key];
+          break;
         case 'editorial_team_full_name':
+          player.editorial_team_full_name = item[key];
+          break;
         case 'editorial_team_key':
+          player.editorial_team_key = item[key];
+          break;
         case 'editorial_team_url':
+          player.editorial_team_url = item[key];
+          break;
         case 'display_position':
+          player.display_position = item[key];
+          break;
         case 'position_type':
+          player.position_type = item[key];
+          break;
         case 'primary_position':
+          player.primary_position = item[key];
+          break;
         case 'status':
+          player.status = item[key];
+          break;
         case 'status_full':
+          player.status_full = item[key];
+          break;
         case 'injury_note':
+          player.injury_note = item[key];
+          break;
         case 'uniform_number':
+          player.uniform_number = item[key];
+          break;
         case 'image_url':
-        case 'headshot_url':
-        case 'headshot_size':
+          player.image_url = item[key];
+          break;
         case 'editorial_player_key':
+          player.editorial_player_key = item[key];
+          break;
         case 'url':
+          player.url = item[key];
+          break;
         case 'notes':
           player[key] = item[key];
           break;
@@ -383,36 +413,33 @@ export async function parsePlayerData(playerData: any[]): Promise<Player> {
           player.full_name = item[key].full;
           player.first_name = item[key].first;
           player.last_name = item[key].last;
-          player.ascii_first_name = item[key].ascii_first || '';
-          player.ascii_last_name = item[key].ascii_last || '';
+          player.ascii_first_name = item[key].ascii_first;
+          player.ascii_last_name = item[key].ascii_last;
           break;
         case 'eligible_positions':
           player.eligible_positions = item[key].map((pos: any) => pos.position);
           break;
+        case 'eligible_positions_to_add':
+          player.eligible_positions_to_add = item[key].map((pos: any) => pos.position);
+          break;
         case 'bye_weeks':
-          player.bye_weeks = Array.isArray(item[key]) ? item[key] : [item[key]];
+          player.bye_weeks = [item[key].week];
           break;
         case 'player_notes_last_timestamp':
           player.player_notes_last_timestamp = item[key] ? new Date(parseInt(item[key]) * 1000).toISOString() : null;
           break;
         case 'is_undroppable':
-          player.is_undroppable = item[key] === '1' || item[key] === true ? 'true' : 'false';
+          player.is_undroppable = item[key];
           break;
         case 'has_player_notes':
-          player.has_player_notes = item[key] === '1' || item[key] === true;
+          player.has_player_notes = item[key] === 1;
           break;
-        case 'on_disabled_list':
-          player.on_disabled_list = item[key] === '1' || item[key] === true;
+        case 'headshot':
+          player.headshot_url = item[key].url;
+          player.headshot_size = item[key].size;
           break;
-        case 'percent_owned':
-        case 'percent_started':
-          player[key] = item[key] !== null ? parseFloat(item[key]) : null;
-          break;
-        case 'rank':
-        case 'o_rank':
-        case 'psr_rank':
-        case 'preseason_rank':
-          player[key] = item[key] !== null ? parseInt(item[key]) : null;
+        case 'is_keeper':
+          player.is_keeper = item[key] as Json;
           break;
         case 'player_stats':
         case 'player_advanced_stats':
@@ -423,21 +450,12 @@ export async function parsePlayerData(playerData: any[]): Promise<Player> {
         case 'ownership':
           player[key] = item[key] as Json;
           break;
-        case 'draft_analysis':
-          player.draft_analysis = item[key] ? {
-            average_pick: parseFloat(item[key].average_pick),
-            average_round: parseFloat(item[key].average_round),
-            average_cost: parseFloat(item[key].average_cost),
-            percent_drafted: parseFloat(item[key].percent_drafted)
-          } : null;
-          break;
       }
     }
   });
 
   return player;
 }
-
 export async function fetchAllPlayers(leagueKey: string, start: number = 0, count: number = 25): Promise<{ players: Player[], nextStart: number | null }> {
   console.log(`Fetching players starting from index ${start}`);
   const playersData = await requestYahoo(`league/${leagueKey}/players;start=${start};count=${count};sort=AR`);
