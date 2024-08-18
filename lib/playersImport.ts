@@ -3,6 +3,8 @@ import { getServerSupabaseClient } from './serverSupabaseClient';
 import { fetchAllPlayers } from '@/lib/yahoo';
 import { PlayerInsert } from '@/lib/types/';
 
+process.on('warning', e => console.warn(e.stack));
+
 const BATCH_SIZE = process.env.DB_IMPORT_BATCH_SIZE ? parseInt(process.env.DB_IMPORT_BATCH_SIZE) : 100;
 const YAHOO_PLAYER_REQUEST_SIZE = process.env.YAHOO_PLAYER_REQUEST_SIZE ? parseInt(process.env.YAHOO_PLAYER_REQUEST_SIZE) : 25;
 
@@ -17,7 +19,7 @@ export async function importPlayers(leagueKey: string, jobId?: string): Promise<
       const { players, nextStart } = await fetchAllPlayers(leagueKey, start, YAHOO_PLAYER_REQUEST_SIZE);
 
       if (players.length > 0) {
-        console.log(`Received ${players.length.toString()} players, beginning import`)
+        console.log(`Received ${players.length} players, beginning import`)
         await importPlayerBatch(players, jobId, totalImported);
         totalImported += players.length;
         
