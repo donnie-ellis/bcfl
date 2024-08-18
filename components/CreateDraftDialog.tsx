@@ -26,11 +26,40 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
   const [isCreatingDraft, setIsCreatingDraft] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [adpProgress, setAdpProgress] = useState(0);
+  const [importJobId, setImportJobId] = useState<string | null>(null);
+  const [draftId, setDraftId] = useState<number | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     setOrderedTeams(teams);
   }, [teams]);
+
+  useEffect(() => {
+    if (importJobId) {
+      const checkImportStatus = async () => {
+        try {
+          const response = await fetch(`/api/db/draft?jobId=${importJobId}`);
+          const data = await response.json();
+  
+          if (data.status === 'in_progress') {
+            setImportProgress(data.progress);
+            setTimeout(checkImportStatus, 2000);
+          } else if (data.status === 'complete') {
+            setImportProgress(100);
+            const toastId = toast.loading("Starting ADP update...");
+            await startAdpUpdate(data.draftId, toastId);
+          } else if (data.status === 'error' && data.metadata?.continuationToken) {
+            await resumeImport(importJobId, data.metadata.continuationToken);
+          }
+        } catch (error) {
+          console.error('Error checking import status:', error);
+          toast.error('Failed to check import status. Please try again.');
+        }
+      };
+  
+      checkImportStatus();
+    }
+  }, [importJobId]);
 
   const fetchYahooData = async () => {
     try {
@@ -159,28 +188,34 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
       }
 
       const { draftId, importJobId } = await response.json();
+      setDraftId(draftId);
+      setImportJobId(importJobId);
 
       toast.success("Draft created successfully. Importing players...", { id: toastId });
-
-      // Start polling for import progress
-      const pollInterval = setInterval(async () => {
-        const progressResponse = await fetch(`/api/db/importJob/${importJobId}`);
-        const { status, progress } = await progressResponse.json();
-        setImportProgress(progress);
-
-        if (status === 'complete') {
-          clearInterval(pollInterval);
-          toast.success("Players imported successfully. Fetching ADP data...", { id: toastId });
-          await startAdpUpdate(draftId, toastId);
-        } else {
-          toast.loading(`Importing players... ${progress}%`, { id: toastId });
-        }
-      }, 2000);
     } catch (error) {
       console.error('Failed to create draft:', error);
       toast.error("Failed to create draft. Please try again.", { id: toastId });
-    } finally {
       setIsCreatingDraft(false);
+    }
+  };
+
+  const resumeImport = async (jobId: string, continuationToken: number) => {
+    try {
+      await fetch('/api/db/draft', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          leagueKey,
+          jobId,
+          continuationToken
+        }),
+      });
+      toast.loading('Resuming player import...');
+    } catch (error) {
+      console.error('Failed to resume import:', error);
+      toast.error('Failed to resume import. Please try again.');
     }
   };
 
@@ -195,7 +230,7 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
           'name' in cat && cat.name === 'Rec' && 
           'value' in cat && typeof cat.value === 'number' && cat.value > 0
         ) ? 'ppr' : 'standard';
-
+  
       const adpResponse = await fetch(`/api/db/draft/${draftId}/players/adp`, {
         method: 'POST',
         headers: {
@@ -207,21 +242,25 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
           numTeams: teams.length,
         }),
       });
-
+  
       if (!adpResponse.ok) {
         throw new Error('Failed to start ADP update');
       }
-
+  
       const { jobId } = await adpResponse.json();
-
+  
       // Poll for job progress
       const pollInterval = setInterval(async () => {
         const progressResponse = await fetch(`/api/db/importJob/${jobId}`);
         const { status, progress } = await progressResponse.json();
-
+  
         if (status === 'complete') {
           clearInterval(pollInterval);
           toast.success("ADP update completed", { id: toastId });
+          finalizeDraftCreation(draftId, toastId);
+        } else if (status === 'error') {
+          clearInterval(pollInterval);
+          toast.error("Failed to update ADP. You can try again later.", { id: toastId });
           finalizeDraftCreation(draftId, toastId);
         } else {
           toast.loading(`Updating ADP... ${progress}%`, { id: toastId });
@@ -249,7 +288,11 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
     }
     toast.success("Draft creation completed. Redirecting to draft page...", { id: toastId });
     // Redirect to the new draft page
-    router.push(`/draft/${draftId}`);
+    if (draftId) {
+      router.push(`/draft/${draftId}`);
+    } else {
+      toast.error("Failed to get draft ID. Please navigate to the draft manually.", { id: toastId });
+    }
   };
 
   const handleDialogClose = (open: boolean) => {
