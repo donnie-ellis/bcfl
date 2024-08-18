@@ -2,7 +2,7 @@
 // Required fields in query: leagueKey
 import { NextRequest, NextResponse } from 'next/server';
 import { requestYahoo, parseTeamData } from '@/lib/yahoo';
-import { Team } from '@/lib/types';
+import { Team } from '@/lib/yahoo.types';
 
 export async function GET(request: NextRequest, { params }: { params: { leagueKey: string } }) {
   const leagueKey = params.leagueKey;
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest, { params }: { params: { leagueKe
   try {
     const data = await requestYahoo(path);
     const teams: Team[] = await parseTeamData(data);
-    
+      
     if (teams.length === 0) {
       console.error('No teams parsed from the data');
       return NextResponse.json({ error: 'No teams found' }, { status: 404 });

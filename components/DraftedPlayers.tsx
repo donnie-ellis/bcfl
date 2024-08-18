@@ -1,203 +1,190 @@
 // ./components/DraftedPlayers.tsx
-import React, { useState, useEffect, useCallback } from 'react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LeagueSettings, Draft, Pick, RosterPosition, Team } from '@/lib/types';
-import { useSession } from 'next-auth/react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TeamLogo } from '@/components/TeamLogo';
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useSupabaseClient } from '@/lib/useSupabaseClient';
+import { Pick, Player } from '@/lib/types/';
+import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DraftedPlayersProps {
-  leagueKey: string;
-  draftId: string;
-  leagueSettings: LeagueSettings | null;
+  picks: Pick[] | undefined;
+  teamKey: string;
+  teamName: string | undefined;
 }
 
-interface RosterSlot {
-  position: string;
-  player: Pick | null;
-}
+const DraftedPlayers: React.FC<DraftedPlayersProps> = React.memo(({ 
+  picks,
+  teamKey,
+  teamName,
+}) => {
+  const [playerDetails, setPlayerDetails] = useState<Record<string, Player>>({});
+  const [loadingPlayerIds, setLoadingPlayerIds] = useState<number[]>([]);
+  const supabase = useSupabaseClient();
 
-const DraftedPlayers: React.FC<DraftedPlayersProps> = ({ leagueKey, draftId, leagueSettings }) => {
-  const { data: session } = useSession();
-  const [rosterSlots, setRosterSlots] = useState<RosterSlot[]>([]);
-  const [picks, setPicks] = useState<Pick[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
+  if (!picks) throw Error('Picks are not present');
 
-  const fetchTeams = useCallback(async () => {
+  const teamPicks = useMemo(() => {
+    return picks
+      .filter(pick => pick.team_key === teamKey)
+      .sort((a, b) => a.total_pick_number - b.total_pick_number);
+  }, [picks, teamKey]);
+
+  const fetchPlayerDetails = useCallback(async (playerIds: number[]) => {
+    if (!supabase || playerIds.length === 0) return;
+
+    setLoadingPlayerIds(playerIds);
     try {
-      const response = await fetch(`/api/yahoo/league/${leagueKey}/teams`);
-      const data = await response.json();
-      setTeams(data);
-      
-      // Set default selected team to the current user's team
-      const userTeam = data.find((team: Team) => team.managers.some(manager => manager.is_current_login));
-      if (userTeam) {
-        setSelectedTeam(userTeam.team_key);
-      }
+      const { data, error } = await supabase
+        .from('players')
+        .select('*')
+        .in('id', playerIds);
+
+      if (error) throw error;
+
+      const newPlayerMap = data.reduce((acc, player) => {
+        acc[player.id] = player;
+        return acc;
+      }, {} as Record<string, Player>);
+
+      setPlayerDetails(prevDetails => ({...prevDetails, ...newPlayerMap}));
     } catch (error) {
-      console.error('Error fetching teams:', error);
+      console.error('Error fetching player details:', error);
+    } finally {
+      setLoadingPlayerIds([]);
     }
-  }, [leagueKey]);
-
-  const fetchPicks = useCallback(async () => {
-    try {
-      const response = await fetch(`/api/db/draft/${draftId}/picks`);
-      const data = await response.json();
-      setPicks(data);
-    } catch (error) {
-      console.error('Error fetching picks:', error);
-    }
-  }, [draftId]);
+  }, [supabase]);
 
   useEffect(() => {
-    fetchTeams();
-    fetchPicks();
-  }, [fetchTeams, fetchPicks]);
+    const newPlayerIds = teamPicks
+      .filter(pick => pick.player_id && !playerDetails[pick.player_id])
+      .map(pick => pick.player_id as number);
 
-  useEffect(() => {
-    if (leagueSettings && leagueSettings.roster_positions) {
-      const slots: RosterSlot[] = [];
-      leagueSettings.roster_positions.forEach((rosterPosition: RosterPosition) => {
-        if (rosterPosition.roster_position.position !== 'IR') {
-          for (let i = 0; i < rosterPosition.roster_position.count; i++) {
-            slots.push({ position: rosterPosition.roster_position.position, player: null });
-          }
-        }
-      });
-      setRosterSlots(slots);
-      setIsLoading(false);
+    if (newPlayerIds.length > 0) {
+      fetchPlayerDetails(newPlayerIds);
     }
-  }, [leagueSettings]);
+  }, [teamPicks, playerDetails, fetchPlayerDetails]);
 
-  useEffect(() => {
-    if (picks.length > 0 && rosterSlots.length > 0 && selectedTeam) {
-      const teamPicks = picks.filter(pick => pick.team_key === selectedTeam);
-      const updatedSlots = rosterSlots.map(slot => ({ ...slot, player: null }));
-      
-      teamPicks.forEach(pick => {
-        const playerPosition = pick.player?.display_position || '';
-        let slotFound = false;
+  const PlayerCardSkeleton = () => (
+    <Card className="mb-2">
+      <CardContent className="p-3 flex items-center space-x-3">
+        <Skeleton className="h-12 w-12 rounded-full" />
+        <div className="flex-grow space-y-2">
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-3 w-1/2" />
+        </div>
+        <Skeleton className="h-6 w-6" />
+      </CardContent>
+    </Card>
+  );
 
-        // Try to fill in matching position
-        for (let i = 0; i < updatedSlots.length; i++) {
-          if (updatedSlots[i].position === playerPosition && !updatedSlots[i].player) {
-            updatedSlots[i].player = pick;
-            slotFound = true;
-            break;
-          }
-        }
+  const PlaceholderCard = () => (
+    <Card className='mb-2 cursor-pointer hover:bg-gray-100 transition-all opacity-50'>
+      <CardContent className="p-3 flex items-center space-x-3">
+        <div className="flex-grow">
+          <p className="font-semibold">Not yet selected</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
-        // If no matching position, try to fill BN spot
-        if (!slotFound) {
-          for (let i = 0; i < updatedSlots.length; i++) {
-            if (updatedSlots[i].position === 'BN' && !updatedSlots[i].player) {
-              updatedSlots[i].player = pick;
-              slotFound = true;
-              break;
-            }
-          }
-        }
+  const IntegratedPlayerCard: React.FC<{ player: Player, isDrafted: boolean }> = ({ player }) => (
+    <Card className={`mb-2 cursor-pointer hover:bg-gray-100 transition-all`}>
+      <CardContent className="p-3 flex items-center space-x-3">
+        <Avatar className="h-12 w-12 rounded">
+          <AvatarImage src={player.headshot_url as string || player.image_url as string} alt={player.full_name} />
+          <AvatarFallback>{player.full_name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+        </Avatar>
+        <div className="flex-grow">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center space-x-1">
+                  <p className="font-semibold truncate">{player.full_name}</p>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{player.editorial_team_full_name}</p>
+                <p>{player.display_position}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <p className="text-sm">
+            <span className="font-medium text-primary">{player.display_position}</span>
+            {player.editorial_team_full_name && (
+              <> - <span className="text-gray-500">{player.editorial_team_full_name}</span></>
+            )}
+          </p>
+        </div>
+        {player.rank && (
+          <div className="text-sm font-medium">
+            #{player.rank}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 
-        // If still no spot, fill first available spot
-        if (!slotFound) {
-          for (let i = 0; i < updatedSlots.length; i++) {
-            if (!updatedSlots[i].player) {
-              updatedSlots[i].player = pick;
-              break;
-            }
-          }
-        }
-      });
-
-      setRosterSlots(updatedSlots);
+  const renderPickCard = useCallback((pick: Pick) => {
+    if (!pick.is_picked) {
+      return <PlaceholderCard />;
     }
-  }, [picks, selectedTeam]);
 
-  const renderSkeletonRows = () => {
-    return Array(10).fill(null).map((_, index) => (
-      <TableRow key={index}>
-        <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-        <TableCell><Skeleton className="h-4 w-40" /></TableCell>
-      </TableRow>
-    ));
-  };
+    if (!pick.player_id) {
+      return (
+        <Card className='mb-2 cursor-pointer hover:bg-gray-100 transition-all opacity-50'>
+          <CardContent className="p-3 flex items-center space-x-3">
+            <div className="flex-grow">
+              <p className="font-semibold">Player data not available</p>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
 
-  const shouldStrikeThrough = (slot: RosterSlot) => {
-    if (!slot.player) return false;
-    return slot.player.player?.display_position !== slot.position && slot.position !== 'BN';
+    if (loadingPlayerIds.includes(pick.player_id)) {
+      return <PlayerCardSkeleton />;
+    }
+
+    const player = playerDetails[pick.player_id];
+    if (player) {
+      return <IntegratedPlayerCard player={player} isDrafted={true} />;
+    }
+
+    return <PlayerCardSkeleton />;
+  }, [playerDetails, loadingPlayerIds]);
+
+  const setTitle = (name: string) => {
+    if (name.endsWith('s')) {
+      return name + "'";
+    } else {
+      return name + "'s";
+    };
   };
 
   return (
-    <Card>
+    <Card className="h-full flex flex-col">
       <CardHeader>
-        <div className="justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Drafted Players</h2>
-          <Select
-            value={selectedTeam || undefined}
-            onValueChange={(value) => setSelectedTeam(value)}
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Select a team" />
-            </SelectTrigger>
-            <SelectContent>
-              {teams.map((team) => (
-                <SelectItem key={team.team_key} value={team.team_key}>
-                  <div className='flex gap-5'>
-                    <TeamLogo teamKey={team.team_key} teams={teams} className='h-5 w-5' />
-                    {team.name}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <CardTitle>{teamName ? setTitle(teamName) + ' Picks' : 'Team Picks'}</CardTitle>
       </CardHeader>
-      <CardContent>      
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Position</TableHead>
-              <TableHead>Player</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              renderSkeletonRows()
-            ) : (
-              rosterSlots.map((slot, index) => (
-                <TableRow key={index}>
-                  <TableCell>
-                    {shouldStrikeThrough(slot) ? (
-                      <span className="line-through">{slot.position}</span>
-                    ) : (
-                      slot.position
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {slot.player ? (
-                      <div>
-                        <span>{slot.player.player?.full_name}</span>
-                        <span className="ml-2 text-sm text-gray-500">
-                          ({slot.player.player?.editorial_team_abbr} - {slot.player.player?.display_position})
-                        </span>
-                      </div>
-                    ) : (
-                      '-'
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+      <CardContent className="flex-grow overflow-hidden">
+        <ScrollArea className="h-full">
+          {teamPicks.map((pick) => (
+            <div key={pick.id} className="mb-4">
+              <div className="font-semibold text-sm text-gray-500 mb-1">
+                Round {pick.round_number}, Pick {pick.pick_number} (Overall: {pick.total_pick_number})
+              </div>
+              {renderPickCard(pick)}
+            </div>
+          ))}
+        </ScrollArea>
       </CardContent>
     </Card>
-
   );
-};
+});
+
+DraftedPlayers.displayName = 'DraftedPlayers';
 
 export default DraftedPlayers;

@@ -3,7 +3,7 @@
 'use server'
 import { getServerAuthSession } from "@/auth"
 import { createClient } from '@supabase/supabase-js'
-import { LeagueDetails, LeagueSettings,  Player, Team, Teams } from '@/lib/types'
+import {LeagueSettings,  Player, Team, Manager } from '@/lib/yahoo.types'
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
@@ -152,7 +152,6 @@ export async function parseTeamData(data: any): Promise<Team[]> {
         team_key: '',
         team_id: '',
         name: '',
-        is_owned_by_current_login: false,
         url: '',
         team_logos: [],
         waiver_priority: '',
@@ -181,9 +180,6 @@ export async function parseTeamData(data: any): Promise<Team[]> {
               break;
             case 'name':
               team.name = item[key];
-              break;
-            case 'is_owned_by_current_login':
-              team.is_owned_by_current_login = item[key] === 1;
               break;
             case 'url':
               team.url = item[key];
@@ -321,9 +317,13 @@ export async function parsePlayerData(playerData: any[]): Promise<Player> {
     bye_weeks: [],
     uniform_number: '',
     image_url: '',
-    injury_note: '',
-    has_player_notes: false,
-    headshot_url: ''
+    headshot_url: '',
+    is_undroppable: false,
+    player_notes_last_timestamp: new Date(),
+    player_stats: null,
+    player_advanced_stats: null,
+    player_points: null,
+    draft_analysis: null,
   };
 
   playerData.forEach(item => {
@@ -341,8 +341,6 @@ export async function parsePlayerData(playerData: any[]): Promise<Player> {
         case 'editorial_team_full_name':
         case 'uniform_number':
         case 'image_url':
-        case 'injury_note':
-        case 'status_full':
           player[key] = item[key];
           break;
         case 'name':
@@ -356,32 +354,14 @@ export async function parsePlayerData(playerData: any[]): Promise<Player> {
         case 'bye_weeks':
           player.bye_weeks = Array.isArray(item[key]) ? item[key] : [item[key]];
           break;
-        case 'percent_owned':
-          player.percent_owned = parseFloat(item[key]);
-          break;
-        case 'percent_started':
-          player.percent_started = parseFloat(item[key]);
-          break;
-        case 'has_player_notes':
-          player.has_player_notes = item[key] === 1;
-          break;
         case 'player_notes_last_timestamp':
           player.player_notes_last_timestamp = new Date(parseInt(item[key]) * 1000);
-          break;
-        case 'selected_position':
-          player.selected_position = item[key].position;
-          break;
-        case 'preseason_rank':
-          player.preseason_rank = parseInt(item[key]);
           break;
         case 'headshot':
           player.headshot_url = item[key].url;
           break;
-        case 'on_disabled_list':
-          player.on_disabled_list = item[key] === 1;
-          break;
         case 'is_undroppable':
-          player.is_undroppable = item[key] === 1;
+          player.is_undroppable = item[key] === '1' || item[key] === true;
           break;
         case 'player_stats':
           player.player_stats = item[key];
@@ -398,28 +378,12 @@ export async function parsePlayerData(playerData: any[]): Promise<Player> {
             average_round: parseFloat(item[key].average_round),
             average_cost: parseFloat(item[key].average_cost),
             percent_drafted: parseFloat(item[key].percent_drafted)
-          };
-          break;
-        case 'league_ownership':
-          player.league_ownership = item[key];
+          } || null;
           break;
         case 'rank':
         case 'o_rank':
         case 'psr_rank':
           player[key] = parseInt(item[key]);
-          break;
-        case 'ownership':
-          player.ownership = {
-            teams_owned: parseInt(item[key].teams_owned),
-            leagues_owned: parseInt(item[key].leagues_owned),
-            leagues_total: parseInt(item[key].leagues_total),
-            percent_owned: parseFloat(item[key].percent_owned),
-            value_month: parseFloat(item[key].value_month),
-            value_season: parseFloat(item[key].value_season),
-            value_14_days: parseFloat(item[key].value_14_days),
-            value_last_month: parseFloat(item[key].value_last_month),
-            value_to_date: parseFloat(item[key].value_to_date)
-          };
           break;
       }
     }
@@ -482,17 +446,11 @@ export async function fetchPlayerDetails(leagueKey: string, playerKey: string): 
     if (typeof item === 'object') {
       const key = Object.keys(item)[0];
       switch (key) {
-        case 'player_notes':
-          player.notes = item[key].note;
-          break;
         case 'status':
           player.status = item[key];
           break;
         case 'injury_note':
           player.injury_note = item[key];
-          break;
-        case 'selected_position':
-          player.selected_position = item[key].position;
           break;
         case 'percent_started':
           player.percent_started = item[key];
@@ -506,15 +464,6 @@ export async function fetchPlayerDetails(leagueKey: string, playerKey: string): 
         case 'player_notes_last_timestamp':
           player.player_notes_last_timestamp = item[key];
           break;
-        case 'preseason_rank':
-          player.preseason_rank = item[key];
-          break;
-        case 'weekly_stats':
-          player.weekly_stats = item[key];
-          break;
-        case 'season_stats':
-          player.season_stats = item[key];
-          break;
       }
     }
   });
@@ -527,33 +476,36 @@ export async function parseUserTeamData(data: any): Promise<Team | null> {
     const teamData = data.fantasy_content.users[0].user[1].games[0].game[1].teams[0].team[0];
     
     const team: Team = {
-      team_key: teamData.find((item: any) => item.team_key)?.team_key,
-      team_id: teamData.find((item: any) => item.team_id)?.team_id,
-      name: teamData.find((item: any) => item.name)?.name,
-      is_owned_by_current_login: teamData.find((item: any) => item.is_owned_by_current_login)?.is_owned_by_current_login === 1,
-      url: teamData.find((item: any) => item.url)?.url,
+      team_key: teamData.find((item: any) => item.team_key)?.team_key || '',
+      team_id: teamData.find((item: any) => item.team_id)?.team_id || '',
+      name: teamData.find((item: any) => item.name)?.name || '',
+      url: teamData.find((item: any) => item.url)?.url || '',
       team_logos: teamData.find((item: any) => item.team_logos)?.team_logos.map((logo: any) => ({
         size: logo.team_logo.size,
         url: logo.team_logo.url
-      })),
-      waiver_priority: teamData.find((item: any) => item.waiver_priority)?.waiver_priority,
-      faab_balance: teamData.find((item: any) => item.faab_balance)?.faab_balance,
-      number_of_moves: parseInt(teamData.find((item: any) => item.number_of_moves)?.number_of_moves || '0'),
-      number_of_trades: parseInt(teamData.find((item: any) => item.number_of_trades)?.number_of_trades || '0'),
-      roster_adds: teamData.find((item: any) => item.roster_adds)?.roster_adds,
-      league_scoring_type: teamData.find((item: any) => item.league_scoring_type)?.league_scoring_type,
+      })) || [],
+      waiver_priority: Number(teamData.find((item: any) => item.waiver_priority)?.waiver_priority || 0).toString(),
+      number_of_moves: Number(teamData.find((item: any) => item.number_of_moves)?.number_of_moves || 0),
+      number_of_trades: Number(teamData.find((item: any) => item.number_of_trades)?.number_of_trades || 0),
+      roster_adds: teamData.find((item: any) => item.roster_adds)?.roster_adds || {
+        coverage_type: '',
+        coverage_value: 0,
+        value: ''
+      },
+      league_scoring_type: teamData.find((item: any) => item.league_scoring_type)?.league_scoring_type || '',
       has_draft_grade: teamData.find((item: any) => item.has_draft_grade)?.has_draft_grade === 1,
-      managers: teamData.find((item: any) => item.managers)?.managers.map((managerData: any) => ({
+      faab_balance: Number(teamData.find((item: any) => item.faab_balance)?.faab_balance || 0).toString(),
+      managers: teamData.find((item: any) => item.managers)?.managers.map((managerData: any): Manager => ({
         manager_id: managerData.manager.manager_id,
         nickname: managerData.manager.nickname,
         guid: managerData.manager.guid,
         is_commissioner: managerData.manager.is_commissioner === '1',
-        is_current_login: managerData.manager.is_current_login === '1',
-        email: managerData.manager.email,
+        email: managerData.manager.email || undefined,
         image_url: managerData.manager.image_url,
         felo_score: managerData.manager.felo_score,
         felo_tier: managerData.manager.felo_tier
-      }))
+      })) || [],
+      is_owned_by_current_login: teamData.find((item: any) => item.is_owned_by_current_login)?.is_owned_by_current_login === 1
     };
 
     return team;

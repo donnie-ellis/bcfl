@@ -1,210 +1,164 @@
 // ./components/PlayersList.tsx
-import React, { useState, useEffect } from 'react';
-import { Player } from '@/lib/types';
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+'use client'
+
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PlayerWithADP, Draft, Pick } from '@/lib/types/';
+import PlayerFilters from './PlayerFilters';
+import { ScrollArea } from "@/components/ui/scroll-area";
+import PlayerCard from '@/components/PlayerCard';
 import { Skeleton } from "@/components/ui/skeleton";
-import { X, ChevronDown, ChevronUp } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
+import { motion, AnimatePresence } from "framer-motion";
+import useSWR from 'swr';
+import { useSupabaseClient } from '@/lib/useSupabaseClient';
 
 interface PlayersListProps {
-  leagueKey: string;
   draftId: string;
-  onPlayerSelect: (player: Player) => void;
+  onPlayerSelect: (player: PlayerWithADP) => void;
+  draft: Draft;
 }
 
-const positionOptions = [
-  { value: 'All', label: 'All' },
-  { value: 'QB', label: 'QB' },
-  { value: 'RB', label: 'RB' },
-  { value: 'WR', label: 'WR' },
-  { value: 'TE', label: 'TE' },
-  { value: 'K', label: 'K' },
-  { value: 'DEF', label: 'DEF' },
-];
+const fetcher = (url: string) => fetch(url).then(res => res.json());
 
-const PlayersList: React.FC<PlayersListProps> = ({ leagueKey, draftId, onPlayerSelect }) => {
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
-  const [positionFilter, setPositionFilter] = useState<string[]>([]);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [showDrafted, setShowDrafted] = useState<boolean>(true);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isFilterOpen, setIsFilterOpen] = useState<boolean>(false);
+interface EnhancedPlayerWithADP extends PlayerWithADP {
+  is_drafted?: boolean;
+}
 
-  const fetchPlayers = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch(`/api/db/league/${leagueKey}/players?draftId=${draftId}`);
-      const data = await response.json();
-      setPlayers(data);
-      setFilteredPlayers(data);
-    } catch (error) {
-      console.error('Error fetching players:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  const filterPlayers = () => {
-    let filtered = players;
+const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerSelect, draft }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
+  const [hideSelected, setHideSelected] = useState(true);
+  const supabase = useSupabaseClient();
 
-    if (positionFilter.length > 0 && !positionFilter.includes('All')) {
-      filtered = filtered.filter(player => 
-        player.eligible_positions.some(position => positionFilter.includes(position))
-      );
-    }
+  const { data: playersData, error: playersError, mutate: mutatePlayers } = useSWR<PlayerWithADP[]>(
+    `/api/db/draft/${draftId}/players`,
+    fetcher,
+    { revalidateOnFocus: false, revalidateOnReconnect: false }
+  );
 
-    if (searchTerm) {
-      filtered = filtered.filter(player => 
-        player.full_name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (!showDrafted) {
-      filtered = filtered.filter(player => !player.is_drafted);
-    }
-
-    setFilteredPlayers(filtered);
-  };
+  const { data: picksData, error: picksError, mutate: mutatePicks } = useSWR<Pick[]>(
+    `/api/db/draft/${draftId}/picks`,
+    fetcher,
+    { revalidateOnFocus: false, revalidateOnReconnect: false }
+  );
 
   useEffect(() => {
-    fetchPlayers();
-  }, [leagueKey, draftId]);
-  
-  useEffect(() => {
-    filterPlayers();
-  }, [players, positionFilter, searchTerm, showDrafted]);
+    if (supabase && draftId) {
+      const subscription = supabase
+        .channel('picks_updates')
+        .on('postgres_changes', { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'picks', 
+          filter: `draft_id=eq.${draftId}` 
+        }, () => {
+          mutatePicks();
+        })
+        .subscribe();
 
-  const togglePosition = (position: string) => {
-    if (position === 'All') {
-      setPositionFilter([]); // Clear all selections
-    } else {
-      setPositionFilter(prev => {
-        const newFilter = prev.filter(p => p !== 'All'); // Remove 'All' if present
-        if (newFilter.includes(position)) {
-          return newFilter.filter(p => p !== position);
-        } else {
-          return [...newFilter, position];
-        }
+      return () => {
+        supabase.removeChannel(subscription);
+      };
+    }
+  }, [supabase, draftId, mutatePicks]);
+
+  const players: EnhancedPlayerWithADP[] = useMemo(() => {
+    if (!playersData || !picksData) return [];
+    
+    const draftedPlayerIds = new Set(picksData.filter(pick => pick.player_id).map(pick => pick.player_id));
+
+    return playersData.map(player => ({
+      ...player,
+      is_drafted: draftedPlayerIds.has(player.id)
+    }));
+  }, [playersData, picksData]);
+
+  const positions = useMemo(() => {
+    const allPositions = players.flatMap(player => player.eligible_positions || []);
+    return Array.from(new Set(allPositions)).filter(pos => pos !== 'IR' && pos !== 'BN' && pos !== 'W/R/T');
+  }, [players]);
+
+  const filteredPlayers = useMemo(() => {
+    return players
+      .filter(player => {
+        const matchesSearch = (player.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                              (player.display_position || '').toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesPosition = selectedPositions.length === 0 || 
+                                (player.eligible_positions && player.eligible_positions.some(pos => selectedPositions.includes(pos)));
+        const matchesHideSelected = !hideSelected || !player.is_drafted;
+
+        return matchesSearch && matchesPosition && matchesHideSelected;
+      })
+      .sort((a, b) => {
+        const adpA = a.adp !== null ? a.adp : Infinity;
+        const adpB = b.adp !== null ? b.adp : Infinity;
+        return adpA - adpB;
       });
-    }
-  };
+  }, [players, searchTerm, selectedPositions, hideSelected]);
 
-  const isPositionSelected = (position: string) => {
-    if (position === 'All') {
-      return positionFilter.length === 0;
+  const handlePlayerClick = useCallback((player: EnhancedPlayerWithADP) => {
+    if (!player.is_drafted) {
+      onPlayerSelect(player);
     }
-    return positionFilter.includes(position);
-  };
+  }, [onPlayerSelect]);
+
+  if (playersError || picksError) return <div>Error loading data</div>;
 
   return (
-    <div className="h-screen overflow-y-auto p-4">
-      <Collapsible open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-        <CollapsibleTrigger asChild>
-          <Button variant="outline" className="w-full mb-4">
-            {isFilterOpen ? (
-              <>
-                <ChevronUp className="mr-2 h-4 w-4" />
-                Hide Filters
-              </>
+    <Card className="flex flex-col h-full">
+      <CardHeader className="py-3">
+        <CardTitle>Players</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col flex-grow p-0 h-full overflow-hidden">
+        <div className="py-2">
+          <PlayerFilters
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            selectedPositions={selectedPositions}
+            setSelectedPositions={setSelectedPositions}
+            hideSelected={hideSelected}
+            setHideSelected={setHideSelected}
+            positions={positions}
+          />
+        </div>
+        <ScrollArea className="flex-grow px-4">
+          <AnimatePresence>
+            {!players.length ? (
+              Array.from({ length: 10 }).map((_, index) => (
+                <motion.div
+                  key={`skeleton-${index}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <Skeleton className="h-20 w-full mb-2" />
+                </motion.div>
+              ))
             ) : (
-              <>
-                <ChevronDown className="mr-2 h-4 w-4" />
-                Show Filters
-              </>
+              filteredPlayers.map((player) => (
+                <motion.div
+                  key={player.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <PlayerCard
+                    player={player}
+                    isDrafted={player.is_drafted || false}
+                    onClick={() => handlePlayerClick(player)}
+                    fadeDrafted={true}
+                  />
+                </motion.div>
+              ))
             )}
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="space-y-4 mb-4">
-            <div className="flex items-center space-x-2">
-              <Input
-                type="text"
-                placeholder="Search players..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-grow"
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSearchTerm('')}
-                disabled={!searchTerm}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <div>
-              <p className="mb-2 font-medium">Positions:</p>
-              <div className="flex flex-wrap gap-2">
-                {positionOptions.map((option) => (
-                  <Badge
-                    key={option.value}
-                    variant={isPositionSelected(option.value) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => togglePosition(option.value)}
-                  >
-                    {option.label}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="show-drafted"
-                checked={showDrafted}
-                onCheckedChange={setShowDrafted}
-              />
-              <Label htmlFor="show-drafted">Show Drafted Players</Label>
-            </div>
-          </div>
-          <Separator className="my-4" />
-        </CollapsibleContent>
-      </Collapsible>
-
-      {isLoading ? (
-        <div className="space-y-4">
-          {[...Array(5)].map((_, index) => (
-            <div key={index} className="flex items-center space-x-4">
-              <Skeleton className="h-12 w-12 rounded-full" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-[200px]" />
-                <Skeleton className="h-4 w-[150px]" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {filteredPlayers.map(player => (
-            <div
-              key={player.player_key}
-              className="flex items-center p-2 border rounded cursor-pointer hover:bg-gray-100"
-              onClick={() => onPlayerSelect(player)}
-            >
-              <Avatar className="h-12 w-12 mr-4">
-                <AvatarImage src={player.headshot_url} alt={player.full_name} />
-                <AvatarFallback>{player.full_name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-semibold">{player.full_name}</p>
-                <p className="text-sm text-gray-600">{player.editorial_team_abbr} - {player.display_position}</p>
-              </div>
-              {player.is_drafted && (
-                <span className="ml-auto text-sm text-red-500">Drafted</span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+          </AnimatePresence>
+        </ScrollArea>
+      </CardContent>
+    </Card>
   );
-};
+});
+
+PlayersList.displayName = 'PlayersList';
 
 export default PlayersList;

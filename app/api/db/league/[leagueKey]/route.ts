@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { League } from '@/lib/types';
+import { Database } from '@/lib/types/database.types';
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
@@ -36,12 +37,16 @@ export async function POST(
   const body: Partial<League> = await request.json();
 
   try {
+    const upsertData = {
+      league_key: leagueKey,
+      ...body,
+      num_teams: body.num_teams ?? undefined,
+      scoring_type: body.scoring_type ?? undefined,
+    };
+
     const { data, error } = await supabase
       .from('leagues')
-      .upsert({
-        league_key: leagueKey,
-        ...body
-      }, {
+      .upsert(upsertData as Database['public']['Tables']['leagues']['Insert'], {
         onConflict: 'league_key'
       })
       .select()
