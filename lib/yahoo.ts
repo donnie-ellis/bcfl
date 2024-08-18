@@ -392,7 +392,7 @@ export async function parsePlayerData(playerData: any[]): Promise<Player> {
   return player;
 }
 
-export async function fetchAllPlayers(leagueKey: string, start: number = 0, count: number = 25): Promise<{ players: Player[], nextStart: number | null }> {
+export async function fetchAllPlayers(leagueKey: string, start: number = 0, count: number = 100): Promise<{ players: Player[], nextStart: number | null }> {
   console.log(`Fetching players starting from index ${start}`);
   const playersData = await requestYahoo(`league/${leagueKey}/players;start=${start};count=${count};sort=AR`);
   const players = playersData.fantasy_content.league[1].players;
