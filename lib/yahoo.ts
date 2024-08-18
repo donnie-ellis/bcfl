@@ -456,14 +456,14 @@ export async function parsePlayerData(playerData: any[]): Promise<PlayerInsert> 
   return player;
 }
 export async function fetchAllPlayers(leagueKey: string, start: number = 0, count: number = 25): Promise<{ players: PlayerInsert[], nextStart: number | null }> {
-  console.log(`Fetching players starting from index ${start}`);
+  console.log(`Fetching players starting from index ${start} and requesting ${count} players`);
   const playersData = await requestYahoo(`league/${leagueKey}/players;start=${start};count=${count};sort=AR`);
   const players = playersData.fantasy_content.league[1].players;
   
   if (!players || players.count === 0) {
     return { players: [], nextStart: null };
   }
-
+  console.log(`Received ${players.length.toString()} players from yahoo.`)
   const parsedPlayers: PlayerInsert[] = [];
   for (const key in players) {
     if (key !== 'count') {
@@ -482,7 +482,6 @@ export async function fetchAllPlayers(leagueKey: string, start: number = 0, coun
   
   // If we fetched less than the requested count, we've reached the end
   const nextStart = parsedPlayers.length < count ? null : start + count;
-  
   return { players: parsedPlayers, nextStart };
 }
 

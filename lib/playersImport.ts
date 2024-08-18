@@ -1,12 +1,12 @@
 // ./lib/playersImport.ts
 import { getServerSupabaseClient } from './serverSupabaseClient';
-import { fetchAllPlayers, fetchPlayerDetails } from '@/lib/yahoo';
-import { PlayerInsert, Player } from '@/lib/types/';
+import { fetchAllPlayers } from '@/lib/yahoo';
+import { PlayerInsert } from '@/lib/types/';
 
-const BATCH_SIZE = 100;
+const BATCH_SIZE = process.env.DB_IMPORT_BATCH_SIZE ? parseInt(process.env.DB_IMPORT_BATCH_SIZE) : 100;
+const YAHOO_PLAYER_REQUEST_SIZE = process.env.YAHOO_PLAYER_REQUEST_SIZE ? parseInt(process.env.YAHOO_PLAYER_REQUEST_SIZE) : 25;
 
 export async function importPlayers(leagueKey: string, jobId?: string): Promise<void> {
-  const supabase = getServerSupabaseClient();
   try {
     if (jobId) await updateJobStatus(jobId, 'in_progress', 0);
 
@@ -14,9 +14,10 @@ export async function importPlayers(leagueKey: string, jobId?: string): Promise<
     let totalImported = 0;
 
     while (true) {
-      const { players, nextStart } = await fetchAllPlayers(leagueKey, start, 400);
+      const { players, nextStart } = await fetchAllPlayers(leagueKey, start, YAHOO_PLAYER_REQUEST_SIZE);
 
       if (players.length > 0) {
+        console.log(`Received ${players.length.toString()} players, beginning import`)
         await importPlayerBatch(players, jobId, totalImported);
         totalImported += players.length;
         
