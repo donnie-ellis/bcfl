@@ -3,12 +3,15 @@ import { getServerSupabaseClient } from './serverSupabaseClient';
 import { fetchAllPlayers } from '@/lib/yahoo';
 import { PlayerInsert } from '@/lib/types/';
 
+//TODO: Remove this
 process.on('warning', e => console.warn(e.stack));
 
 const BATCH_SIZE = process.env.DB_IMPORT_BATCH_SIZE ? parseInt(process.env.DB_IMPORT_BATCH_SIZE) : 100;
 const YAHOO_PLAYER_REQUEST_SIZE = process.env.YAHOO_PLAYER_REQUEST_SIZE ? parseInt(process.env.YAHOO_PLAYER_REQUEST_SIZE) : 25;
 
 export async function importPlayers(leagueKey: string, jobId?: string): Promise<void> {
+  console.log('Memory usage:', process.memoryUsage());
+  console.log('Job ', jobId);
   try {
     if (jobId) await updateJobStatus(jobId, 'in_progress', 0);
 
@@ -16,14 +19,18 @@ export async function importPlayers(leagueKey: string, jobId?: string): Promise<
     let totalImported = 0;
 
     while (true) {
+      console.log(`Fetching players starting from index ${start}`);
+      console.log('Memory usage:', process.memoryUsage());
       const { players, nextStart } = await fetchAllPlayers(leagueKey, start, YAHOO_PLAYER_REQUEST_SIZE);
+      console.log(`Received ${players.length} players, nextStart: ${nextStart}`);
 
       if (players.length > 0) {
-        console.log(`Received ${players.length} players, beginning import`)
+        console.log(`Beginning import of ${players.length} players`);
         await importPlayerBatch(players, jobId, totalImported);
         totalImported += players.length;
         
         if (jobId) {
+          console.log(`Updating job status: ${totalImported} players imported`);
           await updateJobStatus(jobId, 'in_progress', totalImported);
         }
         
@@ -31,12 +38,16 @@ export async function importPlayers(leagueKey: string, jobId?: string): Promise<
       }
 
       if (nextStart === null) {
+        console.log('No more players to fetch, breaking the loop');
         break;
       }
       start = nextStart;
     }
 
-    if (jobId) await updateJobStatus(jobId, 'complete', totalImported);
+    if (jobId) {
+      console.log(`Import complete, updating job status to complete`);
+      await updateJobStatus(jobId, 'complete', totalImported);
+    }
 
     console.log(`Successfully imported/updated ${totalImported} players.`);
     await recordSuccessfulImport(leagueKey, totalImported);
@@ -49,6 +60,8 @@ export async function importPlayers(leagueKey: string, jobId?: string): Promise<
 }
 
 async function importPlayerBatch(players: PlayerInsert[], jobId: string | undefined, importedCount: number) {
+  console.log('Importing players: ', players.length)
+  console.log('Memory usage:', process.memoryUsage());
   const supabase = getServerSupabaseClient();
   const playersToInsert = players.map(player => {
     const { id, ...playerWithoutId } = player; // Remove the id field
