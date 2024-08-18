@@ -4,7 +4,7 @@
 import { getServerAuthSession } from "@/auth"
 import { createClient } from '@supabase/supabase-js'
 import {LeagueSettings, Team, Manager } from '@/lib/yahoo.types'
-import { Player, Json } from "./types"
+import { Player, Json, PlayerInsert } from "./types"
 import { it } from "node:test"
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
@@ -301,8 +301,8 @@ export async function parseLeagueSettings(data: any): Promise<LeagueSettings> {
   };
 }
 
-export async function parsePlayerData(playerData: any[]): Promise<Player> {
-  const player: Omit<Player, 'id'> = {
+export async function parsePlayerData(playerData: any[]): Promise<PlayerInsert> {
+  const player: PlayerInsert = {
     player_key: '',
     player_id: '',
     full_name: '',
@@ -456,7 +456,7 @@ export async function parsePlayerData(playerData: any[]): Promise<Player> {
 
   return player;
 }
-export async function fetchAllPlayers(leagueKey: string, start: number = 0, count: number = 25): Promise<{ players: Player[], nextStart: number | null }> {
+export async function fetchAllPlayers(leagueKey: string, start: number = 0, count: number = 25): Promise<{ players: PlayerInsert[], nextStart: number | null }> {
   console.log(`Fetching players starting from index ${start}`);
   const playersData = await requestYahoo(`league/${leagueKey}/players;start=${start};count=${count};sort=AR`);
   const players = playersData.fantasy_content.league[1].players;
@@ -465,7 +465,7 @@ export async function fetchAllPlayers(leagueKey: string, start: number = 0, coun
     return { players: [], nextStart: null };
   }
 
-  const parsedPlayers: Player[] = [];
+  const parsedPlayers: PlayerInsert[] = [];
   for (const key in players) {
     if (key !== 'count') {
       const playerData = players[key].player[0];
@@ -487,7 +487,7 @@ export async function fetchAllPlayers(leagueKey: string, start: number = 0, coun
   return { players: parsedPlayers, nextStart };
 }
 
-export async function fetchPlayerDetails(leagueKey: string, playerKey: string): Promise<Player> {
+export async function fetchPlayerDetails(leagueKey: string, playerKey: string): Promise<PlayerInsert> {
   const path = `league/${leagueKey}/players;player_keys=${playerKey}/stats`;
   const data = await requestYahoo(path);
   

@@ -45,7 +45,7 @@ export async function importPlayers(leagueKey: string, jobId?: string): Promise<
   }
 }
 
-async function importPlayerBatch(players: Player[], jobId: string | undefined, importedCount: number) {
+async function importPlayerBatch(players: PlayerInsert[], jobId: string | undefined, importedCount: number) {
   const supabase = getServerSupabaseClient();
   const playersToInsert = players.map(player => {
     const { id, ...playerWithoutId } = player; // Remove the id field
