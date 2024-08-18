@@ -18,6 +18,16 @@ const config = {
       },
     },
     extend: {
+      gridTemplateColumns: {
+        // Add all possible numbers of teams in your league
+        // This is for the draftgrid
+        '8': 'repeat(8, minmax(0, 1fr))',
+        '10': 'repeat(10, minmax(0, 1fr))',
+        '12': 'repeat(12, minmax(0, 1fr))',
+        '14': 'repeat(14, minmax(0, 1fr))',
+        '16': 'repeat(16, minmax(0, 1fr))',
+        // Add more if needed
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -74,6 +84,15 @@ const config = {
       },
     },
   },
+  safelist: [
+    // Add all possible grid classes
+    'grid-cols-8',
+    'grid-cols-10',
+    'grid-cols-12',
+    'grid-cols-14',
+    'grid-cols-16',
+    // Add more if needed
+  ],
   plugins: [require("tailwindcss-animate")],
 } satisfies Config
 

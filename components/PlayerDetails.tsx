@@ -1,12 +1,12 @@
 // ./components/PlayerDetails.tsx
 import React from 'react';
-import { Player } from '@/lib/types';
+import { PlayerWithADP } from '@/lib/types/';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface PlayerDetailsProps {
-  player: Player | null;
+  player: PlayerWithADP | null;
 }
 
 const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
@@ -22,8 +22,6 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
 
   // Helper function to format bye weeks
   const formatByeWeeks = (byeWeeks: any): string => {
-    console.log('Raw bye_weeks data:', byeWeeks); // Debugging log
-
     if (!byeWeeks || byeWeeks.length === 0) return 'N/A';
 
     try {
@@ -64,8 +62,8 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
     <Card className="h-full overflow-auto">
       <CardHeader className="flex flex-row items-center space-x-4">
         <Avatar className="h-20 w-20">
-          <AvatarImage src={player.headshot_url} alt={player.full_name} />
-          <AvatarFallback>{player.full_name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+          <AvatarImage src={player.headshot_url as string} alt={player.full_name || 'NA'} />
+          <AvatarFallback>{player.full_name || 'NA'.split(' ').map(n => n[0]).join('')}</AvatarFallback>
         </Avatar>
         <div>
           <CardTitle className="text-2xl">{player.full_name}</CardTitle>
@@ -76,9 +74,9 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
         <div>
           <h3 className="font-semibold mb-2">Position</h3>
           <div className="flex flex-wrap gap-2">
-            {player.eligible_positions.map((position, index) => (
+            {player.eligible_positions ? player.eligible_positions.map((position, index) => (
               <Badge key={index} variant="secondary">{position}</Badge>
-            ))}
+            )) : ''}
           </div>
         </div>
         <div>
@@ -87,21 +85,7 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
             <li><strong>Uniform Number:</strong> {player.uniform_number || 'N/A'}</li>
             <li><strong>Bye Week:</strong> {formatByeWeeks(player.bye_weeks)}</li>
             <li><strong>Status:</strong> {player.status || 'Active'}</li>
-            {player.injury_note && <li><strong>Injury Note:</strong> {player.injury_note}</li>}
-          </ul>
-        </div>
-        {player.notes && (
-          <div>
-            <h3 className="font-semibold mb-2">Player Notes</h3>
-            <p className="text-sm">{player.notes}</p>
-          </div>
-        )}
-        <div>
-          <h3 className="font-semibold mb-2">Draft Analysis</h3>
-          <ul className="space-y-1">
-            <li><strong>Average Draft Position:</strong> {player.average_pick?.toFixed(2) || 'N/A'}</li>
-            <li><strong>Average Draft Round:</strong> {player.average_round?.toFixed(2) || 'N/A'}</li>
-            <li><strong>Percent Drafted:</strong> {player.percent_drafted?.toFixed(2)}%</li>
+            <li><strong>ADP:</strong> {player.adp_formatted}</li>
           </ul>
         </div>
       </CardContent>
