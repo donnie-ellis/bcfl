@@ -3,7 +3,8 @@
 'use server'
 import { getServerAuthSession } from "@/auth"
 import { createClient } from '@supabase/supabase-js'
-import {LeagueSettings,  Player, Team, Manager } from '@/lib/yahoo.types'
+import {LeagueSettings, Team, Manager } from '@/lib/yahoo.types'
+import { Player, Json } from "./types"
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
@@ -301,29 +302,56 @@ export async function parseLeagueSettings(data: any): Promise<LeagueSettings> {
 
 export async function parsePlayerData(playerData: any[]): Promise<Player> {
   const player: Player = {
+    id: 0, // This will be set by the database
     player_key: '',
     player_id: '',
     full_name: '',
     first_name: '',
     last_name: '',
+    ascii_first_name: '',
+    ascii_last_name: '',
     editorial_team_abbr: '',
+    editorial_team_full_name: '',
+    editorial_team_key: '',
+    editorial_team_url: '',
     display_position: '',
     position_type: '',
+    primary_position: '',
     eligible_positions: [],
+    eligible_positions_to_add: [],
     status: '',
+    status_full: '',
+    on_disabled_list: false,
+    injury_note: '',
+    is_undroppable: '',
+    has_player_notes: false,
+    player_notes_last_timestamp: null,
     editorial_player_key: '',
-    editorial_team_key: '',
-    editorial_team_full_name: '',
-    bye_weeks: [],
     uniform_number: '',
     image_url: '',
     headshot_url: '',
-    is_undroppable: false,
-    player_notes_last_timestamp: new Date(),
+    headshot_size: '',
+    is_keeper: null,
+    percent_owned: null,
+    percent_started: null,
+    draft_analysis: null,
     player_stats: null,
     player_advanced_stats: null,
     player_points: null,
-    draft_analysis: null,
+    season_stats: null,
+    weekly_stats: null,
+    league_ownership: null,
+    bye_weeks: [],
+    preseason_rank: null,
+    selected_position: null,
+    rank: null,
+    o_rank: null,
+    psr_rank: null,
+    ownership: null,
+    notes: '',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    url: ''
   };
 
   playerData.forEach(item => {
@@ -333,20 +361,30 @@ export async function parsePlayerData(playerData: any[]): Promise<Player> {
         case 'player_key':
         case 'player_id':
         case 'editorial_team_abbr':
+        case 'editorial_team_full_name':
+        case 'editorial_team_key':
+        case 'editorial_team_url':
         case 'display_position':
         case 'position_type':
+        case 'primary_position':
         case 'status':
-        case 'editorial_player_key':
-        case 'editorial_team_key':
-        case 'editorial_team_full_name':
+        case 'status_full':
+        case 'injury_note':
         case 'uniform_number':
         case 'image_url':
+        case 'headshot_url':
+        case 'headshot_size':
+        case 'editorial_player_key':
+        case 'url':
+        case 'notes':
           player[key] = item[key];
           break;
         case 'name':
           player.full_name = item[key].full;
           player.first_name = item[key].first;
           player.last_name = item[key].last;
+          player.ascii_first_name = item[key].ascii_first || '';
+          player.ascii_last_name = item[key].ascii_last || '';
           break;
         case 'eligible_positions':
           player.eligible_positions = item[key].map((pos: any) => pos.position);
@@ -355,35 +393,43 @@ export async function parsePlayerData(playerData: any[]): Promise<Player> {
           player.bye_weeks = Array.isArray(item[key]) ? item[key] : [item[key]];
           break;
         case 'player_notes_last_timestamp':
-          player.player_notes_last_timestamp = new Date(parseInt(item[key]) * 1000);
-          break;
-        case 'headshot':
-          player.headshot_url = item[key].url;
+          player.player_notes_last_timestamp = item[key] ? new Date(parseInt(item[key]) * 1000).toISOString() : null;
           break;
         case 'is_undroppable':
-          player.is_undroppable = item[key] === '1' || item[key] === true;
+          player.is_undroppable = item[key] === '1' || item[key] === true ? 'true' : 'false';
           break;
-        case 'player_stats':
-          player.player_stats = item[key];
+        case 'has_player_notes':
+          player.has_player_notes = item[key] === '1' || item[key] === true;
           break;
-        case 'player_advanced_stats':
-          player.player_advanced_stats = item[key];
+        case 'on_disabled_list':
+          player.on_disabled_list = item[key] === '1' || item[key] === true;
           break;
-        case 'player_points':
-          player.player_points = item[key];
-          break;
-        case 'draft_analysis':
-          player.draft_analysis = {
-            average_pick: parseFloat(item[key].average_pick),
-            average_round: parseFloat(item[key].average_round),
-            average_cost: parseFloat(item[key].average_cost),
-            percent_drafted: parseFloat(item[key].percent_drafted)
-          } || null;
+        case 'percent_owned':
+        case 'percent_started':
+          player[key] = item[key] !== null ? parseFloat(item[key]) : null;
           break;
         case 'rank':
         case 'o_rank':
         case 'psr_rank':
-          player[key] = parseInt(item[key]);
+        case 'preseason_rank':
+          player[key] = item[key] !== null ? parseInt(item[key]) : null;
+          break;
+        case 'player_stats':
+        case 'player_advanced_stats':
+        case 'player_points':
+        case 'season_stats':
+        case 'weekly_stats':
+        case 'league_ownership':
+        case 'ownership':
+          player[key] = item[key] as Json;
+          break;
+        case 'draft_analysis':
+          player.draft_analysis = item[key] ? {
+            average_pick: parseFloat(item[key].average_pick),
+            average_round: parseFloat(item[key].average_round),
+            average_cost: parseFloat(item[key].average_cost),
+            percent_drafted: parseFloat(item[key].percent_drafted)
+          } : null;
           break;
       }
     }
@@ -442,16 +488,13 @@ export async function fetchPlayerDetails(leagueKey: string, playerKey: string): 
           player.injury_note = item[key];
           break;
         case 'percent_started':
-          player.percent_started = item[key];
+          player.percent_started = parseFloat(item[key]);
           break;
         case 'percent_owned':
-          player.percent_owned = item[key];
+          player.percent_owned = parseFloat(item[key]);
           break;
         case 'has_player_notes':
-          player.has_player_notes = item[key];
-          break;
-        case 'player_notes_last_timestamp':
-          player.player_notes_last_timestamp = item[key];
+          player.has_player_notes = item[key] === '1';
           break;
       }
     }

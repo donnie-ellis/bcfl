@@ -193,13 +193,13 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
 
           if (status === 'complete') {
             clearInterval(pollInterval);
-            toast.success(`${message} completed`, { id: toastId });
+            toast.success(`${message} completed. Imported ${progress} players.`, { id: toastId });
             resolve();
           } else if (status === 'error') {
             clearInterval(pollInterval);
             throw new Error(`${message} failed`);
           } else {
-            toast.loading(`${message}... ${progress}%`, { id: toastId });
+            toast.loading(`${message}... ${progress} players imported`, { id: toastId });
             if (message === 'Importing players') {
               setImportProgress(progress);
             } else if (message === 'Updating ADP') {
@@ -344,11 +344,11 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
             <div className="text-center">
               <Loader2 className="h-8 w-8 animate-spin mb-2 mx-auto" />
               <p>Creating draft and importing players...</p>
-              <Progress value={importProgress} className="w-full mt-2" />
-              {importProgress === 100 && (
+              <p>{importProgress} players imported</p>
+              {importProgress > 0 && (
                 <>
                   <p className="mt-2">Updating ADP data...</p>
-                  <Progress value={adpProgress} className="w-full mt-2" />
+                  <p>{adpProgress}% complete</p>
                 </>
               )}
             </div>
