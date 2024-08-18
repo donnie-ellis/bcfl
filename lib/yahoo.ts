@@ -392,46 +392,35 @@ export async function parsePlayerData(playerData: any[]): Promise<Player> {
   return player;
 }
 
-export async function fetchAllPlayers(leagueKey: string): Promise<Player[]> {
-  let allPlayers: Player[] = [];
-  let start = 0;
-  const count = 25; // Yahoo typically returns 25 players per page
-  let hasMorePlayers = true;
+export async function fetchAllPlayers(leagueKey: string, start: number = 0, count: number = 25): Promise<{ players: Player[], nextStart: number | null }> {
+  console.log(`Fetching players starting from index ${start}`);
+  const playersData = await requestYahoo(`league/${leagueKey}/players;start=${start};count=${count};sort=AR`);
+  const players = playersData.fantasy_content.league[1].players;
+  
+  if (!players || players.count === 0) {
+    return { players: [], nextStart: null };
+  }
 
-  while (hasMorePlayers) {
-    console.log(`Fetching players starting from index ${start}`);
-    const playersData = await requestYahoo(`league/${leagueKey}/players;start=${start};count=${count};sort=AR`);
-    const players = playersData.fantasy_content.league[1].players;
-    
-    if (!players || players.count === 0) {
-      hasMorePlayers = false;
-      break;
-    }
-
-    for (const key in players) {
-      if (key !== 'count') {
-        const playerData = players[key].player[0];
-        try {
-          const player = await parsePlayerData(playerData);
-          allPlayers.push(player);
-        } catch (error) {
-          console.error(`Error parsing player data:`, error);
-          console.log('Problematic player data:', JSON.stringify(playerData, null, 2));
-        }
+  const parsedPlayers: Player[] = [];
+  for (const key in players) {
+    if (key !== 'count') {
+      const playerData = players[key].player[0];
+      try {
+        const player = await parsePlayerData(playerData);
+        parsedPlayers.push(player);
+      } catch (error) {
+        console.error(`Error parsing player data:`, error);
+        console.log('Problematic player data:', JSON.stringify(playerData, null, 2));
       }
-    }
-
-    console.log(`Fetched ${allPlayers.length} players so far`);
-    start += count;
-
-    // If we fetched less than 'count' players, we've reached the end
-    if (players.count < count) {
-      hasMorePlayers = false;
     }
   }
 
-  console.log(`Total players fetched: ${allPlayers.length}`);
-  return allPlayers;
+  console.log(`Fetched ${parsedPlayers.length} players`);
+  
+  // If we fetched less than the requested count, we've reached the end
+  const nextStart = parsedPlayers.length < count ? null : start + count;
+  
+  return { players: parsedPlayers, nextStart };
 }
 
 export async function fetchPlayerDetails(leagueKey: string, playerKey: string): Promise<Player> {

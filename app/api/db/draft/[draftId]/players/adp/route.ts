@@ -35,7 +35,6 @@ export async function POST(
     if (!isCommissioner || !isCommissioner.is_commissioner) {
       return NextResponse.json({ error: 'Unauthorized. Commissioner access required.' }, { status: 403 });
     }
-    console.debug('------ iscommissioner: ', isCommissioner);
     // Get current year
     const currentYear = new Date().getFullYear();
 
@@ -56,7 +55,6 @@ export async function POST(
       throw new Error(`Failed to fetch ADP data: ${response.statusText}`);
     }
     const adpData = await response.json();
-    console.debug('----- adpdata: ', adpData)
     
     // Update player_adp table
     const totalPlayers = adpData.players.length;
