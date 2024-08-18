@@ -52,61 +52,23 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { draftId: string } }
 ) {
-  const draftId = parseInt(params.draftId, 10);
+  const { draftId } = params;
 
-  if (isNaN(draftId)) {
-    return NextResponse.json({ error: 'Invalid draft ID' }, { status: 400 });
-  }
-
-  // Check if the user is logged in
+  // Check if the user is authenticated
   const session = await getServerAuthSession();
   if (!session || !session.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    // Fetch the draft to get the league key
-    const { data: draft, error: draftError } = await supabase
-      .from('drafts')
-      .select('league_id')
-      .eq('id', draftId)
-      .single();
+    const { data, error } = await supabase.rpc('delete_draft', { p_draft_id: parseInt(draftId) });
 
-    if (draftError) {
-      console.error('Error fetching draft:', draftError);
-      if (draftError.code === 'PGRST116') {
-        return NextResponse.json({ error: 'Draft not found' }, { status: 404 });
-      }
-      return NextResponse.json({ error: 'Error fetching draft' }, { status: 500 });
-    }
-
-    if (!draft) {
-      return NextResponse.json({ error: 'Draft not found' }, { status: 404 });
-    }
-
-    // Check if the user is a commissioner of the league
-    const leagueKey = draft.league_id;
-    const isCommissioner = await checkCommissioner(leagueKey);
-
-    if (!isCommissioner) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
-
-    // Proceed with draft deletion
-    const { error } = await supabase.rpc('delete_draft', { p_draft_id: draftId });
-
-    if (error) {
-      console.error('Error deleting draft:', error);
-      if (error.message.includes('not found')) {
-        return NextResponse.json({ error: 'Draft not found' }, { status: 404 });
-      }
-      return NextResponse.json({ error: 'Failed to delete draft', details: error.message }, { status: 500 });
-    }
+    if (error) throw error;
 
     return NextResponse.json({ message: 'Draft deleted successfully' });
-  } catch (error: any) {
-    console.error('Unexpected error deleting draft:', error);
-    return NextResponse.json({ error: 'An unexpected error occurred', details: error.message }, { status: 500 });
+  } catch (error) {
+    console.error('Error deleting draft:', error);
+    return NextResponse.json({ error: 'Failed to delete draft' }, { status: 500 });
   }
 }
 
