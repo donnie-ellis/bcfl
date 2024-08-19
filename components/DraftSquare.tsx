@@ -1,4 +1,6 @@
-import React, { memo } from 'react';
+// ./components/DraftSquare.tsx
+
+import React, { memo, useMemo } from 'react';
 import { PickWithPlayerAndTeam } from '@/lib/types/pick.types';
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -15,8 +17,8 @@ interface DraftSquareProps {
 }
 
 const DraftSquare: React.FC<DraftSquareProps> = memo(({ pick, isCurrentPick, onSquareHover, isLoading }) => {
-  const teamLogos: TeamLogo[] = parseTeamLogos(pick.team?.team_logos || []);
-  const teamLogoUrl = teamLogos.length > 0 ? teamLogos[0].url : '';
+  const teamLogos: TeamLogo[] = useMemo(() => parseTeamLogos(pick.team?.team_logos || []), [pick.team?.team_logos]);
+  const teamLogoUrl = useMemo(() => teamLogos.length > 0 ? teamLogos[0].url : '', [teamLogos]);
 
   const Square = () => (
     <Card className={`w-full h-full ${isCurrentPick ? 'border-2 border-blue-500' : ''}`}>
@@ -64,7 +66,7 @@ const DraftSquare: React.FC<DraftSquareProps> = memo(({ pick, isCurrentPick, onS
                   </Tooltip>
                 </TooltipProvider>
               ) : (
-                <p className="text-gray-500"></p>
+                <p className="text-gray-500">-</p>
               )}
               <p className="text-gray-400">
                 Overall: {pick.total_pick_number}

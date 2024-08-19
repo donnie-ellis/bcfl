@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
-import { Pick, Player } from '@/lib/types/';
+import { Pick, Player, possesiveTitle } from '@/lib/types/';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -156,18 +156,10 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = React.memo(({
     return <PlayerCardSkeleton />;
   }, [playerDetails, loadingPlayerIds]);
 
-  const setTitle = (name: string) => {
-    if (name.endsWith('s')) {
-      return name + "'";
-    } else {
-      return name + "'s";
-    };
-  };
-
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
-        <CardTitle>{teamName ? setTitle(teamName) + ' Picks' : 'Team Picks'}</CardTitle>
+        <CardTitle>{teamName ? possesiveTitle(teamName) + ' team' : 'Team'}</CardTitle>
       </CardHeader>
       <CardContent className="flex-grow overflow-hidden">
         <ScrollArea className="h-full">

@@ -27,7 +27,10 @@ const KioskPage: React.FC = () => {
   const [isPickSubmitting, setIsPickSubmitting] = useState<boolean>(false);
 
   const { data: draftData, mutate: mutateDraft } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher);
-  const { data: leagueData } = useSWR<League>(draftData ? `/api/db/league/${draftData.league_id}` : null, fetcher);
+  const { data: picksData, mutate: mutatePicks } = useSWR<Pick[]>(
+    draftData ? `/api/db/draft/${draftId}/picks` : null,
+    fetcher
+  );  const { data: leagueData } = useSWR<League>(draftData ? `/api/db/league/${draftData.league_id}` : null, fetcher);
   const { data: leagueSettings } = useSWR<LeagueSettings>(draftData ? `/api/db/league/${draftData.league_id}/settings` : null, fetcher);
   const { data: teams } = useSWR<Team[]>(draftData ? `/api/yahoo/league/${draftData.league_id}/teams` : null, fetcher);
   const { data: players } = useSWR<Player[]>(`/api/db/league/${draftData?.league_id}/players`, fetcher);
@@ -36,38 +39,44 @@ const KioskPage: React.FC = () => {
 
   const isLoading = !draftData || !leagueData || !leagueSettings || !teams || !players || !currentPick;
   
-  useEffect(() => {
-    if (draftData && players && teams && supabase) {
-      const fetchPicks = async () => {
-        const { data: picksData, error } = await supabase
-          .from('picks')
-          .select('*')
-          .eq('draft_id', draftId)
-          .order('total_pick_number', { ascending: true });
-
-        if (error) {
-          console.error('Error fetching picks:', error);
-          return;
-        }
-
-        const picksWithDetails: PickWithPlayerAndTeam[] = picksData.map(pick => ({
-          ...pick,
-          player: pick.player_id ? players.find(p => p.id === pick.player_id) || {} as Player : {} as Player,
-          team: teams.find(t => t.team_key === pick.team_key) || {} as Team
-        }));
-
-        setPicks(picksWithDetails);
-
-        const currentPickData = picksWithDetails.find(p => p.total_pick_number === draftData.current_pick) || null;
-        setCurrentPick(currentPickData);
-      };
-
-      fetchPicks();
+  const updatePicksAndDraft = useCallback(() => {
+    if (!draftData || !picksData || !players || !teams) return;
+  
+    const updatedPicks: PickWithPlayerAndTeam[] = picksData.map(pick => ({
+      ...pick,
+      player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
+      team: teams.find(t => t.team_key === pick.team_key) ?? {} as Team
+    }));
+  
+    setPicks(updatedPicks);
+  
+    const updatedCurrentPick = updatedPicks.find(p => !p.is_picked) || null;
+    setCurrentPick(updatedCurrentPick);
+  
+    if (updatedCurrentPick && draftData.current_pick !== updatedCurrentPick.total_pick_number) {
+      mutateDraft({ ...draftData, current_pick: updatedCurrentPick.total_pick_number }, false);
     }
-  }, [draftData, players, teams, draftId, supabase]);
+  }, [draftData, picksData, players, teams, mutateDraft]);
+
+  const notifyPickMade = useCallback((updatedPick: Pick) => {
+    if (updatedPick.is_picked && updatedPick.player_id) {
+      const player = players?.find(p => p.id === updatedPick.player_id);
+      const team = teams?.find(t => t.team_key === updatedPick.team_key);
+      
+      if (player && team) {
+        toast.success(
+          `${team.name} drafted ${player.full_name}`,
+          {
+            description: `${player.editorial_team_full_name} - ${player.display_position}`,
+            duration: 5000,
+          }
+        );
+      }
+    }
+  }, [players, teams]);
 
   useEffect(() => {
-    if (!supabase || !draftId || !players || !teams || !draftData) return;
+    if (!supabase || !draftId) return;
 
     const picksSubscription = supabase
       .channel(`picks_${draftId}`)
@@ -76,26 +85,11 @@ const KioskPage: React.FC = () => {
         schema: 'public', 
         table: 'picks', 
         filter: `draft_id=eq.${draftId}` 
-      }, async (payload) => {
+      }, (payload) => {
         const updatedPick = payload.new as Pick;
-
-        setPicks(prevPicks => prevPicks.map(pick => 
-          pick.id === updatedPick.id 
-            ? {
-                ...pick,
-                ...updatedPick,
-                player: players.find(p => p.id === updatedPick.player_id) || {} as Player,
-                team: teams.find(t => t.team_key === updatedPick.team_key) || {} as Team
-              }
-            : pick
-        ));
-
-        // Update current pick and draft data
-        if (updatedPick.is_picked && draftData.current_pick !== null) {
-          const nextPickNumber = draftData.current_pick + 1;
-          const nextPick = picks.find(p => p.total_pick_number === nextPickNumber) || null;
-          setCurrentPick(nextPick);
-          mutateDraft({ ...draftData, current_pick: nextPickNumber }, false);
+        if (updatedPick.is_picked) {
+          mutatePicks();
+          notifyPickMade(updatedPick);
         }
       })
       .subscribe();
@@ -103,7 +97,44 @@ const KioskPage: React.FC = () => {
     return () => {
       supabase.removeChannel(picksSubscription);
     };
-  }, [supabase, draftId, draftData, players, teams, picks, mutateDraft]);
+  }, [supabase, draftId, mutatePicks, notifyPickMade]);
+
+useEffect(() => {
+  updatePicksAndDraft();
+}, [updatePicksAndDraft, picksData]);
+
+const handleSubmitPick = async (player: PlayerWithADP) => {
+  setIsPickSubmitting(true);
+  if (!currentPick || !draftData) {
+    toast.error("Unable to submit pick. Please try again.");
+    setIsPickSubmitting(false);
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/db/draft/${draftId}/pick`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        pickId: currentPick.id,
+        playerId: player.id
+      }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to submit pick');
+    }
+    
+    // Update SWR cache
+    mutatePicks();
+  } catch (error) {
+    console.error('Error submitting pick:', error);
+    toast.error("Failed to submit pick. Please try again.");
+  } finally {
+    setIsPickSubmitting(false);
+  }
+};
 
   const memoizedDraft = useMemo<MemoizedDraft | undefined>(() => {
     if (draftData && picks.length > 0) {
@@ -121,39 +152,6 @@ const KioskPage: React.FC = () => {
     }
     return 1;
   }, [memoizedDraft, teams]);
-
-  const handleSubmitPick = async (player: PlayerWithADP) => {
-    setIsPickSubmitting(true);
-    if (!currentPick || !memoizedDraft) {
-      toast.error("Unable to submit pick. Please try again.");
-      setIsPickSubmitting(false);
-      return;
-    }
-  
-    try {
-      const response = await fetch(`/api/db/draft/${draftId}/pick`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          pickId: currentPick.id,
-          playerId: player.id
-        }),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to submit pick');
-      }
-      
-      toast.success(`${player.full_name} has been drafted!`);
-
-    } catch (error) {
-      console.error('Error submitting pick:', error);
-      toast.error("Failed to submit pick. Please try again.");
-    } finally {
-      setIsPickSubmitting(false);
-    }
-  };
 
   useEffect(() => {
     if (memoizedDraft && memoizedDraft.status === 'completed') {
@@ -203,7 +201,7 @@ const KioskPage: React.FC = () => {
             <DraftedPlayers
               picks={memoizedDraft.picks}
               teamKey={currentPick.team_key}
-              teamName={teams?.find(team => team.team_key === currentPick.team_key)?.name}
+              teamName={teams ? teams.find(team => team.team_key === currentPick.team_key)?.name: ''}
             />
           )}
         </div>
