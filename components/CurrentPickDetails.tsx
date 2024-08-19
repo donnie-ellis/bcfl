@@ -173,6 +173,9 @@ const CurrentPickDetails: React.FC<CurrentPickDetailsProps> = ({
                 <Button className="w-full">Make Selection</Button>
               </SheetTrigger>
               <SheetContent className="w-full sm:max-w-md">
+                <SheetHeader>
+                  <SheetTitle></SheetTitle>
+                </SheetHeader>
                 <div className="mt-4 h-full flex flex-col">
                   <div className="flex-grow overflow-hidden">
                     <ScrollArea className="h-[calc(100vh-200px)]">
