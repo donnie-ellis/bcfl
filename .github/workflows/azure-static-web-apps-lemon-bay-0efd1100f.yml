@@ -32,7 +32,16 @@ jobs:
           api_location: "" # Api source code path - optional
           output_location: "" # Built app content directory - optional
           ###### End of Repository/Build Configurations ######
-
+        env:
+            SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+            SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+            NEXTAUTH_URL: ${{ vars.NEXTAUTH_URL }}
+            NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+            REDIRECT_URI: ${{ vars.REDIRECT_URI }}
+            YAHOO_CLIENT_ID: ${{ secrets.YAHOO_CLIENT_ID }}
+            YAHOO_CLIENT_SECRET: ${{ secrets.YAHOO_CLIENT_SECRET}}
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
