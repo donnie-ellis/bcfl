@@ -378,13 +378,11 @@ const memoizedDraft = useMemo(() => {
           </SheetHeader>
           <div className="flex-grow flex flex-col overflow-hidden mt-4">
             <div className="flex-grow overflow-hidden">
-              <ScrollArea className="h-[calc(100vh-300px)]">
                 <PlayersList
                   draftId={draftId}
                   onPlayerSelect={setSelectedPlayer}
                   draft={memoizedDraft}
                 />
-              </ScrollArea>
             </div>
             {selectedPlayer && (
               <div className="flex-shrink-0 mt-4">

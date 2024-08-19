@@ -17,7 +17,7 @@ import DraftHeader from '@/components/DraftHeader';
 import useSWR from 'swr';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 
@@ -167,16 +167,12 @@ const DraftPage: React.FC = () => {
       <div className="flex-grow overflow-hidden flex flex-col md:flex-row">
         {/* Desktop View */}
         <div className="hidden md:flex w-full h-[calc(100vh-64px)]">
-          <div className="w-1/4 h-full overflow-hidden flex flex-col">
-            <ScrollArea className="flex-grow">
-              <div className="p-4">
-                <PlayersList
-                  draftId={draftId}
-                  onPlayerSelect={handlePlayerSelect}
-                  draft={memoizedDraft as Draft}
-                />
-              </div>
-            </ScrollArea>
+          <div className="w-1/4 overflow-hidden flex flex-col">
+            <PlayersList
+              draftId={draftId}
+              onPlayerSelect={setSelectedPlayer}
+              draft={memoizedDraft as Draft}
+            />
           </div>
           
           <div className="w-1/2 h-full overflow-hidden flex flex-col">
@@ -215,90 +211,81 @@ const DraftPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Mobile View */}
-        <div className="md:hidden flex-grow flex flex-col">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="players">Players</TabsTrigger>
-              <TabsTrigger value="draft">Draft</TabsTrigger>
-              <TabsTrigger value="team">My Team</TabsTrigger>
-            </TabsList>
-            <TabsContent value="players" className="flex-grow overflow-hidden">
-              <ScrollArea className="h-full">
-                <div className="p-4">
-                  <PlayersList
-                    draftId={draftId}
-                    onPlayerSelect={handlePlayerSelect}
-                    draft={memoizedDraft as Draft}
-                  />
-                </div>
-              </ScrollArea>
-            </TabsContent>
-            <TabsContent value="draft" className="flex-grow overflow-hidden">
-              <ScrollArea className="h-full">
-                <div className="p-4 space-y-4">
-                  <DraftStatus
-                    draft={draftData}
-                    leagueSettings={leagueSettings}
-                    teams={teams}
-                    team={team}
-                  />
-                  <SubmitPickButton
-                    isCurrentUserPick={isCurrentUserPick}
-                    selectedPlayer={selectedPlayer}
-                    currentPick={currentPick}
-                    onSubmitPick={handleSubmitPick}
-                    isPickSubmitting={isPickSubmitting}
-                  />
-                  <PlayerDetails 
-                    player={selectedPlayer} 
-                  />
-                </div>
-              </ScrollArea>
-            </TabsContent>
-            <TabsContent value="team" className="flex-grow overflow-hidden">
-              <ScrollArea className="h-full">
-                <div className="p-4">
-                  <DraftedPlayers
-                    picks={draftData.picks}
-                    teamKey={team.team_key}
-                    teamName={team.name}
-                  />
-                </div>
-              </ScrollArea>
-            </TabsContent>
-          </Tabs>
-        </div>
+        {/* Small screen layout */}
+      <div className="md:hidden flex flex-col h-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+          <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
+            <TabsTrigger value="players">Players</TabsTrigger>
+            <TabsTrigger value="draft">Draft</TabsTrigger>
+            <TabsTrigger value="team">My Team</TabsTrigger>
+          </TabsList>
+          <TabsContent value="players" className="flex-grow overflow-hidden">
+            <PlayersList
+              draftId={draftId}
+              onPlayerSelect={handlePlayerSelect}
+              draft={memoizedDraft as Draft}
+            />
+          </TabsContent>
+          <TabsContent value="draft" className="flex-grow overflow-hidden">
+            <ScrollArea className="h-full">
+              <div className="p-4 space-y-4">
+                <DraftStatus
+                  draft={draftData}
+                  leagueSettings={leagueSettings}
+                  teams={teams}
+                  team={team}
+                />
+              </div>
+            </ScrollArea>
+          </TabsContent>
+          <TabsContent value="team" className="flex-grow overflow-hidden">
+            <ScrollArea className="h-full">
+              <div className="p-4">
+                <DraftedPlayers
+                  picks={draftData.picks}
+                  teamKey={team.team_key}
+                  teamName={team.name}
+                />
+              </div>
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
       </div>
-
-      {/* Floating action button for mobile */}
-      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetTrigger asChild>
-          <Button
-            size="icon"
-            className="fixed right-4 bottom-20 md:hidden rounded-full shadow-lg"
-          >
-            <Menu className="h-6 w-6" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="bottom" className="h-[50vh]">
-          <ScrollArea className="h-full">
-            <div className="p-4 space-y-4">
-              <SubmitPickButton
-                isCurrentUserPick={isCurrentUserPick}
-                selectedPlayer={selectedPlayer}
-                currentPick={currentPick}
-                onSubmitPick={handleSubmitPick}
-                isPickSubmitting={isPickSubmitting}
-              />
-              <PlayerDetails 
-                player={selectedPlayer} 
-              />
-            </div>
-          </ScrollArea>
-        </SheetContent>
-      </Sheet>
     </div>
+
+    {/* Sheet for small screens */}
+    <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+      <SheetContent side="bottom" className="h-[50vh] flex flex-col">
+        <SheetHeader>
+          <SheetTitle>Make your pick</SheetTitle>
+        </SheetHeader>
+        <ScrollArea className="flex-grow">
+          <div className="p-4 space-y-4">
+            <SubmitPickButton
+              isCurrentUserPick={isCurrentUserPick}
+              selectedPlayer={selectedPlayer}
+              currentPick={currentPick}
+              onSubmitPick={handleSubmitPick}
+              isPickSubmitting={isPickSubmitting}
+            />
+            <PlayerDetails
+              player={selectedPlayer}
+            />
+          </div>
+        </ScrollArea>
+      </SheetContent>
+      
+      {/* Floating action button for small screens */}
+      <SheetTrigger asChild>
+        <Button
+          size="icon"
+          className="fixed right-4 bottom-4 rounded-full shadow-lg"
+        >
+          <Menu className="h-6 w-6" />
+        </Button>
+      </SheetTrigger>
+    </Sheet>
+  </div>
   );
 };
 

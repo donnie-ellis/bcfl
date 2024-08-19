@@ -46,11 +46,11 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
     if (supabase && draftId) {
       const subscription = supabase
         .channel('picks_updates')
-        .on('postgres_changes', { 
-          event: 'UPDATE', 
-          schema: 'public', 
-          table: 'picks', 
-          filter: `draft_id=eq.${draftId}` 
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'picks',
+          filter: `draft_id=eq.${draftId}`
         }, () => {
           mutatePicks();
         })
@@ -64,7 +64,7 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
 
   const players: EnhancedPlayerWithADP[] = useMemo(() => {
     if (!playersData || !picksData) return [];
-    
+
     const draftedPlayerIds = new Set(picksData.filter(pick => pick.player_id).map(pick => pick.player_id));
 
     return playersData.map(player => ({
@@ -82,9 +82,9 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
     return players
       .filter(player => {
         const matchesSearch = (player.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                              (player.display_position || '').toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesPosition = selectedPositions.length === 0 || 
-                                (player.eligible_positions && player.eligible_positions.some(pos => selectedPositions.includes(pos)));
+          (player.display_position || '').toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesPosition = selectedPositions.length === 0 ||
+          (player.eligible_positions && player.eligible_positions.some(pos => selectedPositions.includes(pos)));
         const matchesHideSelected = !hideSelected || !player.is_drafted;
 
         return matchesSearch && matchesPosition && matchesHideSelected;
@@ -105,12 +105,12 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
   if (playersError || picksError) return <div>Error loading data</div>;
 
   return (
-    <Card className="flex flex-col h-full">
-      <CardHeader className="py-3">
-        <CardTitle>Players</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col flex-grow p-0 h-full overflow-hidden">
-        <div className="py-2">
+    <div className="flex flex-col h-full">
+      <div className="flex-shrink-0">
+        <CardHeader className="py-3">
+          <CardTitle>Players</CardTitle>
+        </CardHeader>
+        <div className="px-4 py-2">
           <PlayerFilters
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
@@ -121,7 +121,9 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
             positions={positions}
           />
         </div>
-        <ScrollArea className="flex-grow px-4">
+      </div>
+      <ScrollArea className="flex-grow">
+        <div className="p-4">
           <AnimatePresence>
             {!players.length ? (
               Array.from({ length: 10 }).map((_, index) => (
@@ -153,9 +155,9 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
               ))
             )}
           </AnimatePresence>
-        </ScrollArea>
-      </CardContent>
-    </Card>
+        </div>
+      </ScrollArea>
+    </div>
   );
 });
 
