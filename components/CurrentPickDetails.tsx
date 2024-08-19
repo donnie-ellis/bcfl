@@ -178,11 +178,11 @@ const CurrentPickDetails: React.FC<CurrentPickDetailsProps> = ({
                 </SheetHeader>
                 <div className="h-full flex flex-col">
                   <div className="flex-grow overflow-hidden">
-                      <PlayersList
-                        draftId={draftId}
-                        onPlayerSelect={handlePlayerSelect}
-                        draft={draft}
-                      />
+                    <PlayersList
+                      draftId={draftId}
+                      onPlayerSelect={handlePlayerSelect}
+                      draft={draft}
+                    />
                   </div>
                   <AnimatePresence>
                     {selectedPlayer && (

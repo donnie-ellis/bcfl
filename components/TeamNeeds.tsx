@@ -5,6 +5,12 @@ import { LeagueSettings } from '@/lib/types/league-settings.types';
 import { Pick, Player } from '@/lib/types/';
 import { Badge } from "@/components/ui/badge";
 import { Json } from '@/lib/types/database.types';
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from "@/components/ui/tooltip";
 
 interface TeamNeedsProps {
   leagueSettings: LeagueSettings;
@@ -16,6 +22,7 @@ interface PositionNeed {
   position: string;
   needed: number;
   filled: number;
+  players: string[];
 }
 
 interface RosterPosition {
@@ -81,7 +88,8 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draftId, teamKey 
         .map(pos => ({
           position: pos.position,
           needed: pos.count,
-          filled: 0
+          filled: 0,
+          players: []
         }));
 
       const flexPositions = ['W/R/T', 'W/R'];
@@ -98,6 +106,7 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draftId, teamKey 
             const positionNeed = regularPositions.find(need => need.position === position);
             if (positionNeed && positionNeed.filled < positionNeed.needed) {
               positionNeed.filled++;
+              positionNeed.players.push(pick.player.full_name);
               positionFilled = true;
               break;
             }
@@ -107,15 +116,20 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draftId, teamKey 
           if (!positionFilled) {
             for (const flexNeed of flexNeeds) {
               if (flexNeed.position === 'W/R/T' && 
-                  (eligiblePositions.includes('WR') || eligiblePositions.includes('RB') || eligiblePositions.includes('TE')) && 
-                  flexNeed.filled < flexNeed.needed) {
+                  (eligiblePositions.includes('WR') || eligiblePositions.includes('RB') || eligiblePositions.includes('TE'))) {
                 flexNeed.filled++;
+                flexNeed.players.push(pick.player.full_name);
                 break;
               } else if (flexNeed.position === 'W/R' && 
-                         (eligiblePositions.includes('WR') || eligiblePositions.includes('RB')) && 
-                         flexNeed.filled < flexNeed.needed) {
+                         (eligiblePositions.includes('WR') || eligiblePositions.includes('RB'))) {
                 flexNeed.filled++;
+                flexNeed.players.push(pick.player.full_name);
                 break;
+              } else if (flexNeed.position === 'Q/W/R/T' &&
+                        (eligiblePositions.includes('QB') || eligiblePositions.includes('WR') || 
+                          eligiblePositions.includes('RB') || eligiblePositions.includes('TE'))) {
+                            flexNeed.filled++;
+                            flexNeed.players.push(pick.player.first_name);
               }
             }
           }
@@ -146,23 +160,42 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draftId, teamKey 
 
   const getSeverityColor = (needed: number, filled: number) => {
     const remaining = needed - filled;
-    if (remaining === 0) return 'bg-green-500';
-    if (remaining === 1) return 'bg-yellow-500';
-    return 'bg-red-500';
+    if (remaining === 0) return 'bg-green-400';
+    if (remaining === 1) return 'bg-yellow-400';
+    return 'bg-red-400';
   };
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {positionNeeds.map((need) => (
-        <Badge
-          key={need.position}
-          variant="outline"
-          className={`flex items-center justify-between p-2 ${getSeverityColor(need.needed, need.filled)} flex-grow basis-0 min-w-[80px]`}
-        >
-          <span className="font-bold text-xs">{need.position}</span>
-          <span className="text-xs">{need.filled}/{need.needed}</span>
-        </Badge>
-      ))}
+    <div className="flex flex-wrap gap-2 justify-center">
+      <TooltipProvider>
+        {positionNeeds.map((need) => (
+          <Tooltip key={need.position}>
+            <TooltipTrigger asChild>
+              <div className="cursor-default">
+                <Badge
+                  variant="secondary"
+                  className={`flex items-center justify-between p-2 ${getSeverityColor(need.needed, need.filled)} max-w-[100px]`}
+                >
+                  <span className="font-bold text-xs mr-2">{need.position}</span>
+                  <span className="text-xs">{need.filled}/{need.needed}</span>
+                </Badge>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="font-bold">{need.position} Players:</p>
+              {need.players.length > 0 ? (
+                <ul className="list-disc pl-4">
+                  {need.players.map((player, index) => (
+                    <li key={index}>{player}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No players drafted yet</p>
+              )}
+            </TooltipContent>
+          </Tooltip>
+        ))}
+      </TooltipProvider>
     </div>
   );
 };
