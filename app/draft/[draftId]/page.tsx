@@ -31,8 +31,8 @@ const DraftPage: React.FC = () => {
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerWithADP | null>(null);
   const [isPickSubmitting, setIsPickSubmitting] = useState(false);
   const [currentPick, setCurrentPick] = useState<PickWithPlayerAndTeam | null>(null);
-  const [activeTab, setActiveTab] = useState<string>("players");
-
+  const [activeTab, setActiveTab] = useState<string>("draft");
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
   const { data: draftData, mutate: mutateDraft } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher);
   const { data: picksData, mutate: mutatePicks } = useSWR<Pick[]>(
     draftData ? `/api/db/draft/${draftId}/picks` : null,
@@ -108,6 +108,7 @@ const DraftPage: React.FC = () => {
 
   const handlePlayerSelect = useCallback((player: PlayerWithADP) => {
     setSelectedPlayer(player);
+    setIsSheetOpen(true);
   }, []);
 
   const isCurrentUserPick = currentPick?.team_key === team?.team_key;
@@ -161,96 +162,117 @@ const DraftPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col h-screen">
       <DraftHeader league={leagueData} draft={draftData} />
       <div className="flex-grow overflow-hidden flex flex-col md:flex-row">
-        <div className="w-full md:w-1/4 p-2 overflow-hidden flex flex-col order-2 md:order-1">
-          <PlayersList
-            draftId={draftId}
-            onPlayerSelect={handlePlayerSelect}
-            draft={memoizedDraft as Draft}
-          />
-        </div>
-        
-        <div className="w-full md:w-1/2 p-2 overflow-auto flex flex-col gap-y-4 order-1 md:order-2">
-          <DraftStatus
-            draft={draftData}
-            leagueSettings={leagueSettings}
-            teams={teams}
-            team={team}
-          />
-          <SubmitPickButton
-            isCurrentUserPick={isCurrentUserPick}
-            selectedPlayer={selectedPlayer}
-            currentPick={currentPick}
-            onSubmitPick={handleSubmitPick}
-            isPickSubmitting={isPickSubmitting}
-          />
-          <PlayerDetails 
-            player={selectedPlayer} 
-          />
+        {/* Desktop View */}
+        <div className="hidden md:flex w-full h-[calc(100vh-64px)]">
+          <div className="w-1/4 h-full overflow-hidden flex flex-col">
+            <ScrollArea className="flex-grow">
+              <div className="p-4">
+                <PlayersList
+                  draftId={draftId}
+                  onPlayerSelect={handlePlayerSelect}
+                  draft={memoizedDraft as Draft}
+                />
+              </div>
+            </ScrollArea>
+          </div>
+          
+          <div className="w-1/2 h-full overflow-hidden flex flex-col">
+            <ScrollArea className="flex-grow">
+              <div className="p-4 space-y-4">
+                <DraftStatus
+                  draft={draftData}
+                  leagueSettings={leagueSettings}
+                  teams={teams}
+                  team={team}
+                />
+                <SubmitPickButton
+                  isCurrentUserPick={isCurrentUserPick}
+                  selectedPlayer={selectedPlayer}
+                  currentPick={currentPick}
+                  onSubmitPick={handleSubmitPick}
+                  isPickSubmitting={isPickSubmitting}
+                />
+                <PlayerDetails 
+                  player={selectedPlayer} 
+                />
+              </div>
+            </ScrollArea>
+          </div>
+
+          <div className="w-1/4 h-full overflow-hidden flex flex-col">
+            <ScrollArea className="flex-grow">
+              <div className="p-4">
+                <DraftedPlayers
+                  picks={draftData.picks}
+                  teamKey={team.team_key}
+                  teamName={team.name}
+                />
+              </div>
+            </ScrollArea>
+          </div>
         </div>
 
-        <div className="w-full md:w-1/4 p-2 overflow-hidden flex flex-col order-3">
-          <DraftedPlayers
-            picks={draftData.picks}
-            teamKey={team.team_key}
-            teamName={team.name}
-          />
+        {/* Mobile View */}
+        <div className="md:hidden flex-grow flex flex-col">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="players">Players</TabsTrigger>
+              <TabsTrigger value="draft">Draft</TabsTrigger>
+              <TabsTrigger value="team">My Team</TabsTrigger>
+            </TabsList>
+            <TabsContent value="players" className="flex-grow overflow-hidden">
+              <ScrollArea className="h-full">
+                <div className="p-4">
+                  <PlayersList
+                    draftId={draftId}
+                    onPlayerSelect={handlePlayerSelect}
+                    draft={memoizedDraft as Draft}
+                  />
+                </div>
+              </ScrollArea>
+            </TabsContent>
+            <TabsContent value="draft" className="flex-grow overflow-hidden">
+              <ScrollArea className="h-full">
+                <div className="p-4 space-y-4">
+                  <DraftStatus
+                    draft={draftData}
+                    leagueSettings={leagueSettings}
+                    teams={teams}
+                    team={team}
+                  />
+                  <SubmitPickButton
+                    isCurrentUserPick={isCurrentUserPick}
+                    selectedPlayer={selectedPlayer}
+                    currentPick={currentPick}
+                    onSubmitPick={handleSubmitPick}
+                    isPickSubmitting={isPickSubmitting}
+                  />
+                  <PlayerDetails 
+                    player={selectedPlayer} 
+                  />
+                </div>
+              </ScrollArea>
+            </TabsContent>
+            <TabsContent value="team" className="flex-grow overflow-hidden">
+              <ScrollArea className="h-full">
+                <div className="p-4">
+                  <DraftedPlayers
+                    picks={draftData.picks}
+                    teamKey={team.team_key}
+                    teamName={team.name}
+                  />
+                </div>
+              </ScrollArea>
+            </TabsContent>
+          </Tabs>
         </div>
-      </div>
-
-      {/* Mobile View */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="players">Players</TabsTrigger>
-            <TabsTrigger value="draft">Draft</TabsTrigger>
-            <TabsTrigger value="team">My Team</TabsTrigger>
-          </TabsList>
-          <TabsContent value="players" className="h-[calc(100vh-12rem)]">
-            <ScrollArea className="h-full">
-              <PlayersList
-                draftId={draftId}
-                onPlayerSelect={handlePlayerSelect}
-                draft={memoizedDraft as Draft}
-              />
-            </ScrollArea>
-          </TabsContent>
-          <TabsContent value="draft" className="h-[calc(100vh-12rem)]">
-            <ScrollArea className="h-full">
-              <DraftStatus
-                draft={draftData}
-                leagueSettings={leagueSettings}
-                teams={teams}
-                team={team}
-              />
-              <SubmitPickButton
-                isCurrentUserPick={isCurrentUserPick}
-                selectedPlayer={selectedPlayer}
-                currentPick={currentPick}
-                onSubmitPick={handleSubmitPick}
-                isPickSubmitting={isPickSubmitting}
-              />
-              <PlayerDetails 
-                player={selectedPlayer} 
-              />
-            </ScrollArea>
-          </TabsContent>
-          <TabsContent value="team" className="h-[calc(100vh-12rem)]">
-            <ScrollArea className="h-full">
-              <DraftedPlayers
-                picks={draftData.picks}
-                teamKey={team.team_key}
-                teamName={team.name}
-              />
-            </ScrollArea>
-          </TabsContent>
-        </Tabs>
       </div>
 
       {/* Floating action button for mobile */}
-      <Sheet>
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetTrigger asChild>
           <Button
             size="icon"
@@ -261,22 +283,18 @@ const DraftPage: React.FC = () => {
         </SheetTrigger>
         <SheetContent side="bottom" className="h-[50vh]">
           <ScrollArea className="h-full">
-            <DraftStatus
-              draft={draftData}
-              leagueSettings={leagueSettings}
-              teams={teams}
-              team={team}
-            />
-            <SubmitPickButton
-              isCurrentUserPick={isCurrentUserPick}
-              selectedPlayer={selectedPlayer}
-              currentPick={currentPick}
-              onSubmitPick={handleSubmitPick}
-              isPickSubmitting={isPickSubmitting}
-            />
-            <PlayerDetails 
-              player={selectedPlayer} 
-            />
+            <div className="p-4 space-y-4">
+              <SubmitPickButton
+                isCurrentUserPick={isCurrentUserPick}
+                selectedPlayer={selectedPlayer}
+                currentPick={currentPick}
+                onSubmitPick={handleSubmitPick}
+                isPickSubmitting={isPickSubmitting}
+              />
+              <PlayerDetails 
+                player={selectedPlayer} 
+              />
+            </div>
           </ScrollArea>
         </SheetContent>
       </Sheet>
