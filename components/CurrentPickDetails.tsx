@@ -10,12 +10,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import PlayerCard from '@/components/PlayerCard';
 import PlayersList from '@/components/PlayersList';
 import SubmitPickButton from '@/components/SubmitPicksButton';
-import { Draft } from '@/lib/types/draft.types';
-import { Team } from '@/lib/types/team.types';
-import { Pick } from '@/lib/types/pick.types';
-import { PlayerWithADP } from '@/lib/types/player.types';
-import { LeagueSettings } from '@/lib/types/league-settings.types';
-import { Manager } from '@/lib/types/manager.types';
+import { Draft, 
+  Team, 
+  Pick, 
+  PlayerWithADP, 
+  LeagueSettings, 
+  Manager, 
+  possesiveTitle } from '@/lib/types';
 import TeamNeeds from '@/components/TeamNeeds'
 import { Json } from '@/lib/types/database.types';
 
@@ -131,7 +132,7 @@ const CurrentPickDetails: React.FC<CurrentPickDetailsProps> = ({
               leagueSettings={leagueSettings}
             />
             <div>
-              <h3 className="font-semibold mb-2">Previous Team Pick:</h3>
+              <h3 className="font-semibold mb-2">{possesiveTitle(currentTeam.name)} last Pick:</h3>
               {teamPreviousPick && 'player' in teamPreviousPick && teamPreviousPick.player ? (
                 <TooltipProvider>
                   <Tooltip>

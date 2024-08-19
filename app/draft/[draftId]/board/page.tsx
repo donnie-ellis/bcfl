@@ -1,4 +1,5 @@
 // ./app/draft/[draftId]/board/page.tsx
+
 'use client'
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
@@ -30,15 +31,19 @@ const DraftBoardPage: React.FC = () => {
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerWithADP | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [currentPick, setCurrentPick] = useState<PickWithPlayerAndTeam | null>(null);
-  const [picks, setPicks] = useState<PickWithPlayerAndTeam[]>([]);
   const [selectedRound, setSelectedRound] = useState<string>("1");
   const [isMobile, setIsMobile] = useState(false);
-  const { data: draft, error: draftError, mutate: mutateDraft } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher);
-  const { data: league, error: leagueError } = useSWR<League>(draft ? `/api/db/league/${draft.league_id}` : null, fetcher);
-  const { data: leagueSettings, error: settingsError } = useSWR<LeagueSettings>(draft ? `/api/db/league/${draft.league_id}/settings` : null, fetcher);
-  const { data: isCommissioner, error: commissionerError } = useSWR<{ isCommissioner: boolean }>(draft ? `/api/db/league/${draft.league_id}/isCommissioner` : null, fetcher);
-  const { data: teams, error: teamsError } = useSWR<Team[]>(draft ? `/api/yahoo/league/${draft.league_id}/teams` : null, fetcher);
-  const { data: players, error: playersError } = useSWR<Player[]>(draft ? `/api/db/league/${draft.league_id}/players` : null, fetcher);
+
+  const { data: draftData, mutate: mutateDraft } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher);
+  const { data: picksData, mutate: mutatePicks } = useSWR<PickWithPlayerAndTeam[]>(
+    draftData ? `/api/db/draft/${draftId}/picks` : null,
+    fetcher
+  );
+  const { data: league } = useSWR<League>(draftData ? `/api/db/league/${draftData.league_id}` : null, fetcher);
+  const { data: leagueSettings } = useSWR<LeagueSettings>(draftData ? `/api/db/league/${draftData.league_id}/settings` : null, fetcher);
+  const { data: isCommissioner } = useSWR<{ isCommissioner: boolean }>(draftData ? `/api/db/league/${draftData.league_id}/isCommissioner` : null, fetcher);
+  const { data: teams } = useSWR<Team[]>(draftData ? `/api/db/league/${draftData.league_id}/teams` : null, fetcher);
+  const { data: players } = useSWR<Player[]>(draftData ? `/api/db/league/${draftData.league_id}/players` : null, fetcher);
   const roundRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
@@ -55,56 +60,52 @@ const DraftBoardPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (draft && draft.current_pick) {
-      const currentRound = Math.ceil(draft.current_pick / (draft.total_picks / draft.rounds));
+    if (draftData && draftData.current_pick) {
+      const currentRound = Math.ceil(draftData.current_pick / (draftData.total_picks / draftData.rounds));
       setSelectedRound(currentRound.toString());
       if (!isMobile && roundRefs.current[currentRound - 1]) {
         roundRefs.current[currentRound - 1]?.scrollIntoView({ behavior: 'smooth' });
       }
     }
-  }, [draft, isMobile]);
+  }, [draftData, isMobile]);
+
+  const updatePicksAndDraft = useCallback(() => {
+    if (!draftData || !picksData || !players || !teams) return;
   
-  useEffect(() => {
-    if (draft && players && teams && supabase) {
-      const fetchPicks = async () => {
-        const { data: picksData, error } = await supabase
-          .from('picks')
-          .select('*')
-          .eq('draft_id', draftId)
-          .order('total_pick_number', { ascending: true });
+    const updatedPicks: PickWithPlayerAndTeam[] = picksData.map(pick => ({
+      ...pick,
+      player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
+      team: teams.find(t => t.team_key === pick.team_key) || null  // Change this line
+    }));
   
-        if (error) {
-          console.error('Error fetching picks:', error);
-          return;
-        }
+    const updatedCurrentPick = updatedPicks.find(p => !p.is_picked) || null;
+    setCurrentPick(updatedCurrentPick);
   
-        const picksWithDetails: PickWithPlayerAndTeam[] = picksData
-          .map(pick => {
-            const player = pick.player_id ? players.find(p => p.id === pick.player_id) || null : null;
-            const team = teams.find(t => t.team_key === pick.team_key);
-            
-            if (team) {
-              return {
-                ...pick,
-                player,
-                team
-              };
-            }
-            return null;
-          })
-          .filter((pick): pick is PickWithPlayerAndTeam => pick !== null);
-  
-        setPicks(picksWithDetails);
-        setCurrentPick(picksWithDetails.find(p => p.total_pick_number === draft.current_pick) || null);
-      };
-  
-      fetchPicks();
+    if (updatedCurrentPick && draftData.current_pick !== updatedCurrentPick.total_pick_number) {
+      mutateDraft({ ...draftData, current_pick: updatedCurrentPick.total_pick_number }, false);
     }
-  }, [draft, players, teams, draftId, supabase]);
-  
+  }, [draftData, picksData, players, teams, mutateDraft]);
+
+  const notifyPickMade = useCallback((updatedPick: Pick) => {
+    if (updatedPick.is_picked && updatedPick.player_id) {
+      const player = players?.find(p => p.id === updatedPick.player_id);
+      const team = teams?.find(t => t.team_key === updatedPick.team_key);
+      
+      if (player && team) {
+        toast.success(
+          `${team.name} drafted ${player.full_name}`,
+          {
+            description: `${player.editorial_team_full_name} - ${player.display_position}`,
+            duration: 5000,
+          }
+        );
+      }
+    }
+  }, [players, teams]);
+
   useEffect(() => {
-    if (!supabase || !draftId || !players || !teams || !draft) return;
-  
+    if (!supabase || !draftId) return;
+
     const picksSubscription = supabase
       .channel(`picks_${draftId}`)
       .on('postgres_changes', { 
@@ -112,50 +113,39 @@ const DraftBoardPage: React.FC = () => {
         schema: 'public', 
         table: 'picks', 
         filter: `draft_id=eq.${draftId}` 
-      }, async (payload) => {
+      }, (payload) => {
         const updatedPick = payload.new as Pick;
-        const player = updatedPick.player_id ? players.find(p => p.id === updatedPick.player_id) || null : null;
-        const team = teams.find(t => t.team_key === updatedPick.team_key);
-  
-        if (team) {
-          const updatedPickWithDetails: PickWithPlayerAndTeam = {
-            ...updatedPick,
-            player,
-            team
-          };
-  
-          setPicks(prevPicks => prevPicks.map(pick => 
-            pick.id === updatedPick.id ? updatedPickWithDetails : pick
-          ));
-  
-          if (updatedPick.is_picked && draft.current_pick !== null) {
-            const nextPickNumber = draft.current_pick + 1;
-            setCurrentPick(picks.find(p => p.total_pick_number === nextPickNumber) || null);
-            mutateDraft({ ...draft, current_pick: nextPickNumber }, false);
-          }
-  
-          if (updatedPick.is_picked && player) {
-            toast.success(`${team.name} drafted ${player.full_name}`);
-          }
+        if (updatedPick.is_picked) {
+          mutatePicks();
+          notifyPickMade(updatedPick);
         }
       })
       .subscribe();
-  
+
     return () => {
       supabase.removeChannel(picksSubscription);
     };
-  }, [supabase, draftId, draft, players, teams, picks, mutateDraft]);
+  }, [supabase, draftId, mutatePicks, notifyPickMade]);
+
+  useEffect(() => {
+    updatePicksAndDraft();
+  }, [updatePicksAndDraft, picksData]);
   
   const setRoundRef = useCallback((el: HTMLDivElement | null, index: number) => {
       roundRefs.current[index] = el;
   }, []);
 
-  const memoizedDraft = useMemo(() => {
-    if (draft && picks.length > 0) {
-      return { ...draft, picks };
-    }
-    return null;
-  }, [draft, picks]);
+const memoizedDraft = useMemo(() => {
+  if (draftData && picksData && players && teams) {
+    const updatedPicks: PickWithPlayerAndTeam[] = picksData.map(pick => ({
+      ...pick,
+      player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
+      team: teams.find(t => t.team_key === pick.team_key) || null
+    }));
+    return { ...draftData, picks: updatedPicks };
+  }
+  return null;
+}, [draftData, picksData, players, teams]);
 
   const handleSquareHover = useCallback((pick: PickWithPlayerAndTeam) => {
     if (!isCommissioner?.isCommissioner) return null;
@@ -258,9 +248,6 @@ const DraftBoardPage: React.FC = () => {
     return <DraftHeader league={league} draft={memoizedDraft} />;
   }, [league, memoizedDraft]);
 
-  if (draftError || leagueError || settingsError || teamsError || playersError) {
-    return <div>Error loading draft data. Please try again.</div>;
-  }
 
   if (!memoizedDraft || !league || !leagueSettings || !isCommissioner || !teams || !players) {
     return <div>Loading...</div>;
@@ -297,7 +284,7 @@ const DraftBoardPage: React.FC = () => {
                     draft={{
                       ...memoizedDraft,
                       picks: memoizedDraft.picks.filter(
-                        (pick) => pick.round_number === round
+                        (pick: PickWithPlayerAndTeam) => pick.round_number === round
                       ),
                     }}
                     leagueSettings={leagueSettings}
@@ -347,7 +334,7 @@ const DraftBoardPage: React.FC = () => {
                   draft={{
                     ...memoizedDraft,
                     picks: memoizedDraft.picks.filter(
-                      (pick) => pick.round_number === parseInt(selectedRound)
+                      (pick: PickWithPlayerAndTeam) => pick.round_number === parseInt(selectedRound)
                     ),
                   }}
                   leagueSettings={leagueSettings}
@@ -369,7 +356,7 @@ const DraftBoardPage: React.FC = () => {
                     draft={{
                       ...memoizedDraft,
                       picks: memoizedDraft.picks.filter(
-                        (pick) => pick.round_number === round
+                        (pick: PickWithPlayerAndTeam) => pick.round_number === round
                       ),
                     }}
                     leagueSettings={leagueSettings}

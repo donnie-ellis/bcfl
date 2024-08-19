@@ -27,7 +27,7 @@ export type PlayerADP = Database['public']['Tables']['player_adp']['Row'];
 // Custom types for specific use cases
 export interface PickWithPlayerAndTeam extends BasePick {
   player: Player | null;
-  team: Team;
+  team: Team | null;
 }
 
 export interface PickSummary {
