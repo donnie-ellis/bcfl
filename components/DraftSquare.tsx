@@ -7,7 +7,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { parseTeamLogos, TeamLogo } from '@/lib/types/team.types';
+import { parseTeamLogos, TeamLogo, sizedTitle } from '@/lib/types/team.types';
 
 interface DraftSquareProps {
   pick: PickWithPlayerAndTeam;
@@ -33,7 +33,7 @@ const DraftSquare: React.FC<DraftSquareProps> = memo(({ pick, isCurrentPick, onS
           <>
             <div className="text-xs">
               <p className="font-bold">Pick {pick.pick_number}</p>
-              <p className="truncate">{pick.team?.name}</p>
+              <p className="truncate">{sizedTitle(pick.team?.name || '')}</p>
             </div>
             <div className="flex items-center justify-center flex-grow">
               <Avatar className="h-12 w-12">

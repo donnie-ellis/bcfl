@@ -96,3 +96,10 @@ export const possesiveTitle = (name: string) => {
     return name + "'s";
   };
 };
+
+export const sizedTitle = (name: string) => {
+  if (name.trim().length >= 16) {
+    return name.trim().substring(0, 12) + '...'
+  }
+  return name.trim()
+}
