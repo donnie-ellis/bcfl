@@ -160,7 +160,7 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draftId, teamKey 
 
   const getSeverityColor = (needed: number, filled: number) => {
     const remaining = needed - filled;
-    if (remaining === 0) return 'bg-green-400';
+    if (remaining <= 0) return 'bg-green-400';
     if (remaining === 1) return 'bg-yellow-400';
     return 'bg-red-400';
   };
