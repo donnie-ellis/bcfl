@@ -9,7 +9,7 @@ export async function GET(
   { params }: { params: { draftId: string } }
 ) {
   const { draftId } = params;
-
+  console.log('Looking up picks from supabase for draftId: ', draftId)
   try {
     const { data, error } = await supabase
       .from('picks')
@@ -21,6 +21,7 @@ export async function GET(
       .order('total_pick_number', { ascending: true });
 
     if (error) throw error;
+    console.log('Data returned: ', data)
 
     return NextResponse.json(data);
   } catch (error) {
