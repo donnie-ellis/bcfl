@@ -44,9 +44,9 @@ const RoundSquares: React.FC<RoundSquaresProps> = React.memo(({
   }
 
   return (
-    <div className="flex justify-between w-full">
+    <div className="flex flex-col sm:flex-row justify-between w-full">
       {picksToDisplay.map((pick) => (
-        <div key={pick.id} className="flex-1 px-1">
+        <div key={pick.id} className="w-full sm:w-auto sm:flex-1 px-1 mb-2 sm:mb-0">
           <DraftSquare
             pick={pick as PickWithPlayerAndTeam}
             isCurrentPick={pick.total_pick_number === draft.current_pick}
