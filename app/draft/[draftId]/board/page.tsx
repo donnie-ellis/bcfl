@@ -33,12 +33,9 @@ const DraftBoardPage: React.FC = () => {
   const [currentPick, setCurrentPick] = useState<PickWithPlayerAndTeam | null>(null);
   const [selectedRound, setSelectedRound] = useState<string>("1");
   const [isMobile, setIsMobile] = useState(false);
+  const [picks, setPicks] = useState<PickWithPlayerAndTeam[]>([]);
 
   const { data: draftData, mutate: mutateDraft } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher);
-  const { data: picksData, mutate: mutatePicks } = useSWR<PickWithPlayerAndTeam[]>(
-    draftData ? `/api/db/draft/${draftId}/picks` : null,
-    fetcher
-  );
   const { data: league } = useSWR<League>(draftData ? `/api/db/league/${draftData.league_id}` : null, fetcher);
   const { data: leagueSettings } = useSWR<LeagueSettings>(draftData ? `/api/db/league/${draftData.league_id}/settings` : null, fetcher);
   const { data: isCommissioner } = useSWR<{ isCommissioner: boolean }>(draftData ? `/api/db/league/${draftData.league_id}/isCommissioner` : null, fetcher);
@@ -48,10 +45,10 @@ const DraftBoardPage: React.FC = () => {
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 640); // Adjust this breakpoint as needed
+      setIsMobile(window.innerWidth < 640);
     };
 
-    handleResize(); // Set initial state
+    handleResize();
     window.addEventListener('resize', handleResize);
 
     return () => {
@@ -69,39 +66,41 @@ const DraftBoardPage: React.FC = () => {
     }
   }, [draftData, isMobile]);
 
-  const updatePicksAndDraft = useCallback(() => {
-    if (!draftData || !picksData || !players || !teams) return;
-  
-    const updatedPicks: PickWithPlayerAndTeam[] = picksData.map(pick => ({
-      ...pick,
-      player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
-      team: teams.find(t => t.team_key === pick.team_key) || null  // Change this line
-    }));
-  
-    const updatedCurrentPick = updatedPicks.find(p => !p.is_picked) || null;
-    setCurrentPick(updatedCurrentPick);
-  
-    if (updatedCurrentPick && draftData.current_pick !== updatedCurrentPick.total_pick_number) {
-      mutateDraft({ ...draftData, current_pick: updatedCurrentPick.total_pick_number }, false);
-    }
-  }, [draftData, picksData, players, teams, mutateDraft]);
+  const fetchPicks = useCallback(async () => {
+    if (!draftData || !players || !teams || !supabase) return;
 
-  const notifyPickMade = useCallback((updatedPick: Pick) => {
-    if (updatedPick.is_picked && updatedPick.player_id) {
-      const player = players?.find(p => p.id === updatedPick.player_id);
-      const team = teams?.find(t => t.team_key === updatedPick.team_key);
-      
-      if (player && team) {
-        toast.success(
-          `${team.name} drafted ${player.full_name}`,
-          {
-            description: `${player.editorial_team_full_name} - ${player.display_position}`,
-            duration: 5000,
-          }
-        );
+    try {
+      const { data: picksData, error } = await supabase
+        .from('picks')
+        .select('*')
+        .eq('draft_id', draftId)
+        .order('total_pick_number', { ascending: true });
+
+      if (error) throw error;
+
+      const updatedPicks: PickWithPlayerAndTeam[] = picksData.map(pick => ({
+        ...pick,
+        player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
+        team: teams.find(t => t.team_key === pick.team_key) || null
+      }));
+
+      setPicks(updatedPicks);
+
+      const updatedCurrentPick = updatedPicks.find(p => !p.is_picked) || null;
+      setCurrentPick(updatedCurrentPick);
+
+      if (updatedCurrentPick && draftData.current_pick !== updatedCurrentPick.total_pick_number) {
+        mutateDraft({ ...draftData, current_pick: updatedCurrentPick.total_pick_number }, false);
       }
+    } catch (error) {
+      console.error('Error fetching picks:', error);
+      toast.error("Failed to fetch picks. Please try again.");
     }
-  }, [players, teams]);
+  }, [draftData, players, teams, draftId, supabase, mutateDraft]);
+
+  useEffect(() => {
+    fetchPicks();
+  }, [fetchPicks]);
 
   useEffect(() => {
     if (!supabase || !draftId) return;
@@ -113,39 +112,26 @@ const DraftBoardPage: React.FC = () => {
         schema: 'public', 
         table: 'picks', 
         filter: `draft_id=eq.${draftId}` 
-      }, (payload) => {
-        const updatedPick = payload.new as Pick;
-        if (updatedPick.is_picked) {
-          mutatePicks();
-          notifyPickMade(updatedPick);
-        }
+      }, () => {
+        fetchPicks();
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(picksSubscription);
     };
-  }, [supabase, draftId, mutatePicks, notifyPickMade]);
+  }, [supabase, draftId, fetchPicks]);
 
-  useEffect(() => {
-    updatePicksAndDraft();
-  }, [updatePicksAndDraft, picksData]);
-  
   const setRoundRef = useCallback((el: HTMLDivElement | null, index: number) => {
-      roundRefs.current[index] = el;
+    roundRefs.current[index] = el;
   }, []);
 
-const memoizedDraft = useMemo(() => {
-  if (draftData && picksData && players && teams) {
-    const updatedPicks: PickWithPlayerAndTeam[] = picksData.map(pick => ({
-      ...pick,
-      player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
-      team: teams.find(t => t.team_key === pick.team_key) || null
-    }));
-    return { ...draftData, picks: updatedPicks };
-  }
-  return null;
-}, [draftData, picksData, players, teams]);
+  const memoizedDraft = useMemo(() => {
+    if (draftData && picks.length > 0) {
+      return { ...draftData, picks };
+    }
+    return null;
+  }, [draftData, picks]);
 
   const handleSquareHover = useCallback((pick: PickWithPlayerAndTeam) => {
     if (!isCommissioner?.isCommissioner) return null;
@@ -165,7 +151,7 @@ const memoizedDraft = useMemo(() => {
         }
 
         toast.success(`Keeper status ${checked ? 'set' : 'unset'} successfully`);
-        // The pick will be updated through the Supabase subscription
+        fetchPicks();
       } catch (error) {
         console.error('Error updating keeper status:', error);
         toast.error("Failed to update keeper status. Please try again.");
@@ -195,7 +181,7 @@ const memoizedDraft = useMemo(() => {
         )}
       </div>
     );
-  }, [isCommissioner, draftId]);
+  }, [isCommissioner, draftId, fetchPicks]);
 
   const handleDeletePick = async (pick: PickWithPlayerAndTeam) => {
     try {
@@ -210,7 +196,7 @@ const memoizedDraft = useMemo(() => {
         throw new Error('Failed to delete pick');
       }
       toast.success("Pick deleted successfully");
-      // The pick will be updated through the Supabase subscription
+      fetchPicks();
     } catch (error) {
       console.error('Error deleting pick:', error);
       toast.error("Failed to delete pick. Please try again.");
@@ -236,7 +222,7 @@ const memoizedDraft = useMemo(() => {
       }
       setIsSheetOpen(false);
       setSelectedPlayer(null);
-      // The pick will be updated through the Supabase subscription
+      fetchPicks();
     } catch (error) {
       console.error('Error setting pick:', error);
       toast.error("Failed to set pick. Please try again.");
@@ -247,7 +233,6 @@ const memoizedDraft = useMemo(() => {
     if (!league || !memoizedDraft) return null;
     return <DraftHeader league={league} draft={memoizedDraft} />;
   }, [league, memoizedDraft]);
-
 
   if (!memoizedDraft || !league || !leagueSettings || !isCommissioner || !teams || !players) {
     return <div>Loading...</div>;
