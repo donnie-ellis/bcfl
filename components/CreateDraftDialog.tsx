@@ -141,6 +141,9 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
         },
         body: JSON.stringify({
           leagueKey,
@@ -185,7 +188,14 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
     return new Promise<void>((resolve, reject) => {
       const pollInterval = setInterval(async () => {
         try {
-          const response = await fetch(`/api/db/importJob/${jobId}`);
+          const response = await fetch(`/api/db/importJob/${jobId}`, {
+            method: 'GET',
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0',
+            }
+          });
           if (!response.ok) {
             throw new Error('Failed to fetch job progress');
           }
@@ -231,6 +241,9 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
         },
         body: JSON.stringify({
           leagueId: leagueKey,
@@ -248,7 +261,14 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
       // Poll for job progress
       const pollInterval = setInterval(async () => {
         try {
-          const progressResponse = await fetch(`/api/db/importJob/${jobId}`);
+          const progressResponse = await fetch(`/api/db/importJob/${jobId}`, {
+            method: 'GET',
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0',
+            }
+          });
           if (!progressResponse.ok) {
             throw new Error('Failed to fetch ADP update progress');
           }
@@ -284,7 +304,15 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
     setIsDialogOpen(false);
     setDraftName('');
     try {
-      const draftsResponse = await fetch(`/api/db/league/${leagueKey}/drafts`);
+      const draftsResponse = await fetch(`/api/db/league/${leagueKey}/drafts`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        }
+      });
       if (draftsResponse.ok) {
         const updatedDrafts = await draftsResponse.json();
         onDraftCreated(updatedDrafts);

@@ -86,13 +86,19 @@ export async function POST(request: NextRequest) {
       .update({ status: 'complete', progress: 100 })
       .eq('id', jobId);
 
-    return NextResponse.json({ message: 'ADP update completed successfully' });
+    const nextResponse = NextResponse.json({ message: 'ADP update completed successfully' });
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return nextResponse
+  
   } catch (error) {
     console.error('Error updating ADP:', error);
     await supabase
       .from('import_jobs')
       .update({ status: 'error', progress: 0 })
       .eq('id', jobId);
-    return NextResponse.json({ error: 'Failed to update ADP' }, { status: 500 });
+      const errorResponse = NextResponse.json({ error: 'Failed to update ADP' }, { status: 500 });
+      errorResponse.headers.set('Cache-Control', 'no-store, max-age=0');
+      return errorResponse;
   }
 }
+export const dynamic = 'force-dynamic';

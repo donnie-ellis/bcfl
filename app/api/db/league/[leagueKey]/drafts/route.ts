@@ -18,10 +18,16 @@ export async function GET(
       .eq('league_id', leagueKey);
 
     if (error) throw error;
+    const response = NextResponse.json(data);
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return response
 
-    return NextResponse.json(data);
   } catch (error) {
     console.error('Error fetching drafts for league:', error);
-    return NextResponse.json({ error: 'Failed to fetch drafts for league' }, { status: 500 });
+    const errorResponse = NextResponse.json({ error: 'Failed to fetch drafts for league' }, { status: 500 });
+    errorResponse.headers.set('Cache-Control', 'no-store, max-age=0');
+    return errorResponse;
   }
 }
+
+export const dynamic = 'force-dynamic';

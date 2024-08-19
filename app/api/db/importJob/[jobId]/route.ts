@@ -20,9 +20,15 @@ export async function GET(
 
     if (error) throw error;
 
-    return NextResponse.json(data);
+    const response = NextResponse.json(data);
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return response
+
   } catch (error) {
     console.error('Error fetching import job status:', error);
-    return NextResponse.json({ error: 'Failed to fetch import job status' }, { status: 500 });
+    const errorResponse = NextResponse.json({ error: 'Failed to job' }, { status: 500 });
+    errorResponse.headers.set('Cache-Control', 'no-store, max-age=0');
+    return errorResponse;
   }
 }
+export const dynamic = 'force-dynamic';
