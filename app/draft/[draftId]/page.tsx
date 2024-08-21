@@ -202,7 +202,7 @@ const DraftPage: React.FC = () => {
             <ScrollArea className="flex-grow">
               <div className="p-4">
                 <DraftedPlayers
-                  picks={draftData.picks}
+                  picks={memoizedDraft?.picks}
                   teamKey={team.team_key}
                   teamName={team.name}
                 />
@@ -242,7 +242,7 @@ const DraftPage: React.FC = () => {
             <ScrollArea className="h-full">
               <div className="p-4">
                 <DraftedPlayers
-                  picks={draftData.picks}
+                  picks={memoizedDraft?.picks}
                   teamKey={team.team_key}
                   teamName={team.name}
                 />
