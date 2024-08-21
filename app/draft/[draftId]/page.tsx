@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
+export const fetchCache = 'force-no-store';
 
 const DraftPage: React.FC = () => {
   const params = useParams();
