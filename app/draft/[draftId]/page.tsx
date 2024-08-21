@@ -33,6 +33,7 @@ const DraftPage: React.FC = () => {
   const [currentPick, setCurrentPick] = useState<PickWithPlayerAndTeam | null>(null);
   const [activeTab, setActiveTab] = useState<string>("draft");
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+
   const { data: draftData, mutate: mutateDraft } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher);
   const { data: picksData, mutate: mutatePicks } = useSWR<Pick[]>(
     draftData ? `/api/db/draft/${draftId}/picks` : null,
@@ -88,11 +89,13 @@ const DraftPage: React.FC = () => {
         schema: 'public', 
         table: 'picks', 
         filter: `draft_id=eq.${draftId}` 
-      }, (payload) => {
+      }, async (payload) => {
         const updatedPick = payload.new as Pick;
         if (updatedPick.is_picked) {
-          mutatePicks();
+          await mutatePicks();
+          await mutateDraft();
           notifyPickMade(updatedPick);
+          updatePicksAndDraft();
         }
       })
       .subscribe();
@@ -100,7 +103,7 @@ const DraftPage: React.FC = () => {
     return () => {
       supabase.removeChannel(picksSubscription);
     };
-  }, [supabase, draftId, mutatePicks, notifyPickMade]);
+  }, [supabase, draftId, mutatePicks, mutateDraft, notifyPickMade, updatePicksAndDraft]);
 
   useEffect(() => {
     updatePicksAndDraft();
@@ -138,7 +141,9 @@ const DraftPage: React.FC = () => {
       }
 
       setSelectedPlayer(null);
-      mutatePicks();
+      await mutatePicks();
+      await mutateDraft();
+      updatePicksAndDraft();
     } catch (error) {
       console.error('Error submitting pick:', error);
       toast.error("Failed to submit pick. Please try again.");
@@ -163,7 +168,7 @@ const DraftPage: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen">
-      <DraftHeader league={leagueData} draft={draftData} />
+      <DraftHeader league={leagueData} draft={memoizedDraft as Draft} />
       <div className="flex-grow overflow-hidden flex flex-col md:flex-row">
         {/* Desktop View */}
         <div className="hidden md:flex w-full h-[calc(100vh-64px)]">
@@ -179,7 +184,7 @@ const DraftPage: React.FC = () => {
             <ScrollArea className="flex-grow">
               <div className="p-4 space-y-4">
                 <DraftStatus
-                  draft={draftData}
+                  draft={memoizedDraft as Draft}
                   leagueSettings={leagueSettings}
                   teams={teams}
                   team={team}
@@ -212,80 +217,80 @@ const DraftPage: React.FC = () => {
         </div>
 
         {/* Small screen layout */}
-      <div className="md:hidden flex flex-col h-full">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-          <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
-            <TabsTrigger value="players">Players</TabsTrigger>
-            <TabsTrigger value="draft">Draft</TabsTrigger>
-            <TabsTrigger value="team">My Team</TabsTrigger>
-          </TabsList>
-          <TabsContent value="players" className="flex-grow overflow-hidden">
-            <PlayersList
-              draftId={draftId}
-              onPlayerSelect={handlePlayerSelect}
-              draft={memoizedDraft as Draft}
-            />
-          </TabsContent>
-          <TabsContent value="draft" className="flex-grow overflow-hidden">
-            <ScrollArea className="h-full">
-              <div className="p-4 space-y-4">
-                <DraftStatus
-                  draft={draftData}
-                  leagueSettings={leagueSettings}
-                  teams={teams}
-                  team={team}
-                />
-              </div>
-            </ScrollArea>
-          </TabsContent>
-          <TabsContent value="team" className="flex-grow overflow-hidden">
-            <ScrollArea className="h-full">
-              <div className="p-4">
-                <DraftedPlayers
-                  picks={memoizedDraft?.picks}
-                  teamKey={team.team_key}
-                  teamName={team.name}
-                />
-              </div>
-            </ScrollArea>
-          </TabsContent>
-        </Tabs>
+        <div className="md:hidden flex flex-col h-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+            <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
+              <TabsTrigger value="players">Players</TabsTrigger>
+              <TabsTrigger value="draft">Draft</TabsTrigger>
+              <TabsTrigger value="team">My Team</TabsTrigger>
+            </TabsList>
+            <TabsContent value="players" className="flex-grow overflow-hidden">
+              <PlayersList
+                draftId={draftId}
+                onPlayerSelect={handlePlayerSelect}
+                draft={memoizedDraft as Draft}
+              />
+            </TabsContent>
+            <TabsContent value="draft" className="flex-grow overflow-hidden">
+              <ScrollArea className="h-full">
+                <div className="p-4 space-y-4">
+                  <DraftStatus
+                    draft={memoizedDraft as Draft}
+                    leagueSettings={leagueSettings}
+                    teams={teams}
+                    team={team}
+                  />
+                </div>
+              </ScrollArea>
+            </TabsContent>
+            <TabsContent value="team" className="flex-grow overflow-hidden">
+              <ScrollArea className="h-full">
+                <div className="p-4">
+                  <DraftedPlayers
+                    picks={memoizedDraft?.picks}
+                    teamKey={team.team_key}
+                    teamName={team.name}
+                  />
+                </div>
+              </ScrollArea>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
-    </div>
 
-    {/* Sheet for small screens */}
-    <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-      <SheetContent side="bottom" className="h-[50vh] flex flex-col">
-        <SheetHeader>
-          <SheetTitle>Make your pick</SheetTitle>
-        </SheetHeader>
-        <ScrollArea className="flex-grow">
-          <div className="p-4 space-y-4">
-            <SubmitPickButton
-              isCurrentUserPick={isCurrentUserPick}
-              selectedPlayer={selectedPlayer}
-              currentPick={currentPick}
-              onSubmitPick={handleSubmitPick}
-              isPickSubmitting={isPickSubmitting}
-            />
-            <PlayerDetails
-              player={selectedPlayer}
-            />
-          </div>
-        </ScrollArea>
-      </SheetContent>
-      
-      {/* Floating action button for small screens */}
-      <SheetTrigger asChild>
-        <Button
-          size="icon"
-          className="fixed right-4 bottom-4 rounded-full shadow-lg"
-        >
-          <Menu className="h-6 w-6" />
-        </Button>
-      </SheetTrigger>
-    </Sheet>
-  </div>
+      {/* Sheet for small screens */}
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+        <SheetContent side="bottom" className="h-[50vh] flex flex-col">
+          <SheetHeader>
+            <SheetTitle>Make your pick</SheetTitle>
+          </SheetHeader>
+          <ScrollArea className="flex-grow">
+            <div className="p-4 space-y-4">
+              <SubmitPickButton
+                isCurrentUserPick={isCurrentUserPick}
+                selectedPlayer={selectedPlayer}
+                currentPick={currentPick}
+                onSubmitPick={handleSubmitPick}
+                isPickSubmitting={isPickSubmitting}
+              />
+              <PlayerDetails
+                player={selectedPlayer}
+              />
+            </div>
+          </ScrollArea>
+        </SheetContent>
+        
+        {/* Floating action button for small screens */}
+        <SheetTrigger asChild>
+          <Button
+            size="icon"
+            className="fixed right-4 bottom-4 rounded-full shadow-lg"
+          >
+            <Menu className="h-6 w-6" />
+          </Button>
+        </SheetTrigger>
+      </Sheet>
+    </div>
   );
 };
 
