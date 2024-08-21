@@ -22,7 +22,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
-export const fetchCache = 'force-no-store';
 
 const DraftBoardPage: React.FC = () => {
   const params = useParams();
