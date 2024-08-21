@@ -416,7 +416,6 @@ export async function fetchAllPlayers(leagueKey: string, start: number = 0, coun
   if (!players || players.count === 0) {
     return { players: [], nextStart: null };
   }
-  console.log(`Received ${players.count.toString()} players from yahoo.`)
   const parsedPlayers: PlayerInsert[] = [];
   for (const key in players) {
     if (key !== 'count') {
@@ -431,7 +430,6 @@ export async function fetchAllPlayers(leagueKey: string, start: number = 0, coun
     }
   }
 
-  console.log(`Fetched ${parsedPlayers.length} players`);
   
   // If we fetched less than the requested count, we've reached the end
   const nextStart = parsedPlayers.length < count ? null : start + count;

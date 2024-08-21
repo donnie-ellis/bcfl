@@ -29,7 +29,6 @@ const TeamOrder: React.FC<TeamOrderProps> = ({ teams, onSubmit }) => {
   const [orderedTeams, setOrderedTeams] = useState<Team[]>([]);
 
   useEffect(() => {
-    console.log("Teams received in TeamOrder:", teams);
     setOrderedTeams(teams);
   }, [teams]);
 
