@@ -183,6 +183,7 @@ const KioskPage: React.FC = () => {
       </div>
     );
   }
+  
   if (memoizedDraft?.status === 'completed') {
     return (
       <Alert>
