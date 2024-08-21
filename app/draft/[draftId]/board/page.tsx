@@ -75,7 +75,7 @@ const DraftBoardPage: React.FC = () => {
     const updatedPicks: PickWithPlayerAndTeam[] = picksData.map(pick => ({
       ...pick,
       player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
-      team: teams.find(t => t.team_key === pick.team_key) || null  // Change this line
+      team: teams.find(t => t.team_key === pick.team_key) || null
     }));
   
     const updatedCurrentPick = updatedPicks.find(p => !p.is_picked) || null;
@@ -132,20 +132,20 @@ const DraftBoardPage: React.FC = () => {
   }, [updatePicksAndDraft, picksData]);
   
   const setRoundRef = useCallback((el: HTMLDivElement | null, index: number) => {
-      roundRefs.current[index] = el;
+    roundRefs.current[index] = el;
   }, []);
 
-const memoizedDraft = useMemo(() => {
-  if (draftData && picksData && players && teams) {
-    const updatedPicks: PickWithPlayerAndTeam[] = picksData.map(pick => ({
-      ...pick,
-      player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
-      team: teams.find(t => t.team_key === pick.team_key) || null
-    }));
-    return { ...draftData, picks: updatedPicks };
-  }
-  return null;
-}, [draftData, picksData, players, teams]);
+  const memoizedDraft = useMemo(() => {
+    if (draftData && picksData && players && teams) {
+      const updatedPicks: PickWithPlayerAndTeam[] = picksData.map(pick => ({
+        ...pick,
+        player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
+        team: teams.find(t => t.team_key === pick.team_key) || null
+      }));
+      return { ...draftData, picks: updatedPicks };
+    }
+    return null;
+  }, [draftData, picksData, players, teams]);
 
   const handleSquareHover = useCallback((pick: PickWithPlayerAndTeam) => {
     if (!isCommissioner?.isCommissioner) return null;
@@ -165,7 +165,13 @@ const memoizedDraft = useMemo(() => {
         }
 
         toast.success(`Keeper status ${checked ? 'set' : 'unset'} successfully`);
-        // The pick will be updated through the Supabase subscription
+        
+        // Update the local state immediately
+        mutatePicks((currentPicks) => 
+          currentPicks?.map(p => 
+            p.id === pick.id ? { ...p, is_keeper: checked } : p
+          )
+        );
       } catch (error) {
         console.error('Error updating keeper status:', error);
         toast.error("Failed to update keeper status. Please try again.");
@@ -195,7 +201,7 @@ const memoizedDraft = useMemo(() => {
         )}
       </div>
     );
-  }, [isCommissioner, draftId]);
+  }, [isCommissioner, draftId, mutatePicks]);
 
   const handleDeletePick = async (pick: PickWithPlayerAndTeam) => {
     try {
@@ -210,7 +216,7 @@ const memoizedDraft = useMemo(() => {
         throw new Error('Failed to delete pick');
       }
       toast.success("Pick deleted successfully");
-      // The pick will be updated through the Supabase subscription
+      mutatePicks(); // Update the local state
     } catch (error) {
       console.error('Error deleting pick:', error);
       toast.error("Failed to delete pick. Please try again.");
@@ -236,7 +242,7 @@ const memoizedDraft = useMemo(() => {
       }
       setIsSheetOpen(false);
       setSelectedPlayer(null);
-      // The pick will be updated through the Supabase subscription
+      mutatePicks(); // Update the local state
     } catch (error) {
       console.error('Error setting pick:', error);
       toast.error("Failed to set pick. Please try again.");
@@ -247,7 +253,6 @@ const memoizedDraft = useMemo(() => {
     if (!league || !memoizedDraft) return null;
     return <DraftHeader league={league} draft={memoizedDraft} />;
   }, [league, memoizedDraft]);
-
 
   if (!memoizedDraft || !league || !leagueSettings || !isCommissioner || !teams || !players) {
     return <div>Loading...</div>;
