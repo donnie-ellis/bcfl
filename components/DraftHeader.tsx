@@ -7,7 +7,7 @@ import { League, Draft, LeagueSettings } from '@/lib/types/';
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Menu, RefreshCcw } from "lucide-react";
+import { Download, Menu, RefreshCcw } from "lucide-react";
 import { usePathname } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from "sonner";
@@ -60,6 +60,34 @@ const DraftHeader: React.FC<DraftHeaderProps> = ({ league, draft, additionalCont
         <Link href={href}>{children}</Link>
       </Button>
     );
+  };
+
+  const handleExport = async (type: 'csv' | 'pdf') => {
+    if (!draft) return;
+
+    try {
+      const response = await fetch(`/api/db/draft/${draft.id}/export?type=${type}`, {
+        method: 'GET',
+      });
+
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `draft_export_${draft.id}.${type}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success(`Draft exported as ${type.toUpperCase()} successfully`);
+    } catch (error) {
+      console.error('Export failed:', error);
+      toast.error(`Failed to export draft as ${type.toUpperCase()}. Please try again.`);
+    }
   };
 
   const handleUpdateADP = async () => {
@@ -179,8 +207,24 @@ const DraftHeader: React.FC<DraftHeaderProps> = ({ league, draft, additionalCont
             >
               <RefreshCcw className="mr-2 h-4 w-4" />
               Update ADP
-            </Button>
+            </Button>  
           )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleExport('csv')}>
+                Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                Export as PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </nav>
         <div className="flex items-center space-x-4">
           {additionalContent}
@@ -215,6 +259,22 @@ const DraftHeader: React.FC<DraftHeaderProps> = ({ league, draft, additionalCont
                     <RefreshCcw className="mr-2 h-4 w-4" />
                     Update ADP
                   </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline">
+                        <Download className="mr-2 h-4 w-4" />
+                        Export
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem onClick={() => handleExport('csv')}>
+                        Export as CSV
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                        Export as PDF
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>

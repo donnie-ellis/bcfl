@@ -12,12 +12,16 @@ const nextConfig = {
         }
     },
     images: {
+        domains: [
+            'yahoofantasysports-res.cloudinary.com', 
+            'l.yimg.com'
+        ],
         remotePatterns: [
             {
                 hostname: 's.yimg.com'
             }
         ]
-    }
+    },
 };
 
 export default nextConfig;
