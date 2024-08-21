@@ -18,6 +18,7 @@ import useSWR from 'swr';
 type MemoizedDraft = Omit<Draft, 'picks'> & { picks: PickWithPlayerAndTeam[] };
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
+export const fetchCache = 'force-no-store';
 
 const KioskPage: React.FC = () => {
   const params = useParams();
