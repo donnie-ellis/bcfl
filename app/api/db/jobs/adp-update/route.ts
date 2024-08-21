@@ -1,70 +1,12 @@
+// ./app/api/db/jobs/adp-update/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { v4 as uuidv4 } from 'uuid';
-import { getServerAuthSession } from "@/auth";
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { draftId: string } }
-) {
-  const { draftId } = params;
-  const { leagueId, scoringType, numTeams } = await request.json();
+export async function POST(request: NextRequest) {
+  const { jobId } = await request.json();
 
-  // Check if the user is authenticated
-  const session = await getServerAuthSession();
-  if (!session || !session.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  try {
-    // Check if the user is a commissioner for this league
-    const { data: isCommissioner, error: commissionerError } = await supabase
-      .from('managers')
-      .select('is_commissioner')
-      .eq('guid', session.user.id)
-      .contains('league_keys', [leagueId])
-      .single();
-
-    if (commissionerError) throw commissionerError;
-
-    if (!isCommissioner || !isCommissioner.is_commissioner) {
-      return NextResponse.json({ error: 'Unauthorized. Commissioner access required.' }, { status: 403 });
-    }
-
-    // Create a job to track progress
-    const jobId = uuidv4();
-    await supabase.from('import_jobs').insert({
-      id: jobId,
-      status: 'pending',
-      progress: 0,
-      metadata: { draftId, leagueId, scoringType, numTeams }
-    });
-
-    // Start the background job
-    const adpUpdateJob = new Promise((resolve, reject) => {
-      setTimeout(async () => {
-        try {
-          await updateADP(jobId);
-          resolve(null);
-        } catch (error) {
-          reject(error);
-        }
-      }, 0);
-    });
-
-    // Don't await the job, let it run in the background
-    adpUpdateJob.catch(console.error);
-
-    return NextResponse.json({ jobId, message: 'ADP update job started' });
-  } catch (error) {
-    console.error('Error initiating ADP update:', error);
-    return NextResponse.json({ error: 'Failed to initiate ADP update' }, { status: 500 });
-  }
-}
-
-async function updateADP(jobId: string) {
   try {
     // Fetch job details
     const { data: job, error: jobError } = await supabase
@@ -144,11 +86,19 @@ async function updateADP(jobId: string) {
       .update({ status: 'complete', progress: 100 })
       .eq('id', jobId);
 
+    const nextResponse = NextResponse.json({ message: 'ADP update completed successfully' });
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return nextResponse
+  
   } catch (error) {
     console.error('Error updating ADP:', error);
     await supabase
       .from('import_jobs')
       .update({ status: 'error', progress: 0 })
       .eq('id', jobId);
+      const errorResponse = NextResponse.json({ error: 'Failed to update ADP' }, { status: 500 });
+      errorResponse.headers.set('Cache-Control', 'no-store, max-age=0');
+      return errorResponse;
   }
 }
+export const dynamic = 'force-dynamic';

@@ -18,7 +18,6 @@ export async function GET(
   const { leagueKey } = params;
 
   try {
-    console.debug('In the try block')
     const path = `league/${leagueKey}/teams`;
     const data = await requestYahoo(path);
     const teams = await parseTeamData(data.fantasy_content.league[1].teams);

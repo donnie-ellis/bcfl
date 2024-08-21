@@ -1,44 +1,5 @@
 // ./lib/yahoo.types.ts
 
-export interface Player {
-  player_key: string;
-  player_id: string;
-  full_name: string;
-  first_name: string;
-  last_name: string;
-  editorial_team_abbr: string;
-  display_position: string;
-  position_type: string;
-  eligible_positions: string[];
-  status: string;
-  editorial_player_key: string;
-  editorial_team_key: string;
-  editorial_team_full_name: string;
-  bye_weeks: string[];
-  uniform_number: string;
-  image_url: string;
-  headshot_url: string;
-  is_undroppable: boolean;
-  player_notes_last_timestamp?: Date;
-  player_stats?: any;
-  player_advanced_stats?: any;
-  player_points?: any;
-  draft_analysis?: {
-    average_pick: number;
-    average_round: number;
-    average_cost: number;
-    percent_drafted: number;
-  } | null;
-  rank?: number;
-  o_rank?: number;
-  psr_rank?: number;
-  percent_owned?: number;
-  percent_started?: number;
-  status_full?: string;
-  injury_note?: string;
-  has_player_notes?: boolean;
-}
-
 export interface League {
   league_key: string;
   league_id: string;

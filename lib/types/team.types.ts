@@ -88,3 +88,18 @@ export function parseTeamWithLogos(team: BaseTeam): Team {
     team_logos: team.team_logos, // Don't parse here, keep it as Json
   };
 }
+
+export const possesiveTitle = (name: string) => {
+  if (name.endsWith('s')) {
+    return name + "'";
+  } else {
+    return name + "'s";
+  };
+};
+
+export const sizedTitle = (name: string) => {
+  if (name.trim().length >= 16) {
+    return name.trim().substring(0, 12) + '...'
+  }
+  return name.trim()
+}
