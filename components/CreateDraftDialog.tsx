@@ -130,7 +130,15 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
 
       if (yahooData.leagueSettings && yahooData.leagueSettings.roster_positions) {
         const parsedRosterPositions = parseRosterPositions(yahooData.leagueSettings.roster_positions);
-        rosterSize = parsedRosterPositions.reduce((sum, pos) => sum + pos.roster_position.count, 0);
+        rosterSize = parsedRosterPositions.reduce((sum, pos) => {
+          // Exclude 'IR' positions from the roster size calculation
+          console.log('Evaluating position: ', pos);
+          if (pos.roster_position.position !== 'IR') {
+            console.log('Adding position: ', pos);
+            return sum + pos.roster_position.count;
+          }
+          return sum;
+        }, 0);
       }
 
       const rounds = rosterSize;
