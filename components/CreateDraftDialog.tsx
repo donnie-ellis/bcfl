@@ -132,9 +132,7 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
         const parsedRosterPositions = parseRosterPositions(yahooData.leagueSettings.roster_positions);
         rosterSize = parsedRosterPositions.reduce((sum, pos) => {
           // Exclude 'IR' positions from the roster size calculation
-          console.log('Evaluating position: ', pos);
           if (pos.roster_position.position !== 'IR') {
-            console.log('Adding position: ', pos);
             return sum + pos.roster_position.count;
           }
           return sum;

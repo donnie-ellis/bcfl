@@ -14,7 +14,6 @@ export async function importPlayers(leagueKey: string, jobId?: string): Promise<
     let totalImported = 0;
 
     while (true) {
-      console.log(`Fetching players starting from index ${start}`);
       const { players, nextStart } = await fetchAllPlayers(leagueKey, start, YAHOO_PLAYER_REQUEST_SIZE);
       console.log(`Received ${players.length} players, nextStart: ${nextStart}`);
 
