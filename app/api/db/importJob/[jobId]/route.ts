@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(
   request: NextRequest,
@@ -20,10 +22,12 @@ export async function GET(
 
     if (error) throw error;
 
-    const response = NextResponse.json(data);
-    response.headers.set('Cache-Control', 'no-store, max-age=0');
-    return response
-
+    return NextResponse.json(data,
+      {
+        headers: {
+          'Cache-Control': 'no-store, max-age=0'
+        },
+      });
   } catch (error) {
     console.error('Error fetching import job status:', error);
     const errorResponse = NextResponse.json({ error: 'Failed to job' }, { status: 500 });
@@ -31,4 +35,3 @@ export async function GET(
     return errorResponse;
   }
 }
-export const dynamic = 'force-dynamic';

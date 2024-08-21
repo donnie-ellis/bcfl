@@ -7,6 +7,9 @@ import { Database } from '@/lib/types/database.types';
 import { error } from 'console';
 import { SupabaseClient } from '@supabase/supabase-js';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { draftId: string } }
@@ -36,7 +39,11 @@ export async function GET(
     if (pickError) throw pickError;
     
 
-    return NextResponse.json(currentPick);
+    return NextResponse.json(currentPick, {
+      headers: {
+        'Cache-Control': 'no-store, max-age=0'
+      }
+    });
   } catch (error) {
     console.error('Error fetching current pick:', error);
     return NextResponse.json({ error: 'Failed to fetch current pick' }, { status: 500 });

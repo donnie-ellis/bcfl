@@ -3,6 +3,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
 export async function GET(
@@ -18,9 +20,12 @@ export async function GET(
       .eq('league_id', leagueKey);
 
     if (error) throw error;
-    const response = NextResponse.json(data);
-    response.headers.set('Cache-Control', 'no-store, max-age=0');
-    return response
+    return NextResponse.json(data, 
+      {
+        headers: {
+        'Cache-Control': 'no-store, max-age=0',
+        }
+      });
 
   } catch (error) {
     console.error('Error fetching drafts for league:', error);
@@ -29,5 +34,3 @@ export async function GET(
     return errorResponse;
   }
 }
-
-export const dynamic = 'force-dynamic';

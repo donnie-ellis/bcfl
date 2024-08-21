@@ -5,6 +5,8 @@ import { getServerAuthSession } from "@/auth";
 import { requestYahoo } from '@/lib/yahoo';
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 // GET
 export async function GET(request: NextRequest, { params }: { params: { draftId: string } }) {
@@ -40,7 +42,11 @@ export async function GET(request: NextRequest, { params }: { params: { draftId:
       picks: picks
     };
 
-    return NextResponse.json(draftWithPicks);
+    return NextResponse.json(draftWithPicks, {
+      headers: {
+        'Cache-Control': 'no-store, max-age=0',
+      }
+    });
   } catch (error) {
     console.error('Error fetching draft:', error);
     return NextResponse.json({ error: 'Failed to fetch draft' }, { status: 500 });
