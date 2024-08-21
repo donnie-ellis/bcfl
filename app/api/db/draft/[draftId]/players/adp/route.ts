@@ -1,3 +1,5 @@
+// ./app/api/db/draft/[draftId]/players/adp/route.ts
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
@@ -5,6 +7,7 @@ import { getServerAuthSession } from "@/auth";
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
+// POST
 export async function POST(
   request: NextRequest,
   { params }: { params: { draftId: string } }
@@ -33,71 +36,33 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized. Commissioner access required.' }, { status: 403 });
     }
 
+    // Get current year
+    const currentYear = new Date().getFullYear();
+
+    // Construct ADP API URL
+    const adpUrl = `https://fantasyfootballcalculator.com/api/v1/adp/${scoringType}?teams=${numTeams}&year=${currentYear}&position=all`;
+    
     // Create a job to track progress
     const jobId = uuidv4();
     await supabase.from('import_jobs').insert({
       id: jobId,
-      status: 'pending',
-      progress: 0,
-      metadata: { draftId, leagueId, scoringType, numTeams }
+      status: 'in_progress',
+      progress: 0
     });
-
-    // Start the background job
-    const adpUpdateJob = new Promise((resolve, reject) => {
-      setTimeout(async () => {
-        try {
-          await updateADP(jobId);
-          resolve(null);
-        } catch (error) {
-          reject(error);
-        }
-      }, 0);
-    });
-
-    // Don't await the job, let it run in the background
-    adpUpdateJob.catch(console.error);
-
-    return NextResponse.json({ jobId, message: 'ADP update job started' });
-  } catch (error) {
-    console.error('Error initiating ADP update:', error);
-    return NextResponse.json({ error: 'Failed to initiate ADP update' }, { status: 500 });
-  }
-}
-
-async function updateADP(jobId: string) {
-  try {
-    // Fetch job details
-    const { data: job, error: jobError } = await supabase
-      .from('import_jobs')
-      .select('*')
-      .eq('id', jobId)
-      .single();
-
-    if (jobError) throw jobError;
-
-    const { draftId, leagueId, scoringType, numTeams } = job.metadata;
-
-    // Update job status
-    await supabase
-      .from('import_jobs')
-      .update({ status: 'in_progress' })
-      .eq('id', jobId);
 
     // Fetch ADP data
-    const currentYear = new Date().getFullYear();
-    const adpUrl = `https://fantasyfootballcalculator.com/api/v1/adp/${scoringType}?teams=${numTeams}&year=${currentYear}&position=all`;
     const response = await fetch(adpUrl);
     if (!response.ok) {
       throw new Error(`Failed to fetch ADP data: ${response.statusText}`);
     }
     const adpData = await response.json();
-
-    // Process and update ADP data
+    
+    // Update player_adp table
     const totalPlayers = adpData.players.length;
     for (let i = 0; i < totalPlayers; i++) {
       const player = adpData.players[i];
       
-      // Find player
+      // Find player using a more robust search
       const { data: players, error: playerError } = await supabase
         .from('players')
         .select('id, full_name, first_name, last_name, display_position, editorial_team_abbr')
@@ -106,10 +71,26 @@ async function updateADP(jobId: string) {
 
       if (playerError) throw playerError;
 
-      let matchedPlayer = players.find(p => 
-        p.full_name.toLowerCase() === player.name.toLowerCase() &&
-        p.editorial_team_abbr === player.team
-      ) || players[0];
+      let matchedPlayer = null;
+
+      if (players && players.length > 0) {
+        // Try to find an exact match first
+        matchedPlayer = players.find(p => 
+          p.full_name.toLowerCase() === player.name.toLowerCase() &&
+          p.editorial_team_abbr === player.team
+        );
+
+        // If no exact match, use a scoring system
+        if (!matchedPlayer) {
+          const scoredPlayers = players.map(p => ({
+            ...p,
+            score: calculateMatchScore(p, player)
+          }));
+
+          scoredPlayers.sort((a, b) => b.score - a.score);
+          matchedPlayer = scoredPlayers[0];
+        }
+      }
 
       if (matchedPlayer) {
         // Upsert ADP data
@@ -117,7 +98,7 @@ async function updateADP(jobId: string) {
           .from('player_adp')
           .upsert({
             player_id: matchedPlayer.id,
-            draft_id: draftId,
+            draft_id: parseInt(draftId),
             source_id: player.player_id,
             adp: player.adp,
             adp_formatted: player.adp_formatted
@@ -128,6 +109,8 @@ async function updateADP(jobId: string) {
         if (upsertError) {
           console.error('Error upserting ADP data:', upsertError);
         }
+      } else {
+        console.warn(`No matching player found for: ${player.name} (${player.position}, ${player.team})`);
       }
 
       // Update progress
@@ -144,11 +127,40 @@ async function updateADP(jobId: string) {
       .update({ status: 'complete', progress: 100 })
       .eq('id', jobId);
 
+    return NextResponse.json({ jobId, message: 'ADP update job started' });
   } catch (error) {
     console.error('Error updating ADP:', error);
-    await supabase
-      .from('import_jobs')
-      .update({ status: 'error', progress: 0 })
-      .eq('id', jobId);
+    return NextResponse.json({ error: 'Failed to update ADP' }, { status: 500 });
   }
+}
+
+function calculateMatchScore(dbPlayer: any, adpPlayer: any): number {
+  let score = 0;
+
+  // Full name exact match (case-insensitive)
+  if (dbPlayer.full_name.toLowerCase() === adpPlayer.name.toLowerCase()) {
+    score += 10;
+  }
+
+  // First name match
+  if (dbPlayer.first_name.toLowerCase() === adpPlayer.name.split(' ')[0].toLowerCase()) {
+    score += 3;
+  }
+
+  // Last name match
+  if (dbPlayer.last_name.toLowerCase() === adpPlayer.name.split(' ').slice(-1)[0].toLowerCase()) {
+    score += 3;
+  }
+
+  // Position match
+  if (dbPlayer.display_position === adpPlayer.position) {
+    score += 2;
+  }
+
+  // Team match
+  if (dbPlayer.editorial_team_abbr === adpPlayer.team) {
+    score += 2;
+  }
+
+  return score;
 }

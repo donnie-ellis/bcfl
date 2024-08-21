@@ -260,7 +260,7 @@ const DraftPage: React.FC = () => {
 
       {/* Sheet for small screens */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent side="bottom" className="h-[50vh] flex flex-col">
+        <SheetContent side="bottom" className="h-[50vh] flex flex-col md:hidden">
           <SheetHeader>
             <SheetTitle>Make your pick</SheetTitle>
           </SheetHeader>
@@ -284,7 +284,7 @@ const DraftPage: React.FC = () => {
         <SheetTrigger asChild>
           <Button
             size="icon"
-            className="fixed right-4 bottom-4 rounded-full shadow-lg"
+            className="fixed right-4 bottom-4 rounded-full shadow-lg md:hidden"
           >
             <Menu className="h-6 w-6" />
           </Button>
