@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
+import { Loader2, Menu } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -163,8 +163,12 @@ const DraftPage: React.FC = () => {
   }, [draftData, picksData]);
 
   if (!draftData || !leagueData || !leagueSettings || !teams || !team || !players || !picksData) {
-    return <div>Loading...</div>;
-  }
+      return (
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+      );
+    }
 
   return (
     <div className="flex flex-col h-screen">

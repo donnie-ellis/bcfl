@@ -3,20 +3,22 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Draft, LeagueSettings, Team } from '@/lib/types/';
+import { Draft, LeagueSettings, Team, Player, Pick, possesiveTitle } from '@/lib/types/';
 import TeamCard from '@/components/TeamCard';
+import PlayerCard from '@/components/PlayerCard';
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import TeamNeeds from './TeamNeeds';
+import { Badge } from '@/components/ui/badge';
 
 interface DraftStatusProps {
   draft: Draft | null;
   leagueSettings: LeagueSettings | null;
   teams: Team[];
-  team: Team
+  team: Team;
 }
 
 const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams, team }) => {
@@ -45,6 +47,7 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams,
       </Card>
     );
   }
+
   const currentPick = draft.current_pick || 0;
   const totalTeams = teams.length;
   const round = Math.ceil(currentPick / totalTeams);
@@ -59,6 +62,14 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams,
   const progress = (currentPick / draft.total_picks) * 100;
 
   const nextFivePicks = Array.from({ length: 5 }, (_, i) => getCurrentTeam(currentPick + i + 1));
+
+  const lastPick: Pick | null = currentPick > 1 ? draft.picks[currentPick - 2] : null;
+  const lastPickedPlayer: Player | null = lastPick?.player || null;
+  const lastPickTeam: Team | undefined = lastPick ? teams.find(t => t.team_key === lastPick.team_key) : undefined;
+
+  // Calculate picks until next pick for the provided team
+  const picksUntilNextTeamPick = draft.picks.slice(currentPick - 1).findIndex(pick => pick.team_key === team.team_key);
+  const picksUntilNextTeamPickDisplay = picksUntilNextTeamPick === -1 ? 'No more picks' : picksUntilNextTeamPick;
 
   return (
     <Card className="">
@@ -96,6 +107,32 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams,
           </p>
 
           <Progress value={progress} className="w-full" />
+
+          <div className="text-center">
+            <p className="text-sm font-semibold">Picks until {possesiveTitle(team.name)} next pick:</p>
+            <p className="text-lg">
+              {picksUntilNextTeamPickDisplay === 0 ? 
+                <Badge className='bg-green-400 hover:bg-green-400'>On the clock</Badge>
+                : picksUntilNextTeamPickDisplay === 1 ?
+                <Badge className='bg-yellow-400 hover:bg-yellow-400'>On deck</Badge>
+                : <Badge>{picksUntilNextTeamPick}</Badge>
+              }
+            </p>
+          </div>
+
+          {lastPickedPlayer && lastPickTeam ? (
+            <div>
+              <p className="text-xs mb-1">Last Picked Player ({lastPickTeam.name}):</p>
+              <PlayerCard
+                player={lastPickedPlayer}
+                isDrafted={true}
+                onClick={() => {}}
+              />
+            </div>
+          ) : (
+            <p className="text-sm text-center">No players picked yet</p>
+          )}
+
           <TeamNeeds 
             teamKey={team?.team_key}
             draftId={draft.id.toString()}

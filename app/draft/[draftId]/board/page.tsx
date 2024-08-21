@@ -20,6 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import useSWR from 'swr';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2 } from 'lucide-react';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -255,8 +256,12 @@ const DraftBoardPage: React.FC = () => {
   }, [league, memoizedDraft]);
 
   if (!memoizedDraft || !league || !leagueSettings || !isCommissioner || !teams || !players) {
-    return <div>Loading...</div>;
-  }
+      return (
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+      );
+    }
 
   const rounds = Array.from({ length: memoizedDraft.rounds }, (_, i) => i + 1);
 
