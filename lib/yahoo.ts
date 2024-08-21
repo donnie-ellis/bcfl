@@ -3,7 +3,8 @@
 'use server'
 import { getServerAuthSession } from "@/auth"
 import { createClient } from '@supabase/supabase-js'
-import {LeagueSettings,  Player, Team, Manager } from '@/lib/yahoo.types'
+import {LeagueSettings, Team, Manager } from '@/lib/yahoo.types'
+import { Json, PlayerInsert } from "./types"
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
@@ -299,92 +300,107 @@ export async function parseLeagueSettings(data: any): Promise<LeagueSettings> {
   };
 }
 
-export async function parsePlayerData(playerData: any[]): Promise<Player> {
-  const player: Player = {
+export async function parsePlayerData(playerData: any[]): Promise<PlayerInsert> {
+  const player: Omit<PlayerInsert, 'created_at' | 'updated_at'> = {
     player_key: '',
     player_id: '',
     full_name: '',
     first_name: '',
     last_name: '',
+    ascii_first_name: '',
+    ascii_last_name: '',
     editorial_team_abbr: '',
+    editorial_team_full_name: '',
+    editorial_team_key: '',
+    editorial_team_url: '',
     display_position: '',
     position_type: '',
+    primary_position: '',
     eligible_positions: [],
+    eligible_positions_to_add: [],
     status: '',
+    status_full: '',
+    on_disabled_list: false,
+    injury_note: '',
+    is_undroppable: '',
+    has_player_notes: false,
+    player_notes_last_timestamp: null,
     editorial_player_key: '',
-    editorial_team_key: '',
-    editorial_team_full_name: '',
-    bye_weeks: [],
     uniform_number: '',
     image_url: '',
     headshot_url: '',
-    is_undroppable: false,
-    player_notes_last_timestamp: new Date(),
+    headshot_size: '',
+    is_keeper: null,
+    percent_owned: null,
+    percent_started: null,
+    draft_analysis: null,
     player_stats: null,
     player_advanced_stats: null,
     player_points: null,
-    draft_analysis: null,
+    season_stats: null,
+    selected_position: '',
+    weekly_stats: null,
+    league_ownership: null,
+    bye_weeks: [],
+    preseason_rank: null,
+    rank: null,
+    o_rank: null,
+    psr_rank: null,
+    ownership: null,
+    notes: '',
+    url: ''
+  };
+
+  const playerMap: { [key: string]: (value: any) => void } = {
+    player_key: (value) => player.player_key = value,
+    player_id: (value) => player.player_id = value,
+    editorial_team_abbr: (value) => player.editorial_team_abbr = value,
+    editorial_team_full_name: (value) => player.editorial_team_full_name = value,
+    editorial_team_key: (value) => player.editorial_team_key = value,
+    editorial_team_url: (value) => player.editorial_team_url = value,
+    display_position: (value) => player.display_position = value,
+    position_type: (value) => player.position_type = value,
+    primary_position: (value) => player.primary_position = value,
+    status: (value) => player.status = value,
+    status_full: (value) => player.status_full = value,
+    injury_note: (value) => player.injury_note = value,
+    uniform_number: (value) => player.uniform_number = value,
+    image_url: (value) => player.image_url = value,
+    editorial_player_key: (value) => player.editorial_player_key = value,
+    url: (value) => player.url = value,
+    notes: (value) => player.notes = value,
+    name: (value) => {
+      player.full_name = value.full;
+      player.first_name = value.first;
+      player.last_name = value.last;
+      player.ascii_first_name = value.ascii_first;
+      player.ascii_last_name = value.ascii_last;
+    },
+    eligible_positions: (value) => player.eligible_positions = value.map((pos: any) => pos.position),
+    eligible_positions_to_add: (value) => player.eligible_positions_to_add = value.map((pos: any) => pos.position),
+    bye_weeks: (value) => player.bye_weeks = [value.week],
+    player_notes_last_timestamp: (value) => player.player_notes_last_timestamp = value ? new Date(parseInt(value) * 1000).toISOString() : null,
+    is_undroppable: (value) => player.is_undroppable = value,
+    has_player_notes: (value) => player.has_player_notes = value === 1,
+    headshot: (value) => {
+      player.headshot_url = value.url;
+      player.headshot_size = value.size;
+    },
+    is_keeper: (value) => player.is_keeper = value as Json,
+    player_stats: (value) => player.player_stats = value as Json,
+    player_advanced_stats: (value) => player.player_advanced_stats = value as Json,
+    player_points: (value) => player.player_points = value as Json,
+    season_stats: (value) => player.season_stats = value as Json,
+    weekly_stats: (value) => player.weekly_stats = value as Json,
+    league_ownership: (value) => player.league_ownership = value as Json,
+    ownership: (value) => player.ownership = value as Json,
   };
 
   playerData.forEach(item => {
     if (typeof item === 'object') {
       const key = Object.keys(item)[0];
-      switch(key) {
-        case 'player_key':
-        case 'player_id':
-        case 'editorial_team_abbr':
-        case 'display_position':
-        case 'position_type':
-        case 'status':
-        case 'editorial_player_key':
-        case 'editorial_team_key':
-        case 'editorial_team_full_name':
-        case 'uniform_number':
-        case 'image_url':
-          player[key] = item[key];
-          break;
-        case 'name':
-          player.full_name = item[key].full;
-          player.first_name = item[key].first;
-          player.last_name = item[key].last;
-          break;
-        case 'eligible_positions':
-          player.eligible_positions = item[key].map((pos: any) => pos.position);
-          break;
-        case 'bye_weeks':
-          player.bye_weeks = Array.isArray(item[key]) ? item[key] : [item[key]];
-          break;
-        case 'player_notes_last_timestamp':
-          player.player_notes_last_timestamp = new Date(parseInt(item[key]) * 1000);
-          break;
-        case 'headshot':
-          player.headshot_url = item[key].url;
-          break;
-        case 'is_undroppable':
-          player.is_undroppable = item[key] === '1' || item[key] === true;
-          break;
-        case 'player_stats':
-          player.player_stats = item[key];
-          break;
-        case 'player_advanced_stats':
-          player.player_advanced_stats = item[key];
-          break;
-        case 'player_points':
-          player.player_points = item[key];
-          break;
-        case 'draft_analysis':
-          player.draft_analysis = {
-            average_pick: parseFloat(item[key].average_pick),
-            average_round: parseFloat(item[key].average_round),
-            average_cost: parseFloat(item[key].average_cost),
-            percent_drafted: parseFloat(item[key].percent_drafted)
-          } || null;
-          break;
-        case 'rank':
-        case 'o_rank':
-        case 'psr_rank':
-          player[key] = parseInt(item[key]);
-          break;
+      if (key in playerMap) {
+        playerMap[key](item[key]);
       }
     }
   });
@@ -392,49 +408,35 @@ export async function parsePlayerData(playerData: any[]): Promise<Player> {
   return player;
 }
 
-export async function fetchAllPlayers(leagueKey: string): Promise<Player[]> {
-  let allPlayers: Player[] = [];
-  let start = 0;
-  const count = 25; // Yahoo typically returns 25 players per page
-  let hasMorePlayers = true;
-
-  while (hasMorePlayers) {
-    console.log(`Fetching players starting from index ${start}`);
-    const playersData = await requestYahoo(`league/${leagueKey}/players;start=${start};count=${count};sort=AR`);
-    const players = playersData.fantasy_content.league[1].players;
-    
-    if (!players || players.count === 0) {
-      hasMorePlayers = false;
-      break;
-    }
-
-    for (const key in players) {
-      if (key !== 'count') {
-        const playerData = players[key].player[0];
-        try {
-          const player = await parsePlayerData(playerData);
-          allPlayers.push(player);
-        } catch (error) {
-          console.error(`Error parsing player data:`, error);
-          console.log('Problematic player data:', JSON.stringify(playerData, null, 2));
-        }
+export async function fetchAllPlayers(leagueKey: string, start: number = 0, count: number = 25): Promise<{ players: PlayerInsert[], nextStart: number | null }> {
+  console.log(`Fetching players starting from index ${start} and requesting ${count} players`);
+  const playersData = await requestYahoo(`league/${leagueKey}/players;start=${start};count=${count};sort=AR`);
+  const players = playersData.fantasy_content.league[1].players;
+  
+  if (!players || players.count === 0) {
+    return { players: [], nextStart: null };
+  }
+  const parsedPlayers: PlayerInsert[] = [];
+  for (const key in players) {
+    if (key !== 'count') {
+      const playerData = players[key].player[0];
+      try {
+        const player = await parsePlayerData(playerData);
+        parsedPlayers.push(player);
+      } catch (error) {
+        console.error(`Error parsing player data:`, error);
+        console.log('Problematic player data:', JSON.stringify(playerData, null, 2));
       }
-    }
-
-    console.log(`Fetched ${allPlayers.length} players so far`);
-    start += count;
-
-    // If we fetched less than 'count' players, we've reached the end
-    if (players.count < count) {
-      hasMorePlayers = false;
     }
   }
 
-  console.log(`Total players fetched: ${allPlayers.length}`);
-  return allPlayers;
+  
+  // If we fetched less than the requested count, we've reached the end
+  const nextStart = parsedPlayers.length < count ? null : start + count;
+  return { players: parsedPlayers, nextStart };
 }
 
-export async function fetchPlayerDetails(leagueKey: string, playerKey: string): Promise<Player> {
+export async function fetchPlayerDetails(leagueKey: string, playerKey: string): Promise<PlayerInsert> {
   const path = `league/${leagueKey}/players;player_keys=${playerKey}/stats`;
   const data = await requestYahoo(path);
   
@@ -453,16 +455,13 @@ export async function fetchPlayerDetails(leagueKey: string, playerKey: string): 
           player.injury_note = item[key];
           break;
         case 'percent_started':
-          player.percent_started = item[key];
+          player.percent_started = parseFloat(item[key]);
           break;
         case 'percent_owned':
-          player.percent_owned = item[key];
+          player.percent_owned = parseFloat(item[key]);
           break;
         case 'has_player_notes':
-          player.has_player_notes = item[key];
-          break;
-        case 'player_notes_last_timestamp':
-          player.player_notes_last_timestamp = item[key];
+          player.has_player_notes = item[key] === '1';
           break;
       }
     }

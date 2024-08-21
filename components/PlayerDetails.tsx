@@ -24,39 +24,46 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
   const formatByeWeeks = (byeWeeks: any): string => {
     if (!byeWeeks || byeWeeks.length === 0) return 'N/A';
 
-    try {
-      // If it's an array with a single string element, parse that string
-      if (Array.isArray(byeWeeks) && byeWeeks.length === 1 && typeof byeWeeks[0] === 'string') {
-        const parsedWeek = JSON.parse(byeWeeks[0]);
-        return parsedWeek.week || 'N/A';
-      }
-
-      // If it's already an array of objects
-      if (Array.isArray(byeWeeks) && typeof byeWeeks[0] === 'object') {
-        return byeWeeks.map(bw => bw.week).join(', ');
-      }
-
-      // If it's a string, try to parse it
-      if (typeof byeWeeks === 'string') {
-        const parsedWeeks = JSON.parse(byeWeeks);
-        if (Array.isArray(parsedWeeks)) {
-          return parsedWeeks.map(bw => bw.week).join(', ');
-        }
-        return parsedWeeks.week || 'N/A';
-      }
-
-      // If it's an object, return the 'week' property
-      if (typeof byeWeeks === 'object' && !Array.isArray(byeWeeks)) {
-        return byeWeeks.week || 'N/A';
-      }
-
-      // Fallback: convert to string
-      return String(byeWeeks);
-    } catch (error) {
-      console.error('Error parsing bye_weeks:', error);
-      return 'N/A';
-    }
+    return byeWeeks.join(', ');
   };
+
+  const formatStatus = (statusAbbr: string | null): string => {
+    if (!statusAbbr) return "Active";
+    switch (statusAbbr) {
+      case "D":
+        return "Doubtful";
+      case "IR":
+        return "Injured Reserve"
+      case "NA":
+        return "Inactive"
+      case "NFI-A":
+        return "Non Football Injury"
+      case "PUP-P":
+        return "Physically Unable to Perform"
+      case "PUP-R":
+        return "Physically Unable to Perform"
+      case "Q":
+        return "Questionable"
+      case "SUSP":
+        return "Suspended"
+      default:
+        return "Active"
+    }
+  }
+
+  const getSeverityColor = (status: string | null): string => {
+    if (!status) return "bg-green-400";
+    switch (status) {
+      case "":
+        return "bg-green-400 hover:bg-green-400";
+      case "Q":
+        return "bg-yellow-400 hover:bg-yellow-400"
+      case "D":
+        return "bg-yellow-400 hover:bg-yellow-400"
+      default:
+        return "bg-red-400 hover: bg-red-400"
+    }
+  }
 
   return (
     <Card className="h-full overflow-auto">
@@ -84,7 +91,7 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
           <ul className="space-y-1">
             <li><strong>Uniform Number:</strong> {player.uniform_number || 'N/A'}</li>
             <li><strong>Bye Week:</strong> {formatByeWeeks(player.bye_weeks)}</li>
-            <li><strong>Status:</strong> {player.status || 'Active'}</li>
+            <li><strong>Status:</strong> <Badge className={`${getSeverityColor(player.status)}`}>{formatStatus(player.status)}</Badge></li>
             <li><strong>ADP:</strong> {player.adp_formatted}</li>
           </ul>
         </div>

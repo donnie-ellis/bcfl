@@ -1,11 +1,13 @@
-import React, { memo } from 'react';
+// ./components/DraftSquare.tsx
+
+import React, { memo, useMemo } from 'react';
 import { PickWithPlayerAndTeam } from '@/lib/types/pick.types';
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { parseTeamLogos, TeamLogo } from '@/lib/types/team.types';
+import { parseTeamLogos, TeamLogo, sizedTitle } from '@/lib/types/team.types';
 
 interface DraftSquareProps {
   pick: PickWithPlayerAndTeam;
@@ -15,8 +17,8 @@ interface DraftSquareProps {
 }
 
 const DraftSquare: React.FC<DraftSquareProps> = memo(({ pick, isCurrentPick, onSquareHover, isLoading }) => {
-  const teamLogos: TeamLogo[] = parseTeamLogos(pick.team?.team_logos || []);
-  const teamLogoUrl = teamLogos.length > 0 ? teamLogos[0].url : '';
+  const teamLogos: TeamLogo[] = useMemo(() => parseTeamLogos(pick.team?.team_logos || []), [pick.team?.team_logos]);
+  const teamLogoUrl = useMemo(() => teamLogos.length > 0 ? teamLogos[0].url : '', [teamLogos]);
 
   const Square = () => (
     <Card className={`w-full h-full ${isCurrentPick ? 'border-2 border-blue-500' : ''}`}>
@@ -31,7 +33,7 @@ const DraftSquare: React.FC<DraftSquareProps> = memo(({ pick, isCurrentPick, onS
           <>
             <div className="text-xs">
               <p className="font-bold">Pick {pick.pick_number}</p>
-              <p className="truncate">{pick.team?.name}</p>
+              <p className="truncate">{sizedTitle(pick.team?.name || '')}</p>
             </div>
             <div className="flex items-center justify-center flex-grow">
               <Avatar className="h-12 w-12">
@@ -64,7 +66,7 @@ const DraftSquare: React.FC<DraftSquareProps> = memo(({ pick, isCurrentPick, onS
                   </Tooltip>
                 </TooltipProvider>
               ) : (
-                <p className="text-gray-500"></p>
+                <p className="text-gray-500">-</p>
               )}
               <p className="text-gray-400">
                 Overall: {pick.total_pick_number}

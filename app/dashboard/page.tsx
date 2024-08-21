@@ -129,11 +129,12 @@ const DashboardPage: React.FC = () => {
       const response = await fetch(`/api/db/draft/${draftId}`, {
         method: 'DELETE',
       });
-
+  
       if (!response.ok) {
-        throw new Error('Failed to delete draft');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete draft');
       }
-
+  
       setDrafts(drafts.filter(draft => draft.id.toString() !== draftId));
       toast.success("Draft deleted successfully", { id: toastId });
     } catch (error) {
@@ -141,7 +142,7 @@ const DashboardPage: React.FC = () => {
       toast.error("Failed to delete draft. Please try again.", { id: toastId });
     }
   };
-
+  
   const handleDraftClick = (draftId: string) => {
     router.push(`/draft/${draftId}`);
   };
