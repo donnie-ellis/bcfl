@@ -392,6 +392,7 @@ const DraftBoardPage: React.FC = () => {
                   draftId={draftId}
                   onPlayerSelect={setSelectedPlayer}
                   draft={memoizedDraft}
+                  selectedPlayer={null}
                 />
             </div>
             {selectedPlayer && (
