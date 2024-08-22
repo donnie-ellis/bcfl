@@ -4,11 +4,10 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
-import { League, Draft, LeagueSettings, PlayerWithADP } from '@/lib/types/';
+import { League, Draft, LeagueSettings, PlayerWithADP, Json } from '@/lib/types/';
 import { Pick, Player, Team } from '@/lib/types/';
 import { PickWithPlayerAndTeam } from '@/lib/types/pick.types';
 import RoundSquares from '@/components/RoundSquares';
-import CurrentPickDetails from '@/components/CurrentPickDetails';
 import { toast } from "sonner";
 import DraftedPlayers from '@/components/DraftedPlayers';
 import DraftHeader from '@/components/DraftHeader';
@@ -20,6 +19,10 @@ import useSWR from 'swr';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import TeamNeeds from '@/components/TeamNeeds';
+import { parseTeamLogos, possesiveTitle } from '@/lib/types/team.types';
 
 type MemoizedDraft = Omit<Draft, 'picks'> & { picks: PickWithPlayerAndTeam[] };
 
@@ -44,8 +47,12 @@ const KioskPage: React.FC = () => {
   const { data: players } = useSWR<Player[]>(`/api/db/league/${draftData?.league_id}/players`, fetcher);
   const [currentPick, setCurrentPick] = useState<PickWithPlayerAndTeam | null>(null);
   const [picks, setPicks] = useState<PickWithPlayerAndTeam[]>([]);
-
   const isLoading = !draftData || !leagueData || !leagueSettings || !teams || !players || !currentPick;
+  
+  const getTeamLogoUrl = (teamLogos: Json): string => {
+    const parsedLogos = parseTeamLogos(teamLogos);
+    return parsedLogos && parsedLogos.length > 0 ? parsedLogos[0].url : '';
+  };
   
   const updatePicksAndDraft = useCallback(() => {
     if (!draftData || !picksData || !players || !teams) return;
@@ -176,6 +183,20 @@ const KioskPage: React.FC = () => {
     }
   }, [memoizedDraft, draftId, router]);
 
+  const currentTeam = useMemo(() => {
+    if (currentPick && teams) {
+      return teams.find(team => team.team_key === currentPick.team_key);
+    }
+    return undefined;
+  }, [currentPick, teams]);
+
+  const remainingPicks = useMemo(() => {
+    if (currentTeam && memoizedDraft) {
+      return memoizedDraft.picks.filter(pick => pick.team_key === currentTeam.team_key && !pick.is_picked).length;
+    }
+    return 0;
+  }, [currentTeam, memoizedDraft]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -233,39 +254,71 @@ const KioskPage: React.FC = () => {
           )}
         </div>
         <div className="w-1/2 p-4 flex flex-col">
-          {currentPick && leagueSettings && teams && memoizedDraft && (
-            <>
-              <CurrentPickDetails
-                currentTeam={teams.find(team => team.team_key === currentPick.team_key)}
-                currentPick={currentPick}
-                leagueKey={leagueData?.league_key || ''}
-                draftId={draftId}
-                leagueSettings={leagueSettings}
-                draft={memoizedDraft}
-              />
-              <div className="mt-4">
-                <PlayerDetails player={selectedPlayer} />
-              </div>
-              <div className="mt-4">
-                <SubmitPickButton
-                  isCurrentUserPick={true}
-                  selectedPlayer={selectedPlayer}
-                  currentPick={currentPick}
-                  onSubmitPick={handleSubmitPick}
-                  isPickSubmitting={isPickSubmitting}
-                />
-              </div>
-            </>
+          {currentPick && leagueSettings && teams && memoizedDraft && currentTeam && (
+            <Card className="h-full flex flex-col">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-4">
+                  <Avatar className="h-16 w-16">
+                    <AvatarImage src={getTeamLogoUrl(currentTeam.team_logos)} alt={currentTeam.name} />
+                    <AvatarFallback>{currentTeam.name[0]}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-grow">
+                    <div className="flex justify-between items-center">
+                      <h2 className='text-2xl font-bold'>{possesiveTitle(currentTeam.name)} draft summary</h2>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold">Remaining Picks</p>
+                        <p className="text-2xl font-bold">{remainingPicks}</p>
+                      </div>
+                    </div>
+                    <div className='flex space-x-2 text-sm'>
+                      {currentTeam.managers?.map((manager, index) => (
+                        <span key={index} className="flex items-center space-x-2">
+                          <span>{manager.nickname ?? 'Unknown'}</span>
+                          <Avatar className="h-4 w-4">
+                            <AvatarImage src={manager.image_url as string} alt={manager.nickname ?? 'Unknown'} />
+                            <AvatarFallback>{(manager.nickname ?? 'U')[0]}</AvatarFallback>
+                          </Avatar>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex-grow overflow-hidden">
+                <ScrollArea className="h-full">
+                  <div className="space-y-4">
+                    <TeamNeeds
+                      draft={memoizedDraft}
+                      teamKey={currentTeam.team_key}
+                      leagueSettings={leagueSettings}
+                      teams={teams}
+                    />
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
           )}
+          <div className="mt-4">
+            <PlayerDetails player={selectedPlayer} />
+          </div>
+          <div className="mt-4">
+            <SubmitPickButton
+              isCurrentUserPick={true}
+              selectedPlayer={selectedPlayer}
+              currentPick={currentPick}
+              onSubmitPick={handleSubmitPick}
+              isPickSubmitting={isPickSubmitting}
+            />
+          </div>
         </div>
         <div className="w-1/4 pr-2">
-              {memoizedDraft && (
-                <PlayersList
-                  draftId={draftId}
-                  onPlayerSelect={setSelectedPlayer}
-                  draft={memoizedDraft}
-                />
-              )}
+          {memoizedDraft && (
+            <PlayersList
+              draftId={draftId}
+              onPlayerSelect={setSelectedPlayer}
+              draft={memoizedDraft}
+            />
+          )}
         </div>
       </div>
     </div>
