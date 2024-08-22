@@ -37,7 +37,7 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
   }
 
   return (
-    <Card className="h-full">
+    <Card className="">
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center gap-4">
           <Avatar className="h-20 w-20 flex-shrink-0">
