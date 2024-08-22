@@ -1,6 +1,6 @@
 // ./components/PlayerCard.tsx
 import React from 'react';
-import { PlayerWithADP, Player } from '@/lib/types/player.types';
+import { PlayerWithADP, Player, formatStatus } from '@/lib/types/player.types';
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,16 @@ interface PlayerCardProps {
   isDrafted: boolean | undefined;
   onClick: () => void;
   fadeDrafted?: boolean;
+}
+
+const getSeverityColor = (status: string | null): string => {
+  if (!status) return "bg-green-400";
+  switch (status) {
+    case "": return "bg-green-400 hover:bg-green-400";
+    case "Q":
+    case "D": return "bg-yellow-400 hover:bg-yellow-400";
+    default: return "bg-red-400 hover:bg-red-400";
+  }
 }
 
 const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fadeDrafted = false }) => {
@@ -59,7 +69,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
           <div className="space-y-2">
             <p><strong>Position:</strong> {player.display_position}</p>
             <p><strong>Team:</strong> {player.editorial_team_full_name}</p>
-            {player.bye_weeks && <p><strong>Bye Week:</strong> {player.bye_weeks}</p>}
+            {player.bye_weeks && <p><strong>Bye Week{player.bye_weeks.length > 1 && 's'}:</strong> {player.bye_weeks.join(', ')}</p>}
+            <p><strong>Status:</strong> <Badge className={getSeverityColor(player.status)}>{formatStatus(player.status)}</Badge></p>
           </div>
         </TooltipContent>
       </Tooltip>
