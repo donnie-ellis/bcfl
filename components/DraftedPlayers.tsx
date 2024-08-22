@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Pick, possesiveTitle } from '@/lib/types/';
 import PlayerCard from './PlayerCard';
+import { Separator } from '@/components/ui/separator';
 
 interface DraftedPlayersProps {
   picks: Pick[] | undefined;
@@ -37,23 +38,24 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = React.memo(({
   );
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader>
-        <CardTitle>{teamName ? possesiveTitle(teamName) + ' team' : 'Team'}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex-grow overflow-hidden">
+    <>
+      <h2 className='text-2xl font-bold'>
+        {teamName ? possesiveTitle(teamName) + ' team' : 'Team'}
+      </h2>
+      <Separator className='mt-2' />
         <ScrollArea className="h-full">
-          {teamPicks.map((pick) => (
-            <div key={pick.id} className="mb-4">
-              <div className="font-semibold text-sm text-gray-500 mb-1">
-                Round {pick.round_number}, Pick {pick.pick_number} (Overall: {pick.total_pick_number})
+          <div className='pr-3'>
+            {teamPicks.map((pick) => (
+              <div key={pick.id} className="mb-4">
+                <div className="font-semibold text-sm text-gray-500 mb-1">
+                  Round {pick.round_number}, Pick {pick.pick_number} (Overall: {pick.total_pick_number})
+                </div>
+                {pick.player ? <PlayerCard player={pick.player} isDrafted={false} onClick={() => {}} /> : <PlaceholderCard />}
               </div>
-              {pick.player ? <PlayerCard player={pick.player} isDrafted={false} onClick={() => {}} /> : <PlaceholderCard />}
-            </div>
-          ))}
-        </ScrollArea>
-      </CardContent>
-    </Card>
+            ))}
+        </div>
+       </ScrollArea>
+    </>
   );
 });
 
