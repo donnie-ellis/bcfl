@@ -2,7 +2,6 @@
 'use client'
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlayerWithADP, Draft, Pick } from '@/lib/types/';
 import PlayerFilters from './PlayerFilters';
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -17,6 +16,7 @@ interface PlayersListProps {
   draftId: string;
   onPlayerSelect: (player: PlayerWithADP) => void;
   draft: Draft;
+  selectedPlayer: PlayerWithADP | null;
 }
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
@@ -142,8 +142,9 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
                   key={player.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
+                  exit={{ opacity: 0, y: 20 }}
                   transition={{ duration: 0.2 }}
+                  whileTap={{ scale: 0.85}}
                 >
                   <PlayerCard
                     player={player}

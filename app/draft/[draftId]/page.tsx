@@ -20,6 +20,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Loader2, Menu } from "lucide-react";
+import { motion } from 'framer-motion';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -114,6 +115,15 @@ const DraftPage: React.FC = () => {
     setIsSheetOpen(true);
   }, []);
 
+  const handlePlayerSelectMd = async (player: PlayerWithADP) => {
+    if (player && player === selectedPlayer) {
+      setSelectedPlayer(null);
+    } else {
+      setSelectedPlayer(player);
+    }
+  }
+
+
   const isCurrentUserPick = currentPick?.team_key === team?.team_key;
 
   const handleSubmitPick = async () => {
@@ -176,14 +186,18 @@ const DraftPage: React.FC = () => {
       <div className="flex-grow overflow-hidden flex flex-col md:flex-row">
         {/* Desktop View */}
         <div className="hidden md:flex w-full h-[calc(100vh-64px)]">
+
+          {/* Left Column */}
           <div className="w-1/4 overflow-hidden flex flex-col">
             <PlayersList
               draftId={draftId}
-              onPlayerSelect={setSelectedPlayer}
+              onPlayerSelect={handlePlayerSelectMd}
               draft={memoizedDraft as Draft}
+              selectedPlayer={selectedPlayer}
             />
           </div>
           
+          {/* Middle Column */}
           <div className="w-1/2 h-full overflow-hidden flex flex-col">
             <ScrollArea className="flex-grow">
               <div className="p-4 space-y-4">
@@ -193,30 +207,38 @@ const DraftPage: React.FC = () => {
                   teams={teams}
                   team={team}
                 />
-                <SubmitPickButton
-                  isCurrentUserPick={isCurrentUserPick}
-                  selectedPlayer={selectedPlayer}
-                  currentPick={currentPick}
-                  onSubmitPick={handleSubmitPick}
-                  isPickSubmitting={isPickSubmitting}
-                />
-                <PlayerDetails 
-                  player={selectedPlayer} 
-                />
+                {selectedPlayer && (
+                  <motion.div
+                    key="playerSelected"
+                    initial={{ opacity: 0, y: 100 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 1, y: 100 }}
+                    transition={{ duration: 0.2 }}
+                    className='space-y-4'
+                  >
+                  <SubmitPickButton
+                    isCurrentUserPick={isCurrentUserPick}
+                    selectedPlayer={selectedPlayer}
+                    currentPick={currentPick}
+                    onSubmitPick={handleSubmitPick}
+                    isPickSubmitting={isPickSubmitting}
+                  />
+                  <PlayerDetails 
+                    player={selectedPlayer} 
+                  />
+                </motion.div>
+              )}
               </div>
             </ScrollArea>
           </div>
 
-          <div className="w-1/4 h-full overflow-hidden flex flex-col">
-            <ScrollArea className="flex-grow">
-              <div className="p-4">
-                <DraftedPlayers
-                  picks={memoizedDraft?.picks}
-                  teamKey={team.team_key}
-                  teamName={team.name}
-                />
-              </div>
-            </ScrollArea>
+          {/* Right Column */}
+          <div className="w-1/4 overflow-hidden flex flex-col p-4">
+              <DraftedPlayers
+                picks={memoizedDraft?.picks}
+                teamKey={team.team_key}
+                teamName={team.name}
+              />
           </div>
         </div>
 
@@ -233,6 +255,7 @@ const DraftPage: React.FC = () => {
                 draftId={draftId}
                 onPlayerSelect={handlePlayerSelect}
                 draft={memoizedDraft as Draft}
+                selectedPlayer={selectedPlayer}
               />
             </TabsContent>
             <TabsContent value="draft" className="flex-grow overflow-hidden">

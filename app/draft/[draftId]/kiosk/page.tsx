@@ -23,6 +23,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import TeamNeeds from '@/components/TeamNeeds';
 import { parseTeamLogos, possesiveTitle } from '@/lib/types/team.types';
+import { AnimatePresence, motion } from 'framer-motion';
 
 type MemoizedDraft = Omit<Draft, 'picks'> & { picks: PickWithPlayerAndTeam[] };
 
@@ -48,26 +49,26 @@ const KioskPage: React.FC = () => {
   const [currentPick, setCurrentPick] = useState<PickWithPlayerAndTeam | null>(null);
   const [picks, setPicks] = useState<PickWithPlayerAndTeam[]>([]);
   const isLoading = !draftData || !leagueData || !leagueSettings || !teams || !players || !currentPick;
-  
+
   const getTeamLogoUrl = (teamLogos: Json): string => {
     const parsedLogos = parseTeamLogos(teamLogos);
     return parsedLogos && parsedLogos.length > 0 ? parsedLogos[0].url : '';
   };
-  
+
   const updatePicksAndDraft = useCallback(() => {
     if (!draftData || !picksData || !players || !teams) return;
-  
+
     const updatedPicks: PickWithPlayerAndTeam[] = picksData.map(pick => ({
       ...pick,
       player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
       team: teams.find(t => t.team_key === pick.team_key) ?? {} as Team
     }));
-  
+
     setPicks(updatedPicks);
-  
+
     const updatedCurrentPick = updatedPicks.find(p => !p.is_picked) || null;
     setCurrentPick(updatedCurrentPick);
-  
+
     if (updatedCurrentPick && draftData.current_pick !== updatedCurrentPick.total_pick_number) {
       mutateDraft({ ...draftData, current_pick: updatedCurrentPick.total_pick_number }, false);
     }
@@ -77,7 +78,7 @@ const KioskPage: React.FC = () => {
     if (updatedPick.is_picked && updatedPick.player_id) {
       const player = players?.find(p => p.id === updatedPick.player_id);
       const team = teams?.find(t => t.team_key === updatedPick.team_key);
-      
+
       if (player && team) {
         toast.success(
           `${team.name} drafted ${player.full_name}`,
@@ -95,11 +96,11 @@ const KioskPage: React.FC = () => {
 
     const picksSubscription = supabase
       .channel(`picks_${draftId}`)
-      .on('postgres_changes', { 
-        event: 'UPDATE', 
-        schema: 'public', 
-        table: 'picks', 
-        filter: `draft_id=eq.${draftId}` 
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'picks',
+        filter: `draft_id=eq.${draftId}`
       }, (payload) => {
         const updatedPick = payload.new as Pick;
         if (updatedPick.is_picked) {
@@ -117,6 +118,14 @@ const KioskPage: React.FC = () => {
   useEffect(() => {
     updatePicksAndDraft();
   }, [updatePicksAndDraft, picksData]);
+
+  const handlePlayerSelect = async (player: PlayerWithADP) => {
+    if (player && player === selectedPlayer) {
+      setSelectedPlayer(null);
+    } else {
+      setSelectedPlayer(player);
+    }
+  }
 
   const handleSubmitPick = async () => {
     setIsPickSubmitting(true);
@@ -140,7 +149,7 @@ const KioskPage: React.FC = () => {
       if (!response.ok) {
         throw new Error('Failed to submit pick');
       }
-      
+
       // Update SWR cache
       mutatePicks();
       setSelectedPlayer(null);
@@ -151,6 +160,7 @@ const KioskPage: React.FC = () => {
       setIsPickSubmitting(false);
     }
   };
+
 
   const memoizedDraft = useMemo<MemoizedDraft | undefined>(() => {
     if (draftData && picks.length > 0) {
@@ -204,7 +214,7 @@ const KioskPage: React.FC = () => {
       </div>
     );
   }
-  
+
   if (memoizedDraft?.status === 'completed') {
     return (
       <Alert>
@@ -243,19 +253,22 @@ const KioskPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Left Column */}
       <div className="flex-grow overflow-hidden flex">
         <div className="w-1/4 p-4">
           {memoizedDraft && currentPick && (
             <DraftedPlayers
               picks={memoizedDraft.picks}
               teamKey={currentPick.team_key}
-              teamName={teams ? teams.find(team => team.team_key === currentPick.team_key)?.name: ''}
+              teamName={teams ? teams.find(team => team.team_key === currentPick.team_key)?.name : ''}
             />
           )}
         </div>
-        <div className="w-1/2 p-4 flex flex-col">
+
+        {/* Center Column */}
+        <div className="w-1/2 p-4 flex flex-col space-y-4">
           {currentPick && leagueSettings && teams && memoizedDraft && currentTeam && (
-            <Card className="h-full flex flex-col">
+            <Card className="flex flex-col">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-4">
                   <Avatar className="h-16 w-16">
@@ -284,39 +297,47 @@ const KioskPage: React.FC = () => {
                   </div>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex-grow overflow-hidden">
-                <ScrollArea className="h-full">
-                  <div className="space-y-4">
-                    <TeamNeeds
-                      draft={memoizedDraft}
-                      teamKey={currentTeam.team_key}
-                      leagueSettings={leagueSettings}
-                      teams={teams}
-                    />
-                  </div>
-                </ScrollArea>
+              <CardContent className="flex-grow overflow-hidden space-y-4">
+                <TeamNeeds
+                  draft={memoizedDraft}
+                  teamKey={currentTeam.team_key}
+                  leagueSettings={leagueSettings}
+                  teams={teams}
+                />
               </CardContent>
             </Card>
           )}
-          <div className="mt-4">
-            <PlayerDetails player={selectedPlayer} />
-          </div>
-          <div className="mt-4">
-            <SubmitPickButton
-              isCurrentUserPick={true}
-              selectedPlayer={selectedPlayer}
-              currentPick={currentPick}
-              onSubmitPick={handleSubmitPick}
-              isPickSubmitting={isPickSubmitting}
-            />
-          </div>
+          {selectedPlayer && (
+            <AnimatePresence>
+              <motion.div
+                key="playerSelected"
+                initial={{ opacity: 0, y: 100 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 100 }}
+                transition={{ duration: 0.2 }}
+                className='space-y-4'
+              >
+                <PlayerDetails player={selectedPlayer} />
+                <SubmitPickButton
+                  isCurrentUserPick={true}
+                  selectedPlayer={selectedPlayer}
+                  currentPick={currentPick}
+                  onSubmitPick={handleSubmitPick}
+                  isPickSubmitting={isPickSubmitting}
+                />
+              </motion.div>
+            </AnimatePresence>
+          )}
         </div>
+
+        {/* Right Column */}
         <div className="w-1/4 pr-2">
           {memoizedDraft && (
             <PlayersList
               draftId={draftId}
-              onPlayerSelect={setSelectedPlayer}
+              onPlayerSelect={handlePlayerSelect}
               draft={memoizedDraft}
+              selectedPlayer={selectedPlayer}
             />
           )}
         </div>
