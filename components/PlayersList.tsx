@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR from 'swr';
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
+import { Separator } from './ui/separator';
 
 interface PlayersListProps {
   draftId: string;
@@ -107,9 +108,7 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
   return (
     <div className="flex flex-col h-full">
       <div className="flex-shrink-0">
-        <CardHeader className="py-3">
-          <CardTitle>Players</CardTitle>
-        </CardHeader>
+      <h2 className='text-2xl ml-4 py-2 font-bold'>Players</h2>
         <div className="px-4 py-2">
           <PlayerFilters
             searchTerm={searchTerm}
@@ -122,8 +121,9 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
           />
         </div>
       </div>
+      <Separator className='ml-4' />
       <ScrollArea className="flex-grow">
-        <div className="p-4">
+        <div className="p-4 pr-3">
           <AnimatePresence>
             {!players.length ? (
               Array.from({ length: 10 }).map((_, index) => (
