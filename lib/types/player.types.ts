@@ -26,6 +26,10 @@ export type PlayerInsert = Database['public']['Tables']['players']['Insert'];
 // PlayerWithADP type from Supabase view
 export type PlayerWithADP = Database['public']['Views']['players_with_adp']['Row'];
 
+export interface EnhancedPlayerWithADP extends PlayerWithADP {
+  is_drafted: boolean;
+}
+
 // Custom types for specific use cases
 export interface PlayerSummary {
   id: number;
