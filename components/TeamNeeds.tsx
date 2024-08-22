@@ -1,202 +1,147 @@
 // ./components/TeamNeeds.tsx
-import React, { useState, useEffect } from 'react';
-import { useSupabaseClient } from '@/lib/useSupabaseClient';
-import { LeagueSettings } from '@/lib/types/league-settings.types';
-import { Pick, Player } from '@/lib/types/';
-import { Badge } from "@/components/ui/badge";
-import { Json } from '@/lib/types/database.types';
-import { 
-  Tooltip, 
-  TooltipContent, 
-  TooltipProvider, 
-  TooltipTrigger 
-} from "@/components/ui/tooltip";
+import React, { useMemo } from 'react';
+import { LeagueSettings, Draft, Pick, Player, Team, RosterPosition, parseRosterPositions } from '@/lib/types/';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface TeamNeedsProps {
   leagueSettings: LeagueSettings;
-  draftId: string;
+  draft: Draft;
   teamKey: string;
+  teams: Team[];
 }
 
 interface PositionNeed {
   position: string;
   needed: number;
   filled: number;
-  players: string[];
+  players: { name: string; position: string }[];
+  isFlex: boolean;
 }
 
-interface RosterPosition {
-  position: string;
-  count: number;
-}
+const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draft, teamKey, teams }) => {
+  const positionNeeds = useMemo(() => {
+    const flexPositions = ['W/R/T', 'W/R', 'Q/W/R/T'];
+    const rosterPositions = parseRosterPositions(leagueSettings.roster_positions);
+    
+    const needs: PositionNeed[] = rosterPositions
+    .filter((pos: RosterPosition) => !['BN', 'IR'].includes(pos.roster_position.position))
+    .map((pos: RosterPosition) => ({
+      position: pos.roster_position.position,
+      needed: pos.roster_position.count,
+      filled: 0,
+      players: [],
+      isFlex: flexPositions.includes(pos.roster_position.position)
+    }));
+    
+    const teamPicks = draft.picks.filter(pick => pick.team_key === teamKey && pick.is_picked && pick.player_id !== null);
 
-const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draftId, teamKey }) => {
-  const [positionNeeds, setPositionNeeds] = useState<PositionNeed[]>([]);
-  const supabase = useSupabaseClient();
+    teamPicks.forEach((pick: Pick) => { 
+      const player = pick.player as Player | undefined;
+      if (!player) return;
+      const eligiblePositions = player.eligible_positions || [];
+      let positionFilled = false;
 
-  const parseRosterPositions = (rosterPositions: Json): RosterPosition[] => {
-    if (Array.isArray(rosterPositions)) {
-      return rosterPositions.reduce((acc: RosterPosition[], item) => {
-        if (
-          typeof item === 'object' &&
-          item !== null &&
-          'roster_position' in item &&
-          typeof item.roster_position === 'object' &&
-          item.roster_position !== null &&
-          'position' in item.roster_position &&
-          'count' in item.roster_position &&
-          typeof item.roster_position.position === 'string' &&
-          typeof item.roster_position.count === 'number'
-        ) {
-          acc.push({
-            position: item.roster_position.position,
-            count: item.roster_position.count
-          });
+      // First, try to fill regular positions
+      for (const position of eligiblePositions) {
+        const positionNeed = needs.find(need => !need.isFlex && need.position === position);
+        if (positionNeed && positionNeed.filled < positionNeed.needed) {
+          positionNeed.filled++;
+          positionNeed.players.push({ name: player.full_name, position: player.display_position as string });
+          positionFilled = true;
+          break;
         }
-        return acc;
-      }, []);
-    }
-    return [];
-  };
-
-  useEffect(() => {
-    if (!supabase || !teamKey) return;
-
-    const fetchTeamPicks = async () => {
-      const { data: picks, error } = await supabase
-        .from('picks')
-        .select(`
-          *,
-          player:players(*)
-        `)
-        .eq('draft_id', draftId)
-        .eq('team_key', teamKey)
-        .eq('is_picked', true);
-
-      if (error) {
-        console.error('Error fetching team picks:', error);
-        return;
       }
 
-      updatePositionNeeds(picks as (Pick & { player: Player | null })[]);
-    };
-
-    const updatePositionNeeds = (picks: (Pick & { player: Player | null })[]) => {
-      const rosterPositions = parseRosterPositions(leagueSettings.roster_positions);
-      const needs: PositionNeed[] = rosterPositions
-        .filter(pos => !['BN', 'IR'].includes(pos.position))
-        .map(pos => ({
-          position: pos.position,
-          needed: pos.count,
-          filled: 0,
-          players: []
-        }));
-
-      const flexPositions = ['W/R/T', 'W/R'];
-      const regularPositions = needs.filter(need => !flexPositions.includes(need.position));
-      const flexNeeds = needs.filter(need => flexPositions.includes(need.position));
-
-      picks.forEach(pick => {
-        if (pick.player && pick.player.eligible_positions) {
-          const eligiblePositions = pick.player.eligible_positions;
-          let positionFilled = false;
-
-          // First, try to fill regular positions
-          for (const position of eligiblePositions) {
-            const positionNeed = regularPositions.find(need => need.position === position);
-            if (positionNeed && positionNeed.filled < positionNeed.needed) {
-              positionNeed.filled++;
-              positionNeed.players.push(pick.player.full_name);
-              positionFilled = true;
-              break;
-            }
-          }
-
-          // If no regular position was filled, try to fill flex positions
-          if (!positionFilled) {
-            for (const flexNeed of flexNeeds) {
-              if (flexNeed.position === 'W/R/T' && 
-                  (eligiblePositions.includes('WR') || eligiblePositions.includes('RB') || eligiblePositions.includes('TE'))) {
-                flexNeed.filled++;
-                flexNeed.players.push(pick.player.full_name);
-                break;
-              } else if (flexNeed.position === 'W/R' && 
-                         (eligiblePositions.includes('WR') || eligiblePositions.includes('RB'))) {
-                flexNeed.filled++;
-                flexNeed.players.push(pick.player.full_name);
-                break;
-              } else if (flexNeed.position === 'Q/W/R/T' &&
-                        (eligiblePositions.includes('QB') || eligiblePositions.includes('WR') || 
-                          eligiblePositions.includes('RB') || eligiblePositions.includes('TE'))) {
-                            flexNeed.filled++;
-                            flexNeed.players.push(pick.player.first_name);
-              }
-            }
+      // If no regular position was filled, try to fill flex positions
+      if (!positionFilled) {
+        for (const flexNeed of needs.filter(need => need.isFlex)) {
+          if (
+            (flexNeed.position === 'W/R/T' && 
+             (eligiblePositions.includes('WR') || eligiblePositions.includes('RB') || eligiblePositions.includes('TE'))) ||
+            (flexNeed.position === 'W/R' && 
+             (eligiblePositions.includes('WR') || eligiblePositions.includes('RB'))) ||
+            (flexNeed.position === 'Q/W/R/T' &&
+             (eligiblePositions.includes('QB') || eligiblePositions.includes('WR') || 
+              eligiblePositions.includes('RB') || eligiblePositions.includes('TE')))
+          ) {
+            flexNeed.filled++;
+            flexNeed.players.push({ name: player.full_name, position: player.display_position as string });
+            break;
           }
         }
-      });
+      }
+    });
 
-      setPositionNeeds([...regularPositions, ...flexNeeds]);
-    };
-
-    fetchTeamPicks();
-
-    const subscription = supabase
-      .channel('team_needs')
-      .on('postgres_changes', { 
-        event: 'UPDATE', 
-        schema: 'public', 
-        table: 'picks', 
-        filter: `draft_id=eq.${draftId} AND team_key=eq.${teamKey}` 
-      }, () => {
-        fetchTeamPicks();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(subscription);
-    };
-  }, [supabase, draftId, teamKey, leagueSettings]);
+    return needs;
+  }, [leagueSettings, draft, teamKey]);
 
   const getSeverityColor = (needed: number, filled: number) => {
     const remaining = needed - filled;
-    if (remaining <= 0) return 'bg-green-400';
-    if (remaining === 1) return 'bg-yellow-400';
-    return 'bg-red-400';
+    if (remaining <= 0) return 'bg-green-100 dark:bg-green-900';
+    if (remaining === 1) return 'bg-yellow-100 dark:bg-yellow-900';
+    return 'bg-red-100 dark:bg-red-900';
   };
 
   return (
-    <div className="flex flex-wrap gap-2 justify-center">
-      <TooltipProvider>
-        {positionNeeds.map((need) => (
-          <Tooltip key={need.position}>
-            <TooltipTrigger asChild>
-              <div className="cursor-default">
-                <Badge
-                  variant="secondary"
-                  className={`flex items-center justify-between p-2 ${getSeverityColor(need.needed, need.filled)} max-w-[100px]`}
-                >
-                  <span className="font-bold text-xs mr-2">{need.position}</span>
-                  <span className="text-xs">{need.filled}/{need.needed}</span>
-                </Badge>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="font-bold">{need.position} Players:</p>
-              {need.players.length > 0 ? (
-                <ul className="list-disc pl-4">
-                  {need.players.map((player, index) => (
-                    <li key={index}>{player}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p>No players drafted yet</p>
-              )}
-            </TooltipContent>
-          </Tooltip>
-        ))}
-      </TooltipProvider>
-    </div>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          {positionNeeds.map((need) => (
+            <TableHead key={need.position} className="text-center p-2">
+              {need.position}
+            </TableHead>
+          ))}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        <TableRow>
+          {positionNeeds.map((need) => (
+            <TableCell key={need.position} className="p-0">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button 
+                    className={`w-full h-full p-2 ${getSeverityColor(need.needed, need.filled)} hover:opacity-80 transition-opacity`}
+                  >
+                    <span className="font-bold">
+                      {need.filled}/{need.needed}
+                    </span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48">
+                  <div className="space-y-2">
+                    <h3 className="font-bold">{need.position} Players:</h3>
+                    {need.players.length > 0 ? (
+                      <ul className="list-disc pl-4 space-y-1">
+                        {need.players.map((player, index) => (
+                          <li key={index}>
+                            {player.name}
+                            {need.isFlex && ` - ${player.position}`}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>No players drafted yet</p>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </TableCell>
+          ))}
+        </TableRow>
+      </TableBody>
+    </Table>
   );
 };
 
