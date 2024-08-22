@@ -97,6 +97,13 @@ export const possesiveTitle = (name: string) => {
   };
 };
 
+export const getTeamLogoUrl = (teamLogos: Json): string => {
+  if (Array.isArray(teamLogos) && teamLogos.length > 0 && typeof teamLogos[0] === 'object' && teamLogos[0] !== null) {
+    return (teamLogos[0] as { url?: string }).url || '';
+  }
+  return '';
+};
+
 export const sizedTitle = (name: string) => {
   if (name.trim().length >= 16) {
     return name.trim().substring(0, 12) + '...'
