@@ -207,15 +207,7 @@ const KioskPage: React.FC = () => {
     return 0;
   }, [currentTeam, memoizedDraft]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (memoizedDraft?.status === 'completed') {
+  if (isLoading && memoizedDraft?.status === 'completed') {
     return (
       <Alert>
         <AlertTitle>Draft Completed</AlertTitle>
@@ -224,7 +216,11 @@ const KioskPage: React.FC = () => {
         </AlertDescription>
       </Alert>
     );
-  }
+  } else if (isLoading) {
+    <div className="flex items-center justify-center h-screen">
+      <Loader2 className="h-12 w-12 animate-spin text-primary" />
+    </div>
+  };
 
   return (
     <div className="flex flex-col h-screen">
