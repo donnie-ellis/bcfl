@@ -135,8 +135,9 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams,
 
           <TeamNeeds 
             teamKey={team?.team_key}
-            draftId={draft.id.toString()}
+            draft={draft}
             leagueSettings={leagueSettings}
+            teams={teams}
           />
         </div>
       </CardContent>

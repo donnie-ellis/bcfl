@@ -20,7 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import useSWR from 'swr';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2 } from 'lucide-react';
+import { Loader2, Trophy } from 'lucide-react';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -72,16 +72,16 @@ const DraftBoardPage: React.FC = () => {
 
   const updatePicksAndDraft = useCallback(() => {
     if (!draftData || !picksData || !players || !teams) return;
-  
+
     const updatedPicks: PickWithPlayerAndTeam[] = picksData.map(pick => ({
       ...pick,
       player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
       team: teams.find(t => t.team_key === pick.team_key) || null
     }));
-  
+
     const updatedCurrentPick = updatedPicks.find(p => !p.is_picked) || null;
     setCurrentPick(updatedCurrentPick);
-  
+
     if (updatedCurrentPick && draftData.current_pick !== updatedCurrentPick.total_pick_number) {
       mutateDraft({ ...draftData, current_pick: updatedCurrentPick.total_pick_number }, false);
     }
@@ -91,7 +91,7 @@ const DraftBoardPage: React.FC = () => {
     if (updatedPick.is_picked && updatedPick.player_id) {
       const player = players?.find(p => p.id === updatedPick.player_id);
       const team = teams?.find(t => t.team_key === updatedPick.team_key);
-      
+
       if (player && team) {
         toast.success(
           `${team.name} drafted ${player.full_name}`,
@@ -109,11 +109,11 @@ const DraftBoardPage: React.FC = () => {
 
     const picksSubscription = supabase
       .channel(`picks_${draftId}`)
-      .on('postgres_changes', { 
-        event: 'UPDATE', 
-        schema: 'public', 
-        table: 'picks', 
-        filter: `draft_id=eq.${draftId}` 
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'picks',
+        filter: `draft_id=eq.${draftId}`
       }, (payload) => {
         const updatedPick = payload.new as Pick;
         if (updatedPick.is_picked) {
@@ -131,7 +131,7 @@ const DraftBoardPage: React.FC = () => {
   useEffect(() => {
     updatePicksAndDraft();
   }, [updatePicksAndDraft, picksData]);
-  
+
   const setRoundRef = useCallback((el: HTMLDivElement | null, index: number) => {
     roundRefs.current[index] = el;
   }, []);
@@ -166,10 +166,10 @@ const DraftBoardPage: React.FC = () => {
         }
 
         toast.success(`Keeper status ${checked ? 'set' : 'unset'} successfully`);
-        
+
         // Update the local state immediately
-        mutatePicks((currentPicks) => 
-          currentPicks?.map(p => 
+        mutatePicks((currentPicks) =>
+          currentPicks?.map(p =>
             p.id === pick.id ? { ...p, is_keeper: checked } : p
           )
         );
@@ -256,12 +256,12 @@ const DraftBoardPage: React.FC = () => {
   }, [league, memoizedDraft]);
 
   if (!memoizedDraft || !league || !leagueSettings || !isCommissioner || !teams || !players) {
-      return (
-        <div className="flex items-center justify-center h-screen">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
-      );
-    }
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const rounds = Array.from({ length: memoizedDraft.rounds }, (_, i) => i + 1);
 
@@ -276,9 +276,9 @@ const DraftBoardPage: React.FC = () => {
     return (
       <div className="flex flex-col h-screen">
         {MemoizedDraftHeader}
-        <Alert className="m-4">
-          <AlertTitle>Draft Completed</AlertTitle>
-          <AlertDescription>
+        <Alert className="mx-4 my-4 max-w-[calc(100%-2rem)]">
+            <AlertTitle className="flex-grow text-center mx-2">Draft Completed</AlertTitle>
+          <AlertDescription className="text-center mt-2 flex-grow">
             The draft has been completed. You can review the final draft results below.
           </AlertDescription>
         </Alert>
@@ -388,11 +388,12 @@ const DraftBoardPage: React.FC = () => {
           </SheetHeader>
           <div className="flex-grow flex flex-col overflow-hidden mt-4">
             <div className="flex-grow overflow-hidden">
-                <PlayersList
-                  draftId={draftId}
-                  onPlayerSelect={setSelectedPlayer}
-                  draft={memoizedDraft}
-                />
+              <PlayersList
+                draftId={draftId}
+                onPlayerSelect={setSelectedPlayer}
+                draft={memoizedDraft}
+                selectedPlayer={null}
+              />
             </div>
             {selectedPlayer && (
               <div className="flex-shrink-0 mt-4">
