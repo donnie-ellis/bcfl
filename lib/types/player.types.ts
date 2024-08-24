@@ -26,6 +26,10 @@ export type PlayerInsert = Database['public']['Tables']['players']['Insert'];
 // PlayerWithADP type from Supabase view
 export type PlayerWithADP = Database['public']['Views']['players_with_adp']['Row'];
 
+export interface EnhancedPlayerWithADP extends PlayerWithADP {
+  is_drafted: boolean;
+}
+
 // Custom types for specific use cases
 export interface PlayerSummary {
   id: number;
@@ -101,6 +105,23 @@ export function parseDraftAnalysis(json: Json): DraftAnalysis | null {
   }
   return null;
 }
+
+// Function to parse the status information
+export const formatStatus = (statusAbbr: string | null): string => {
+  if (!statusAbbr) return "Active";
+  switch (statusAbbr) {
+    case "D": return "Doubtful";
+    case "IR": return "Injured Reserve";
+    case "NA": return "Inactive";
+    case "NFI-A": return "Non Football Injury";
+    case "PUP-P": return "Physically Unable to Perform";
+    case "PUP-R": return "Physically Unable to Perform";
+    case "Q": return "Questionable";
+    case "SUSP": return "Suspended";
+    default: return "Active";
+  }
+}
+
 
 // Interface for player with parsed draft analysis
 export interface PlayerWithParsedDraftAnalysis extends Omit<Player, 'draft_analysis'> {

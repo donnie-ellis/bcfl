@@ -10,6 +10,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface PlayerFiltersProps {
   searchTerm: string;
@@ -54,7 +55,16 @@ const PlayerFilters: React.FC<PlayerFiltersProps> = ({
         <span>Filters</span>
         {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
       </CollapsibleTrigger>
-      <CollapsibleContent className="px-4 py-2 space-y-2">
+      <CollapsibleContent>
+      <AnimatePresence>
+      <motion.div 
+        className="px-4 py-2 space-y-2"
+        key="filterContent"
+        initial={{ opacity: 0, y: -40 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -40 }}
+        transition={{ duration: 0.2 }}
+      >
         <div className="relative">
           <Input
             placeholder="Player Name"
@@ -74,22 +84,27 @@ const PlayerFilters: React.FC<PlayerFiltersProps> = ({
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Badge
-            variant={selectedPositions.length === 0 ? "default" : "outline"}
-            className="cursor-pointer"
-            onClick={handleAllPositions}
-          >
-            All
-          </Badge>
-          {positions.map((position) => (
+          <motion.div key="all" whileTap={{ scale: 0.85 }}>
             <Badge
-              key={position}
-              variant={selectedPositions.includes(position) ? "default" : "outline"}
+              variant={selectedPositions.length === 0 ? "default" : "outline"}
               className="cursor-pointer"
-              onClick={() => handlePositionToggle(position)}
+              onClick={handleAllPositions}
             >
-              {position}
+              All
             </Badge>
+
+          </motion.div>
+          {positions.map((position) => (
+            <motion.div key={position} whileTap={{ scale: 0.85 }}>
+              <Badge
+                key={position}
+                variant={selectedPositions.includes(position) ? "default" : "outline"}
+                className="cursor-pointer"
+                onClick={() => handlePositionToggle(position)}
+              >
+                {position}
+              </Badge>
+            </motion.div>
           ))}
         </div>
         <div className="flex items-center space-x-2">
@@ -100,6 +115,7 @@ const PlayerFilters: React.FC<PlayerFiltersProps> = ({
           />
           <label htmlFor="hide-selected">Hide selected players</label>
         </div>
+        </motion.div></AnimatePresence>
       </CollapsibleContent>
     </Collapsible>
   );

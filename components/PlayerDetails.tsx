@@ -1,6 +1,6 @@
 // ./components/PlayerDetails.tsx
 import React from 'react';
-import { PlayerWithADP } from '@/lib/types/';
+import { PlayerWithADP, formatStatus } from '@/lib/types/';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -26,21 +26,6 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
     return byeWeeks.join(', ');
   };
 
-  const formatStatus = (statusAbbr: string | null): string => {
-    if (!statusAbbr) return "Active";
-    switch (statusAbbr) {
-      case "D": return "Doubtful";
-      case "IR": return "Injured Reserve";
-      case "NA": return "Inactive";
-      case "NFI-A": return "Non Football Injury";
-      case "PUP-P": return "Physically Unable to Perform";
-      case "PUP-R": return "Physically Unable to Perform";
-      case "Q": return "Questionable";
-      case "SUSP": return "Suspended";
-      default: return "Active";
-    }
-  }
-
   const getSeverityColor = (status: string | null): string => {
     if (!status) return "bg-green-400";
     switch (status) {
@@ -52,7 +37,7 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
   }
 
   return (
-    <Card className="h-full">
+    <Card className="">
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center gap-4">
           <Avatar className="h-20 w-20 flex-shrink-0">

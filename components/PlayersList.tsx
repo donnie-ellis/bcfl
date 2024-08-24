@@ -1,77 +1,50 @@
 // ./components/PlayersList.tsx
 'use client'
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlayerWithADP, Draft, Pick } from '@/lib/types/';
+import React, { useState, useMemo, useCallback } from 'react';
+import { PlayerWithADP, Draft, Pick, EnhancedPlayerWithADP } from '@/lib/types/';
 import PlayerFilters from './PlayerFilters';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import PlayerCard from '@/components/PlayerCard';
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR from 'swr';
-import { useSupabaseClient } from '@/lib/useSupabaseClient';
+import { Separator } from './ui/separator';
 
 interface PlayersListProps {
   draftId: string;
   onPlayerSelect: (player: PlayerWithADP) => void;
   draft: Draft;
+  selectedPlayer: PlayerWithADP | null;
 }
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
-interface EnhancedPlayerWithADP extends PlayerWithADP {
-  is_drafted?: boolean;
-}
-
-const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerSelect, draft }) => {
+const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerSelect, draft, selectedPlayer }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
   const [hideSelected, setHideSelected] = useState(true);
-  const supabase = useSupabaseClient();
 
-  const { data: playersData, error: playersError, mutate: mutatePlayers } = useSWR<PlayerWithADP[]>(
+  const { data: playersData, error: playersError } = useSWR<PlayerWithADP[]>(
     `/api/db/draft/${draftId}/players`,
     fetcher,
-    { revalidateOnFocus: false, revalidateOnReconnect: false }
-  );
-
-  const { data: picksData, error: picksError, mutate: mutatePicks } = useSWR<Pick[]>(
-    `/api/db/draft/${draftId}/picks`,
-    fetcher,
-    { revalidateOnFocus: false, revalidateOnReconnect: false }
-  );
-
-  useEffect(() => {
-    if (supabase && draftId) {
-      const subscription = supabase
-        .channel('picks_updates')
-        .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'picks',
-          filter: `draft_id=eq.${draftId}`
-        }, () => {
-          mutatePicks();
-        })
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(subscription);
-      };
+    { 
+      revalidateOnFocus: false, 
+      revalidateOnReconnect: false,
+      dedupingInterval: 300000, // 5 minutes
     }
-  }, [supabase, draftId, mutatePicks]);
+  );
 
   const players: EnhancedPlayerWithADP[] = useMemo(() => {
-    if (!playersData || !picksData) return [];
+    if (!playersData || !draft.picks) return [];
 
-    const draftedPlayerIds = new Set(picksData.filter(pick => pick.player_id).map(pick => pick.player_id));
+    const draftedPlayerIds = new Set(draft.picks.filter(pick => pick.player_id).map(pick => pick.player_id));
 
     return playersData.map(player => ({
       ...player,
       is_drafted: draftedPlayerIds.has(player.id)
     }));
-  }, [playersData, picksData]);
+  }, [playersData, draft.picks]);
 
   const positions = useMemo(() => {
     const allPositions = players.flatMap(player => player.eligible_positions || []);
@@ -102,14 +75,12 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
     }
   }, [onPlayerSelect]);
 
-  if (playersError || picksError) return <div>Error loading data</div>;
+  if (playersError) return <div>Error loading data</div>;
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex-shrink-0">
-        <CardHeader className="py-3">
-          <CardTitle>Players</CardTitle>
-        </CardHeader>
+        <h2 className='text-2xl ml-4 py-2 font-bold'>Players</h2>
         <div className="px-4 py-2">
           <PlayerFilters
             searchTerm={searchTerm}
@@ -122,10 +93,11 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
           />
         </div>
       </div>
+      <Separator className='ml-4' />
       <ScrollArea className="flex-grow">
-        <div className="p-4">
+        <div className="p-4 pr-3">
           <AnimatePresence>
-            {!players.length ? (
+            {!playersData ? (
               Array.from({ length: 10 }).map((_, index) => (
                 <motion.div
                   key={`skeleton-${index}`}
@@ -142,12 +114,13 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
                   key={player.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
+                  exit={{ opacity: 0, y: 20 }}
                   transition={{ duration: 0.2 }}
+                  whileTap={{ scale: 0.85}}
                 >
                   <PlayerCard
                     player={player}
-                    isDrafted={player.is_drafted || false}
+                    isDrafted={player.is_drafted}
                     onClick={() => handlePlayerClick(player)}
                     fadeDrafted={true}
                   />
