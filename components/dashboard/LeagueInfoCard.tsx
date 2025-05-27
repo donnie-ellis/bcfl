@@ -4,9 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
-import TeamList from "@/components/TeamList";
-import { League } from "@/lib/types/league.types";
-import { Team } from "@/lib/types/team.types";
+import TeamList from "@/components/dashboard/TeamList";
+import { League, Team } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface LeagueInfoCardProps {

@@ -12,12 +12,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from 'sonner';
 
 import { League, Team, LeagueSettings, Draft } from '@/lib/types';
-import CreateDraftDialog from '@/components/CreateDraftDialog';
-import DraftCardList from '@/components/DraftCardList';
-import LeagueInfoCard from '@/components/LeagueInfoCard';
-import LeagueList from '@/components/LeagueList';
-import LeagueSettingsCard from '@/components/LeagueSettingsCard';
-import LeagueHeaderCard from '@/components/LeagueHeaderCard';
+import CreateDraftDialog from '@/components/dashboard/CreateDraftDialog';
+import DraftCardList from '@/components/dashboard/DraftCardList';
+import LeagueInfoCard from '@/components/dashboard/LeagueInfoCard';
+import LeagueList from '@/components/dashboard/LeagueList';
+import LeagueSettingsCard from '@/components/dashboard/LeagueSettingsCard';
+import LeagueHeaderCard from '@/components/dashboard/LeagueHeaderCard';
 import Profile from '@/components/Profile';
 
 const DashboardPage: React.FC = () => {
