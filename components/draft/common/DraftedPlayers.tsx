@@ -1,10 +1,10 @@
 // ./components/DraftedPlayers.tsx
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Pick, possesiveTitle } from '@/lib/types/';
-import PlayerCard from './PlayerCard';
-import { Separator } from '@/components/ui/separator';
+import PlayerCard from '@/components/draft/board/PlayerCard';
 
 interface DraftedPlayersProps {
   picks: Pick[] | undefined;

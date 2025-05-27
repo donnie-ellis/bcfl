@@ -18,7 +18,7 @@ import LeagueInfoCard from '@/components/dashboard/LeagueInfoCard';
 import LeagueList from '@/components/dashboard/LeagueList';
 import LeagueSettingsCard from '@/components/dashboard/LeagueSettingsCard';
 import LeagueHeaderCard from '@/components/dashboard/LeagueHeaderCard';
-import Profile from '@/components/Profile';
+import Profile from '@/components/common/Profile';
 
 const DashboardPage: React.FC = () => {
   const router = useRouter();

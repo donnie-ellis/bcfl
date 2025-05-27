@@ -1,22 +1,22 @@
 // ./components/DraftHeader.tsx
 
 import React, { useState } from 'react';
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import Profile from '@/components/Profile';
-import { League, Draft, LeagueSettings } from '@/lib/types/';
 import Link from 'next/link';
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Download, Menu, RefreshCcw } from "lucide-react";
 import { usePathname } from 'next/navigation';
 import useSWR from 'swr';
-import { toast } from "sonner";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+import { Download, Menu, RefreshCcw } from "lucide-react";
+import { League, Draft, LeagueSettings } from '@/lib/types/';
+import Profile from '@/components/common/Profile';
 
 interface DraftHeaderProps {
   league: League | null | undefined;

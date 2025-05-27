@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown } from "lucide-react";
-import RosterPositions from "@/components/RosterPositions";
-import StatCategories from "@/components/StatCategories";
+import RosterPositions from "@/components/dashboard/RosterPositions";
+import StatCategories from "@/components/dashboard/StatCategories";
 import { LeagueSettings } from "@/lib/types";
 
 const LeagueSettingsCard: React.FC<{ leagueSettings: LeagueSettings | null, isLeagueDataLoading: boolean }> = ({ leagueSettings, isLeagueDataLoading }) => {

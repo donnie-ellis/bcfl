@@ -2,14 +2,14 @@
 'use client'
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { PlayerWithADP, Draft, Pick, EnhancedPlayerWithADP } from '@/lib/types/';
-import PlayerFilters from './PlayerFilters';
-import { ScrollArea } from "@/components/ui/scroll-area";
-import PlayerCard from '@/components/PlayerCard';
-import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR from 'swr';
-import { Separator } from './ui/separator';
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import PlayerCard from '@/components/draft/board/PlayerCard';
+import PlayerFilters from '@/components/draft/common/PlayerFilters';
+import { PlayerWithADP, Draft, Pick, EnhancedPlayerWithADP } from '@/lib/types/';
+import { Separator } from '@/components/ui/separator';
 
 interface PlayersListProps {
   draftId: string;

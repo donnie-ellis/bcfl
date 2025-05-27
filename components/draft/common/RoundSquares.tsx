@@ -1,10 +1,14 @@
 // ./components/RoundSquares.tsx
 
 import React, { useMemo } from 'react';
-import { Draft, LeagueSettings, Team } from '@/lib/types/';
-import { PickWithPlayerAndTeam } from '@/lib/types/pick.types';
-import DraftSquare from "@/components/DraftSquare"
 import { Skeleton } from "@/components/ui/skeleton";
+import DraftSquare from "@/components/draft/common/DraftSquare"
+import { 
+  Draft, 
+  LeagueSettings, 
+  Team, 
+  PickWithPlayerAndTeam 
+} from '@/lib/types/';
 
 interface RoundSquaresProps {
   draft: Draft & { picks: PickWithPlayerAndTeam[] };

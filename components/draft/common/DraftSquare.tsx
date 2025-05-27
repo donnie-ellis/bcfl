@@ -1,13 +1,12 @@
 // ./components/DraftSquare.tsx
 
 import React, { memo, useMemo } from 'react';
-import { PickWithPlayerAndTeam } from '@/lib/types/pick.types';
-import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { parseTeamLogos, TeamLogo, sizedTitle } from '@/lib/types/team.types';
+import { parseTeamLogos, PickWithPlayerAndTeam, TeamLogo, sizedTitle } from '@/lib/types';
 
 interface DraftSquareProps {
   pick: PickWithPlayerAndTeam;

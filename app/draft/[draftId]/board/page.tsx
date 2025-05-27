@@ -5,22 +5,31 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
-import { League, Draft, LeagueSettings, Team, Pick, Player, PickWithPlayerAndTeam, PlayerWithADP } from '@/lib/types/';
-import DraftHeader from '@/components/DraftHeader';
-import RoundSquares from '@/components/RoundSquares';
+import useSWR from 'swr';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import PlayersList from '@/components/PlayersList';
-import SubmitPickButton from '@/components/SubmitPicksButton';
-import PlayerCard from '@/components/PlayerCard';
-import { Switch } from "@/components/ui/switch";
-import useSWR from 'swr';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 import { Loader2, Trophy } from 'lucide-react';
+import PlayersList from '@/components/draft/common/PlayersList';
+import SubmitPickButton from '@/components/draft/common/SubmitPicksButton';
+import DraftHeader from '@/components/draft/common/DraftHeader';
+import RoundSquares from '@/components/draft/common/RoundSquares';
+import PlayerCard from '@/components/draft/board/PlayerCard';
+import { 
+  League, 
+  Draft, 
+  LeagueSettings, 
+  Team, 
+  Pick, 
+  Player, 
+  PickWithPlayerAndTeam, 
+  PlayerWithADP 
+} from '@/lib/types/';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
