@@ -1,7 +1,7 @@
 // ./components/LeagueHeaderCard.tsx
 // This component displays the league header with the logo and name.
 import React from "react";
-import { Card, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { League } from "@/lib/types";
 
 const LeagueHeaderCard: React.FC<{ league: League | null }> = ({ league }) => {

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { LeagueSettings, parseRosterPositions, Team } from '@/lib/types/';
 import { League, Manager } from '@/lib/yahoo.types';
-import TeamCard from './TeamCard';
+import TeamCard from '@/components/dashboard/TeamCard';
 import { Loader2 } from 'lucide-react';
 import { toast } from "sonner";
 import { Reorder } from 'framer-motion';

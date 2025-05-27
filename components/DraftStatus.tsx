@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Draft, LeagueSettings, Team, Player, Pick, possesiveTitle } from '@/lib/types/';
-import TeamCard from '@/components/TeamCard';
+import TeamCard from '@/components/dashboard/TeamCard';
 import PlayerCard from '@/components/PlayerCard';
 import {
   HoverCard,
