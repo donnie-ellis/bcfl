@@ -5,13 +5,13 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Draft, LeagueSettings, Team, Player, Pick, possesiveTitle } from '@/lib/types/';
 import TeamCard from '@/components/dashboard/TeamCard';
-import PlayerCard from '@/components/PlayerCard';
+import PlayerCard from '@/components/draft/board/PlayerCard';
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
-import TeamNeeds from './TeamNeeds';
+import TeamNeeds from './kiosk/TeamNeeds';
 import { Badge } from '@/components/ui/badge';
 
 interface DraftStatusProps {

@@ -4,7 +4,7 @@ import React from "react";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Team, TeamLogo, parseTeamLogos } from '@/lib/types/team.types';
-import ManagerInfo from "@/components/ManagerInfo";
+import ManagerInfo from "@/components/dashboard/ManagerInfo";
 
 const TeamList: React.FC<{ teams: Team[] }> = ({ teams }) => (
   <Table>

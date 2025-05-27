@@ -6,7 +6,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import LoginButton from "@/components/LoginButton";
+import LoginButton from "@/components/home/LoginButton";
 
 export default function Home() {
   const router = useRouter();

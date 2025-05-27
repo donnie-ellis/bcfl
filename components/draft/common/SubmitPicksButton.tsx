@@ -1,8 +1,8 @@
 // ./components/SubmitPickButton.tsx
 import React from 'react';
+import { Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Pick, PlayerWithADP } from '@/lib/types/';
-import { Loader2 } from 'lucide-react';
 
 interface SubmitPickButtonProps {
   isCurrentUserPick: boolean;
