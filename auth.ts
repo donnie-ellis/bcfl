@@ -143,6 +143,13 @@ export const authOptions: NextAuthOptions = {
         },
         async session({ session, token }) {
             // Attach user info from JWT to session
+            // Test the session token
+            if (typeof token.accessToken !== 'string' || !token.userId) {
+                throw new Error("Invalid or messing session accessToken");
+            }
+            if (typeof token.userId !== "string" || !token.userId) {
+               throw new Error("Invalid or missing userId in token");
+            }
             session.user = {
                 ...session.user,
                 id: token.userId,

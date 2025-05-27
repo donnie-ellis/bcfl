@@ -6,7 +6,7 @@ declare module "next-auth" {
     error?: string;
     refreshToken?: string;
     user: {
-      id?: string;
+      id: string;
     } & DefaultSession["user"];
   }
 }
