@@ -1,4 +1,7 @@
 // ./app/dashboard/page.tsx
+// This is the main dashboard page for the application, which includes tabs for leagues and drafts.
+// It fetches and displays leagues, allows users to select a league, and shows related drafts and settings.
+
 'use client'
 
 import React, { useState, useEffect } from 'react';
@@ -6,17 +9,16 @@ import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import Profile from '@/components/Profile';
-import LeagueList from '@/components/LeagueList';
-import CreateDraftDialog from '@/components/CreateDraftDialog';
-import { League } from '@/lib/types/league.types';
-import { Team } from '@/lib/types/team.types';
-import { LeagueSettings } from '@/lib/types/league-settings.types';
-import { Draft } from '@/lib/types/draft.types';
 import { toast } from 'sonner';
+
+import { League, Team, LeagueSettings, Draft } from '@/lib/types';
+import CreateDraftDialog from '@/components/CreateDraftDialog';
 import DraftCardList from '@/components/DraftCardList';
 import LeagueInfoCard from '@/components/LeagueInfoCard';
+import LeagueList from '@/components/LeagueList';
 import LeagueSettingsCard from '@/components/LeagueSettingsCard';
+import LeagueHeaderCard from '@/components/LeagueHeaderCard';
+import Profile from '@/components/Profile';
 
 const DashboardPage: React.FC = () => {
   const router = useRouter();
@@ -24,7 +26,6 @@ const DashboardPage: React.FC = () => {
   const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
   const [leagues, setLeagues] = useState<League[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [team, setTeam] = useState<Team | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [isCommissioner, setIsCommissioner] = useState<boolean>(false);
   const [leagueSettings, setLeagueSettings] = useState<LeagueSettings | null>(null);
@@ -66,7 +67,6 @@ const DashboardPage: React.FC = () => {
 
       if (teamResponse.ok) {
         const teamData: Team = await teamResponse.json();
-        setTeam(teamData);
       }
 
       if (commissionerResponse.ok) {
@@ -152,19 +152,7 @@ const DashboardPage: React.FC = () => {
         <TabsContent value="drafts">
           {selectedLeague ? (
             <div className="space-y-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center space-x-4">
-                  {selectedLeague.logo_url && (
-                    <img 
-                      src={selectedLeague.logo_url} 
-                      alt={selectedLeague.name} 
-                      className="w-16 h-16 rounded"
-                    />
-                  )}
-                  <CardTitle>{selectedLeague.name}</CardTitle>
-                </CardHeader>
-              </Card>
-              
+              <LeagueHeaderCard league={selectedLeague} />              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between">
@@ -204,7 +192,7 @@ const DashboardPage: React.FC = () => {
                       <CardTitle>League Settings</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <LeagueSettingsCard settings={leagueSettings} isLeagueDataLoading={isLeagueDataLoading} />  
+                      <LeagueSettingsCard leagueSettings={leagueSettings} isLeagueDataLoading={isLeagueDataLoading} />  
                     </CardContent>
                   </Card>
                 </div>

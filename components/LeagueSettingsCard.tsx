@@ -10,17 +10,17 @@ import RosterPositions from "@/components/RosterPositions";
 import StatCategories from "@/components/StatCategories";
 import { LeagueSettings } from "@/lib/types";
 
-const LeagueSettingsCard: React.FC<{ settings: LeagueSettings | null, isLeagueDataLoading: boolean }> = ({ settings, isLeagueDataLoading }) => {
+const LeagueSettingsCard: React.FC<{ leagueSettings: LeagueSettings | null, isLeagueDataLoading: boolean }> = ({ leagueSettings, isLeagueDataLoading }) => {
     return (
         isLeagueDataLoading ? (
             <Skeleton className="h-48 w-full" />
-        ) : settings ? (
+        ) : leagueSettings ? (
             <div className="space-y-2">
-                <p><strong>Draft Type:</strong> <Badge>{settings.draft_type}</Badge></p>
-                <p><strong>Scoring Type:</strong> <Badge>{settings.scoring_type}</Badge></p>
-                <p><strong>Uses Playoff:</strong> <Badge>{settings.uses_playoff ? 'Yes' : 'No'}</Badge></p>
-                <p><strong>Waiver Rule:</strong> <Badge>{settings.waiver_rule}</Badge></p>
-                <p><strong>Uses FAAB:</strong> <Badge>{settings.uses_faab ? 'Yes' : 'No'}</Badge></p>
+                <p><strong>Draft Type:</strong> <Badge>{leagueSettings.draft_type}</Badge></p>
+                <p><strong>Scoring Type:</strong> <Badge>{leagueSettings.scoring_type}</Badge></p>
+                <p><strong>Uses Playoff:</strong> <Badge>{leagueSettings.uses_playoff ? 'Yes' : 'No'}</Badge></p>
+                <p><strong>Waiver Rule:</strong> <Badge>{leagueSettings.waiver_rule}</Badge></p>
+                <p><strong>Uses FAAB:</strong> <Badge>{leagueSettings.uses_faab ? 'Yes' : 'No'}</Badge></p>
                 <Collapsible>
                     <CollapsibleTrigger asChild>
                         <Button variant="ghost" className="flex items-center justify-between w-full">
@@ -29,7 +29,7 @@ const LeagueSettingsCard: React.FC<{ settings: LeagueSettings | null, isLeagueDa
                         </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                        <RosterPositions positions={settings.roster_positions} />
+                        <RosterPositions positions={leagueSettings.roster_positions} />
                     </CollapsibleContent>
                 </Collapsible>
                 <Collapsible>
@@ -40,7 +40,7 @@ const LeagueSettingsCard: React.FC<{ settings: LeagueSettings | null, isLeagueDa
                         </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                        <StatCategories categories={settings.stat_categories} />
+                        <StatCategories categories={leagueSettings.stat_categories} />
                     </CollapsibleContent>
                 </Collapsible>
             </div>
