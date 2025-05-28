@@ -34,7 +34,6 @@ const DraftPage: React.FC = () => {
   const [currentPick, setCurrentPick] = useState<PickWithPlayerAndTeam | null>(null);
   const [activeTab, setActiveTab] = useState<string>("draft");
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [picks, setPicks] = useState<PickWithPlayerAndTeam[]>([]);
 
   const { data: draftData, mutate: mutateDraft } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher);
   const { data: picksData, mutate: mutatePicks } = useSWR<Pick[]>(
@@ -60,9 +59,6 @@ const DraftPage: React.FC = () => {
       player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
       team: teams.find(t => t.team_key === pick.team_key) ?? {} as Team
     }));
-
-    console.log('Updated picks:', updatedPicks);
-    setPicks(updatedPicks);
 
     const updatedCurrentPick = updatedPicks.find(p => !p.is_picked) || null;
     console.log('Updated Current Pick:', updatedCurrentPick);
@@ -191,15 +187,25 @@ const DraftPage: React.FC = () => {
     }
   };
 
+  const memoizedPicks: PickWithPlayerAndTeam[] = useMemo(() => {
+    if (!picksData || !players || !teams) return [];
+    return picksData.map(pick => ({
+      ...pick,
+      player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
+      team: teams.find(t => t.team_key === pick.team_key) ?? {} as Team
+    }));
+  }, [picksData, players, teams]);
+
   const memoizedDraft = useMemo(() => {
-    if (draftData && picks.length > 0) {
+    if (draftData && memoizedPicks.length > 0) {
       return {
         ...draftData,
-        picks: picks
+        picks: memoizedPicks
       };
     }
     return undefined;
-  }, [draftData, picks]);
+  }, [draftData, memoizedPicks]);
+
 
   if (!memoizedDraft || !leagueData || !leagueSettings || !teams || !team || !players) {
     return (
