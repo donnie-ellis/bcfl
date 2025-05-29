@@ -101,7 +101,7 @@ const DraftHeader: React.FC<DraftHeaderProps> = ({ league, draft, additionalCont
       
       if (leagueSettings.stat_categories) {
         const recStat = Array.isArray(leagueSettings.stat_categories) 
-          ? leagueSettings.stat_categories.find((stat: any) => stat.name === 'Rec')
+          ? leagueSettings.stat_categories.find((stat: any) => stat.display_name === 'Rec')
           : null;
         
         if (recStat && typeof recStat === 'object' && 'value' in recStat && typeof recStat.value === 'number' && recStat.value > 0) {
