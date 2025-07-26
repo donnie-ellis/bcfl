@@ -222,7 +222,7 @@ const handleSubmitPick = async () => {
               onPlayerSelect={handlePlayerSelectMd}
               draft={memoizedDraft}
               selectedPlayer={selectedPlayer}
-              className="md:bg-linear-to-l from-background to-muted"
+              className="md:bg-linear-to-l from-background to-muted/50"
             />
           </div>
           
@@ -267,7 +267,7 @@ const handleSubmitPick = async () => {
               picks={memoizedDraft.picks}
               teamKey={team.team_key}
               teamName={team.name}
-              className="md:bg-linear-to-r from-background to-muted"
+              className="md:bg-linear-to-r from-background to-muted/50"
             />
           </div>
         </div>
