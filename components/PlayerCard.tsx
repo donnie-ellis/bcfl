@@ -30,7 +30,7 @@ const getSeverityColor = (status: string | null): string => {
 
 const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fadeDrafted = false }) => {
   const cardClasses = `
-    mb-2 cursor-pointer transition-all
+    mb-2 cursor-pointer transition-all duration-300
     ${isDrafted ? (fadeDrafted ? 'opacity-50' : '') : 'hover:bg-accent'}
     ${isDrafted ? 'cursor-not-allowed' : 'cursor-pointer'}
   `;
