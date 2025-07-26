@@ -18,7 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Loader2, Menu } from "lucide-react";
+import { Loader2, Menu, Plus } from "lucide-react";
 import { motion } from 'framer-motion';
 import TeamNeeds from '@/components/TeamNeeds';
 
@@ -340,9 +340,22 @@ const DraftPage: React.FC = () => {
                 onSubmitPick={handleSubmitPick}
                 isPickSubmitting={isPickSubmitting}
               />
-              <PlayerDetails
-                player={selectedPlayer}
-              />
+              {selectedPlayer ?
+                <PlayerDetails
+                  player={selectedPlayer}
+                /> 
+              :
+              <div>
+                <h1>No player selected</h1>
+                <Button 
+                  onClick={() => {setActiveTab("players"); setIsSheetOpen(false);}}
+                  variant="outline"
+                  className='flex items-center justify-center w-full h-12'
+                  >
+                    Click to choose a player
+                  </Button>
+              </div>
+              }
             </div>
           </ScrollArea>
         </SheetContent>
@@ -351,9 +364,9 @@ const DraftPage: React.FC = () => {
         <SheetTrigger asChild>
           <Button
             size="icon"
-            className="fixed right-4 bottom-4 rounded-full shadow-lg md:hidden"
+            className={`fixed right-4 bottom-4 rounded-full shadow-lg md:hidden ${isCurrentUserPick ? 'animate-pulse ring-4 ring-green-400' : 'opacity-60 transition-opacity duration-300'}`}
           >
-            <Menu className="h-6 w-6" />
+            <Plus className="h-8 w-8" />
           </Button>
         </SheetTrigger>
       </Sheet>
