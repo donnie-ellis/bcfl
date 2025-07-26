@@ -97,7 +97,6 @@ const DraftPage: React.FC = () => {
         table: 'picks',
         filter: `draft_id=eq.${draftId}`
       }, async (payload) => {
-        console.log('Websocket update received:', payload);
         const updatedPick = payload.new as Pick;
         if (updatedPick.is_picked) {
           notifyPickMade(updatedPick);
@@ -113,7 +112,13 @@ const DraftPage: React.FC = () => {
           updatePicksAndDraft(latestDraft, latestPicks);
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Subscribed to picks updates');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Error subscribing to picks updates');
+        }
+      });
 
     return () => {
       supabase.removeChannel(picksSubscription);
