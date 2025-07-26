@@ -76,9 +76,9 @@ const DraftPage: React.FC = () => {
 
       if (player && team) {
         toast.success(
-          `${team.name} drafted ${player.full_name}`,
+          `${team.name} has made pick #${updatedPick.total_pick_number}`,
           {
-            description: `${player.editorial_team_full_name} - ${player.display_position}`,
+            description: `${player.full_name} (${player.editorial_team_abbr}) - ${player.display_position}`,
             duration: 5000,
           }
         );
