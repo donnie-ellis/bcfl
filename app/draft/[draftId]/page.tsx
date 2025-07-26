@@ -267,6 +267,7 @@ const handleSubmitPick = async () => {
               picks={memoizedDraft.picks}
               teamKey={team.team_key}
               teamName={team.name}
+              currentPick={memoizedDraft.current_pick}
               className="md:bg-linear-to-r from-background to-muted/50"
             />
           </div>
@@ -307,6 +308,7 @@ const handleSubmitPick = async () => {
                     picks={memoizedDraft.picks}
                     teamKey={team.team_key}
                     teamName={team.name}
+                    currentPick={memoizedDraft.current_pick}
                   />
                 </div>
               </ScrollArea>
