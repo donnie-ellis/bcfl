@@ -277,7 +277,7 @@ const DraftBoardPage: React.FC = () => {
       <div className="flex flex-col h-screen">
         {MemoizedDraftHeader}
         <Alert className="mx-4 my-4 max-w-[calc(100%-2rem)]">
-            <AlertTitle className="grow text-center mx-2">Draft Completed</AlertTitle>
+          <AlertTitle className="grow text-center mx-2">Draft Completed</AlertTitle>
           <AlertDescription className="text-center mt-2 grow">
             The draft has been completed. You can review the final draft results below.
           </AlertDescription>
@@ -313,7 +313,7 @@ const DraftBoardPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen bg-muted/50">
       {MemoizedDraftHeader}
       <div className="p-4">
         <Select

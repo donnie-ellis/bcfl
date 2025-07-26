@@ -21,7 +21,7 @@ const DraftSquare: React.FC<DraftSquareProps> = memo(({ pick, isCurrentPick, onS
   const teamLogoUrl = useMemo(() => teamLogos.length > 0 ? teamLogos[0].url : '', [teamLogos]);
 
   const Square = () => (
-    <Card className={`w-full h-full ${isCurrentPick ? 'border-2 border-blue-500' : ''}`}>
+    <Card className={`w-full h-full ${isCurrentPick ? 'border-2 border-primary' : ''} hover:bg-muted`}>
       <CardContent className="p-2 h-full flex flex-col justify-between">
         {isLoading ? (
           <>
