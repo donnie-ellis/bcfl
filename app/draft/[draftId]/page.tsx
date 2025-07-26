@@ -211,7 +211,7 @@ const handleSubmitPick = async () => {
   return (
     <div className="flex flex-col h-screen">
       <DraftHeader league={leagueData} draft={memoizedDraft} />
-      <div className="flex-grow overflow-hidden flex flex-col md:flex-row">
+      <div className="grow overflow-hidden flex flex-col md:flex-row">
         {/* Desktop View */}
         <div className="hidden md:flex w-full h-[calc(100vh-64px)]">
 
@@ -222,13 +222,13 @@ const handleSubmitPick = async () => {
               onPlayerSelect={handlePlayerSelectMd}
               draft={memoizedDraft}
               selectedPlayer={selectedPlayer}
-              className="md:bg-gradient-to-l from-background to-muted"
+              className="md:bg-linear-to-l from-background to-muted"
             />
           </div>
           
           {/* Middle Column */}
           <div className="w-1/2 h-full overflow-hidden flex flex-col">
-            <ScrollArea className="flex-grow">
+            <ScrollArea className="grow">
               <div className="p-4 space-y-4">
                 <DraftStatus
                   draft={memoizedDraft}
@@ -267,7 +267,7 @@ const handleSubmitPick = async () => {
               picks={memoizedDraft.picks}
               teamKey={team.team_key}
               teamName={team.name}
-              className="md:bg-gradient-to-r from-background to-muted"
+              className="md:bg-linear-to-r from-background to-muted"
             />
           </div>
         </div>
@@ -275,12 +275,12 @@ const handleSubmitPick = async () => {
         {/* Small screen layout */}
         <div className="md:hidden flex flex-col h-full">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-            <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
+            <TabsList className="grid w-full grid-cols-3 shrink-0">
               <TabsTrigger value="players">Players</TabsTrigger>
               <TabsTrigger value="draft">Draft</TabsTrigger>
               <TabsTrigger value="team">My Team</TabsTrigger>
             </TabsList>
-            <TabsContent value="players" className="flex-grow overflow-hidden">
+            <TabsContent value="players" className="grow overflow-hidden">
               <PlayersList
                 draftId={draftId}
                 onPlayerSelect={handlePlayerSelect}
@@ -288,7 +288,7 @@ const handleSubmitPick = async () => {
                 selectedPlayer={selectedPlayer}
               />
             </TabsContent>
-            <TabsContent value="draft" className="flex-grow overflow-hidden">
+            <TabsContent value="draft" className="grow overflow-hidden">
               <ScrollArea className="h-full">
                 <div className="p-4 space-y-4">
                   <DraftStatus
@@ -300,7 +300,7 @@ const handleSubmitPick = async () => {
                 </div>
               </ScrollArea>
             </TabsContent>
-            <TabsContent value="team" className="flex-grow overflow-hidden">
+            <TabsContent value="team" className="grow overflow-hidden">
               <ScrollArea className="h-full">
                 <div className="p-4">
                   <DraftedPlayers
@@ -321,7 +321,7 @@ const handleSubmitPick = async () => {
           <SheetHeader>
             <SheetTitle>Make your pick</SheetTitle>
           </SheetHeader>
-          <ScrollArea className="flex-grow">
+          <ScrollArea className="grow">
             <div className="p-4 space-y-4">
               <SubmitPickButton
                 isCurrentUserPick={isCurrentUserPick}

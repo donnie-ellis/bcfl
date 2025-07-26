@@ -48,7 +48,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
                 <AvatarImage src={player.headshot_url as string} alt={player.full_name || 'N/A'} />
                 <AvatarFallback>{player.full_name || 'NA'.split(' ').map(n => n[0]).join('')}</AvatarFallback>
               </Avatar>
-              <div className="flex-grow">
+              <div className="grow">
                 <p className="font-semibold">{player.full_name}</p>
                 <p className="text-sm">
                   <span className="font-medium text-primary">{player.display_position}</span>

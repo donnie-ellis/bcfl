@@ -32,7 +32,7 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = React.memo(({
   const PlaceholderCard = () => (
     <Card className='mb-2 cursor-pointer hover:bg-gray-100 transition-all opacity-50'>
       <CardContent className="p-3 flex items-center space-x-3">
-        <div className="flex-grow">
+        <div className="grow">
           <p className="font-semibold">Not yet selected</p>
         </div>
       </CardContent>

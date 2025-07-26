@@ -35,7 +35,7 @@ const DraftSquare: React.FC<DraftSquareProps> = memo(({ pick, isCurrentPick, onS
               <p className="font-bold">Pick {pick.pick_number}</p>
               <p className="truncate">{sizedTitle(pick.team?.name || '')}</p>
             </div>
-            <div className="flex items-center justify-center flex-grow">
+            <div className="flex items-center justify-center grow">
               <Avatar className="h-12 w-12">
                 {pick.is_picked ? (
                   <AvatarImage src={pick.player?.headshot_url || pick.player?.image_url || ''} alt={pick.player?.full_name} />

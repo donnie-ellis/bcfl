@@ -86,7 +86,7 @@ const PlayerFilters: React.FC<PlayerFiltersProps> = ({
         <div className="flex flex-wrap gap-2">
           <motion.div key="all" whileTap={{ scale: 0.85 }}>
             <Badge
-              variant={selectedPositions.length === 0 ? "default" : "outline"}
+              variant={selectedPositions.length === 0 ? "default" : "outline-solid"}
               className="cursor-pointer"
               onClick={handleAllPositions}
             >
@@ -98,7 +98,7 @@ const PlayerFilters: React.FC<PlayerFiltersProps> = ({
             <motion.div key={position} whileTap={{ scale: 0.85 }}>
               <Badge
                 key={position}
-                variant={selectedPositions.includes(position) ? "default" : "outline"}
+                variant={selectedPositions.includes(position) ? "default" : "outline-solid"}
                 className="cursor-pointer"
                 onClick={() => handlePositionToggle(position)}
               >
