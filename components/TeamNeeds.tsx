@@ -50,35 +50,41 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draft, teamKey, t
     teamPicks.forEach((pick: Pick) => { 
       const player = pick.player as Player | undefined;
       if (!player) return;
-      const eligiblePositions = player.eligible_positions || [];
-      let positionFilled = false;
 
-      // First, try to fill regular positions
+      const eligiblePositions = player.eligible_positions || [];
+      const remainingEligiblePositions = [...eligiblePositions]; // Keep this immutable for flex checks
+
+      // First, count the player for their primary position
       for (const position of eligiblePositions) {
-        const positionNeed = needs.find(need => !need.isFlex && need.position === position);
-        if (positionNeed && positionNeed.filled < positionNeed.needed) {
+        const positionNeed = needs.find(need => need.position === position);
+        if (positionNeed) {
           positionNeed.filled++;
           positionNeed.players.push({ name: player.full_name, position: player.display_position as string });
-          positionFilled = true;
-          break;
+          break; // Stop after assigning to the first eligible primary position
         }
       }
 
-      // If no regular position was filled, try to fill flex positions
-      if (!positionFilled) {
-        for (const flexNeed of needs.filter(need => need.isFlex)) {
-          if (
-            (flexNeed.position === 'W/R/T' && 
-             (eligiblePositions.includes('WR') || eligiblePositions.includes('RB') || eligiblePositions.includes('TE'))) ||
-            (flexNeed.position === 'W/R' && 
-             (eligiblePositions.includes('WR') || eligiblePositions.includes('RB'))) ||
-            (flexNeed.position === 'Q/W/R/T' &&
-             (eligiblePositions.includes('QB') || eligiblePositions.includes('WR') || 
-              eligiblePositions.includes('RB') || eligiblePositions.includes('TE')))
-          ) {
+      // Then, count the player for a flex position based on remaining eligible positions
+      for (const flexNeed of needs.filter(need => need.isFlex)) {
+        if (
+          (flexNeed.position === 'W/R/T' && 
+           (remainingEligiblePositions.includes('WR') || remainingEligiblePositions.includes('RB') || remainingEligiblePositions.includes('TE'))) ||
+          (flexNeed.position === 'W/R' && 
+           (remainingEligiblePositions.includes('WR') || remainingEligiblePositions.includes('RB'))) ||
+          (flexNeed.position === 'Q/W/R/T' &&
+           (remainingEligiblePositions.includes('QB') || remainingEligiblePositions.includes('WR') || 
+            remainingEligiblePositions.includes('RB') || remainingEligiblePositions.includes('TE')))
+        ) {
+          // Ensure the player's primary position has already met its minimum requirement
+          const primaryPosition = eligiblePositions.find(pos => {
+            const positionNeed = needs.find(need => need.position === pos);
+            return positionNeed && positionNeed.filled > positionNeed.needed; // Allow flex if primary is overfilled
+          });
+
+          if (primaryPosition) {
             flexNeed.filled++;
             flexNeed.players.push({ name: player.full_name, position: player.display_position as string });
-            break;
+            break; // Stop after assigning to the first eligible flex position
           }
         }
       }
