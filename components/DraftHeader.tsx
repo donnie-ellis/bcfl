@@ -168,10 +168,10 @@ const DraftHeader: React.FC<DraftHeaderProps> = ({ league, draft, additionalCont
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur-sm supports-backdrop-filter:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4">
         <div className="flex items-center space-x-4 overflow-hidden">
-          <Link href="/dashboard" className="flex-shrink-0">
+          <Link href="/dashboard" className="shrink-0">
             <Avatar className="h-8 w-8">
               <AvatarImage src={league?.logo_url || ''} alt={league?.name} />
               <AvatarFallback>{league?.name?.[0]}</AvatarFallback>

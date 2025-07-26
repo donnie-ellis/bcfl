@@ -223,7 +223,7 @@ const KioskPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-muted">
+    <div className="flex flex-col h-screen bg-muted/50">
       {leagueData && memoizedDraft && (
         <DraftHeader league={leagueData} draft={memoizedDraft} />
       )}
@@ -241,7 +241,7 @@ const KioskPage: React.FC = () => {
             />
           )}
           <div className="mt-4 flex items-center">
-            <Progress value={draftProgress} className="flex-grow mr-4" />
+            <Progress value={draftProgress} className="grow mr-4" />
             <span className="text-sm font-medium">
               Pick {memoizedDraft?.current_pick} of {memoizedDraft?.total_picks}
             </span>
@@ -250,7 +250,7 @@ const KioskPage: React.FC = () => {
       </div>
 
       {/* Left Column */}
-      <div className="flex-grow overflow-hidden flex">
+      <div className="grow overflow-hidden flex">
         <div className="w-1/4">
           {memoizedDraft && currentPick && (
             <DraftedPlayers
@@ -272,7 +272,7 @@ const KioskPage: React.FC = () => {
                     <AvatarImage src={getTeamLogoUrl(currentTeam.team_logos)} alt={currentTeam.name} />
                     <AvatarFallback>{currentTeam.name[0]}</AvatarFallback>
                   </Avatar>
-                  <div className="flex-grow">
+                  <div className="grow">
                     <div className="flex justify-between items-center">
                       <h2 className='text-2xl font-bold'>{possesiveTitle(currentTeam.name)} draft summary</h2>
                       <div className="text-right">
@@ -294,7 +294,7 @@ const KioskPage: React.FC = () => {
                   </div>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex-grow overflow-hidden space-y-4">
+              <CardContent className="grow overflow-hidden space-y-4">
                 <TeamNeeds
                   draft={memoizedDraft}
                   teamKey={currentTeam.team_key}

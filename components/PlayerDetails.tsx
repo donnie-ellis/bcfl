@@ -40,11 +40,11 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
     <Card className="">
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center gap-4">
-          <Avatar className="h-20 w-20 flex-shrink-0">
+          <Avatar className="h-20 w-20 shrink-0">
             <AvatarImage src={player.headshot_url as string} alt={player.full_name || 'NA'} />
             <AvatarFallback>{player.full_name || 'NA'.split(' ').map(n => n[0]).join('')}</AvatarFallback>
           </Avatar>
-          <div className="flex-grow">
+          <div className="grow">
             <div className="flex items-center gap-2 flex-wrap">
               <CardTitle className="text-2xl">{player.full_name}</CardTitle>
               <Badge className={`${getSeverityColor(player.status)}`}>{formatStatus(player.status)}</Badge>
@@ -60,10 +60,10 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap gap-4">
-          <div className="flex-grow">
+          <div className="grow">
             <strong>Bye Week:</strong> {formatByeWeeks(player.bye_weeks)}
           </div>
-          <div className="flex-grow">
+          <div className="grow">
             <strong>ADP:</strong> {player.adp_formatted}
           </div>
         </div>
