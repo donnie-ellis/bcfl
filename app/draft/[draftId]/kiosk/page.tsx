@@ -108,7 +108,14 @@ const KioskPage: React.FC = () => {
           notifyPickMade(updatedPick);
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('Subscribed to picks updates for draft:', draftId);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Error subscribing to picks updates:', status);
+        }
+      });
 
     return () => {
       supabase.removeChannel(picksSubscription);
