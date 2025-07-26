@@ -222,6 +222,7 @@ const handleSubmitPick = async () => {
               onPlayerSelect={handlePlayerSelectMd}
               draft={memoizedDraft}
               selectedPlayer={selectedPlayer}
+              className="md:bg-gradient-to-l from-background to-muted"
             />
           </div>
           
@@ -261,11 +262,12 @@ const handleSubmitPick = async () => {
           </div>
 
           {/* Right Column */}
-          <div className="w-1/4 overflow-hidden flex flex-col p-4">
+          <div className="w-1/4 overflow-hidden flex flex-col">
             <DraftedPlayers
               picks={memoizedDraft.picks}
               teamKey={team.team_key}
               teamName={team.name}
+              className="md:bg-gradient-to-r from-background to-muted"
             />
           </div>
         </div>

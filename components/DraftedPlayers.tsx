@@ -10,12 +10,14 @@ interface DraftedPlayersProps {
   picks: Pick[] | undefined;
   teamKey: string;
   teamName: string | undefined;
+  className?: string;
 }
 
-const DraftedPlayers: React.FC<DraftedPlayersProps> = React.memo(({ 
+const DraftedPlayers: React.FC<DraftedPlayersProps> = React.memo(({
   picks,
   teamKey,
   teamName,
+  className
 }) => {
 
   if (!picks) throw Error('Picks are not present');
@@ -38,24 +40,24 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = React.memo(({
   );
 
   return (
-    <>
-      <h2 className='text-2xl font-bold'>
+    <div className={`flex flex-col h-full ${className}`}>
+      <h2 className='text-2xl font-bold text-center'>
         {teamName ? possesiveTitle(teamName) + ' team' : 'Team'}
       </h2>
       <Separator className='mt-2' />
-        <ScrollArea className="h-full">
-          <div className='pr-3'>
-            {teamPicks.map((pick) => (
-              <div key={pick.id} className="mb-4">
-                <div className="font-semibold text-sm text-gray-500 mb-1">
-                  Round {pick.round_number}, Pick {pick.pick_number} (Overall: {pick.total_pick_number})
-                </div>
-                {pick.player ? <PlayerCard player={pick.player} isDrafted={false} onClick={() => {}} /> : <PlaceholderCard />}
+      <ScrollArea className="h-full">
+        <div className='pr-3'>
+          {teamPicks.map((pick) => (
+            <div key={pick.id} className="mb-4">
+              <div className="font-semibold text-sm text-gray-500 mb-1">
+                Round {pick.round_number}, Pick {pick.pick_number} (Overall: {pick.total_pick_number})
               </div>
-            ))}
+              {pick.player ? <PlayerCard player={pick.player} isDrafted={false} onClick={() => { }} /> : <PlaceholderCard />}
+            </div>
+          ))}
         </div>
-       </ScrollArea>
-    </>
+      </ScrollArea>
+    </div>
   );
 });
 
