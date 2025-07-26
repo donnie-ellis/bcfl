@@ -16,11 +16,12 @@ interface PlayersListProps {
   onPlayerSelect: (player: PlayerWithADP) => void;
   draft: Draft;
   selectedPlayer: PlayerWithADP | null;
+  className?: string;
 }
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
-const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerSelect, draft, selectedPlayer }) => {
+const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerSelect, draft, selectedPlayer, className }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
   const [hideSelected, setHideSelected] = useState(true);
@@ -78,10 +79,10 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
   if (playersError) return <div>Error loading data</div>;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className={`flex flex-col h-full ${className}`}>
       <div className="flex-shrink-0">
-        <h2 className='text-2xl ml-4 py-2 font-bold'>Players</h2>
-        <div className="px-4 py-2">
+        <h2 className='text-2xl ml-4 py-2 font-bold text-primary text-center'>Players</h2>
+        <div className="py-2">
           <PlayerFilters
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}

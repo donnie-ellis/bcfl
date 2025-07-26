@@ -223,7 +223,7 @@ const KioskPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen bg-muted">
       {leagueData && memoizedDraft && (
         <DraftHeader league={leagueData} draft={memoizedDraft} />
       )}
@@ -251,12 +251,13 @@ const KioskPage: React.FC = () => {
 
       {/* Left Column */}
       <div className="flex-grow overflow-hidden flex">
-        <div className="w-1/4 p-4">
+        <div className="w-1/4">
           {memoizedDraft && currentPick && (
             <DraftedPlayers
               picks={memoizedDraft.picks}
               teamKey={currentPick.team_key}
               teamName={teams ? teams.find(team => team.team_key === currentPick.team_key)?.name : ''}
+              className="pl-4"
             />
           )}
         </div>

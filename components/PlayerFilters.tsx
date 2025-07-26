@@ -50,7 +50,7 @@ const PlayerFilters: React.FC<PlayerFiltersProps> = ({
   };
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full bg-muted px-2">
       <CollapsibleTrigger className="flex items-center justify-between w-full p-2 bg-secondary">
         <span>Filters</span>
         {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
