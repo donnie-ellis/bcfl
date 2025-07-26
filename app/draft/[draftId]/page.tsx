@@ -20,6 +20,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Button } from "@/components/ui/button";
 import { Loader2, Menu } from "lucide-react";
 import { motion } from 'framer-motion';
+import TeamNeeds from '@/components/TeamNeeds';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -47,30 +48,24 @@ const DraftPage: React.FC = () => {
   const { data: players } = useSWR<Player[]>(draftData ? `/api/db/league/${draftData.league_id}/players` : null, fetcher);
 
   const updatePicksAndDraft = useCallback((latestDraft: Draft, latestPicks: Pick[]) => {
-    console.log('updatePicksAndDraft called');
-  
     if (!latestDraft || !latestPicks || !players || !teams) {
       console.log('Missing required data, returning early');
       return;
     }
-  
+
     const updatedPicks: PickWithPlayerAndTeam[] = latestPicks.map(pick => ({
       ...pick,
       player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
       team: teams.find(t => t.team_key === pick.team_key) ?? {} as Team
     }));
-  
-    console.log('Updated picks:', updatedPicks);
     setPicks(updatedPicks);
-  
+
     const updatedCurrentPick = updatedPicks.find(p => !p.is_picked) || null;
-    console.log('Updated Current Pick:', updatedCurrentPick);
-  
+
     if (updatedCurrentPick && latestDraft.current_pick !== updatedCurrentPick.total_pick_number) {
-      console.log('Updating draft data', { oldPick: latestDraft.current_pick, newPick: updatedCurrentPick.total_pick_number });
       mutateDraft({ ...latestDraft, current_pick: updatedCurrentPick.total_pick_number }, false);
     }
-  
+
     setCurrentPick(updatedCurrentPick);
   }, [players, teams, mutateDraft]);
 
@@ -78,7 +73,7 @@ const DraftPage: React.FC = () => {
     if (updatedPick.is_picked && updatedPick.player_id) {
       const player = players?.find(p => p.id === updatedPick.player_id);
       const team = teams?.find(t => t.team_key === updatedPick.team_key);
-      
+
       if (player && team) {
         toast.success(
           `${team.name} drafted ${player.full_name}`,
@@ -93,14 +88,14 @@ const DraftPage: React.FC = () => {
 
   useEffect(() => {
     if (!supabase || !draftId) return;
-  
+
     const picksSubscription = supabase
       .channel(`picks_${draftId}`)
-      .on('postgres_changes', { 
-        event: 'UPDATE', 
-        schema: 'public', 
-        table: 'picks', 
-        filter: `draft_id=eq.${draftId}` 
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'picks',
+        filter: `draft_id=eq.${draftId}`
       }, async (payload) => {
         console.log('Websocket update received:', payload);
         const updatedPick = payload.new as Pick;
@@ -119,18 +114,17 @@ const DraftPage: React.FC = () => {
         }
       })
       .subscribe();
-  
+
     return () => {
       supabase.removeChannel(picksSubscription);
     };
   }, [supabase, draftId, notifyPickMade, updatePicksAndDraft, mutateDraft, mutatePicks]);
 
-useEffect(() => {
-  if (draftData && picksData && players && teams) {
-    console.log('Calling updatePicksAndDraft from useEffect');
-    updatePicksAndDraft(draftData, picksData);
-  }
-}, [draftData, picksData, players, teams, updatePicksAndDraft]);
+  useEffect(() => {
+    if (draftData && picksData && players && teams) {
+      updatePicksAndDraft(draftData, picksData);
+    }
+  }, [draftData, picksData, players, teams, updatePicksAndDraft]);
 
   const handlePlayerSelect = useCallback((player: PlayerWithADP) => {
     setSelectedPlayer(player);
@@ -147,48 +141,48 @@ useEffect(() => {
 
   const isCurrentUserPick = currentPick?.team_key === team?.team_key;
 
-const handleSubmitPick = async () => {
-  setIsPickSubmitting(true);
-  if (!selectedPlayer || !currentPick || !draftData) {
-    toast.error("Unable to submit pick. Please try again.");
-    setIsPickSubmitting(false);
-    return;
-  }
-
-  try {
-    const response = await fetch(`/api/db/draft/${draftId}/pick`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        pickId: currentPick.id,
-        playerId: selectedPlayer.id,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to submit pick');
+  const handleSubmitPick = async () => {
+    setIsPickSubmitting(true);
+    if (!selectedPlayer || !currentPick || !draftData) {
+      toast.error("Unable to submit pick. Please try again.");
+      setIsPickSubmitting(false);
+      return;
     }
 
-    setSelectedPlayer(null);
-    // Fetch latest data
-    const [latestDraft, latestPicks] = await Promise.all([
-      fetch(`/api/db/draft/${draftId}`).then(res => res.json()),
-      fetch(`/api/db/draft/${draftId}/picks`).then(res => res.json())
-    ]);
-    // Update SWR cache
-    mutateDraft(latestDraft, false);
-    mutatePicks(latestPicks, false);
-    // Update local state
-    updatePicksAndDraft(latestDraft, latestPicks);
-  } catch (error) {
-    console.error('Error submitting pick:', error);
-    toast.error("Failed to submit pick. Please try again.");
-  } finally {
-    setIsPickSubmitting(false);
-  }
-};
+    try {
+      const response = await fetch(`/api/db/draft/${draftId}/pick`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          pickId: currentPick.id,
+          playerId: selectedPlayer.id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit pick');
+      }
+
+      setSelectedPlayer(null);
+      // Fetch latest data
+      const [latestDraft, latestPicks] = await Promise.all([
+        fetch(`/api/db/draft/${draftId}`).then(res => res.json()),
+        fetch(`/api/db/draft/${draftId}/picks`).then(res => res.json())
+      ]);
+      // Update SWR cache
+      mutateDraft(latestDraft, false);
+      mutatePicks(latestPicks, false);
+      // Update local state
+      updatePicksAndDraft(latestDraft, latestPicks);
+    } catch (error) {
+      console.error('Error submitting pick:', error);
+      toast.error("Failed to submit pick. Please try again.");
+    } finally {
+      setIsPickSubmitting(false);
+    }
+  };
 
   const memoizedDraft = useMemo(() => {
     if (draftData && picks.length > 0) {
@@ -225,7 +219,7 @@ const handleSubmitPick = async () => {
               className="md:bg-linear-to-l from-background to-muted/50"
             />
           </div>
-          
+
           {/* Middle Column */}
           <div className="w-1/2 h-full overflow-hidden flex flex-col">
             <ScrollArea className="grow">
@@ -252,8 +246,8 @@ const handleSubmitPick = async () => {
                       onSubmitPick={handleSubmitPick}
                       isPickSubmitting={isPickSubmitting}
                     />
-                    <PlayerDetails 
-                      player={selectedPlayer} 
+                    <PlayerDetails
+                      player={selectedPlayer}
                     />
                   </motion.div>
                 )}
@@ -263,6 +257,14 @@ const handleSubmitPick = async () => {
 
           {/* Right Column */}
           <div className="w-1/4 overflow-hidden flex flex-col">
+          <div>
+            <TeamNeeds
+              teamKey={team?.team_key}
+              leagueSettings={leagueSettings}
+              draft={memoizedDraft}
+              teams={teams} 
+            />
+            </div>
             <DraftedPlayers
               picks={memoizedDraft.picks}
               teamKey={team.team_key}
@@ -302,6 +304,12 @@ const handleSubmitPick = async () => {
               </ScrollArea>
             </TabsContent>
             <TabsContent value="team" className="grow overflow-hidden">
+              <TeamNeeds
+                teamKey={team?.team_key}
+                leagueSettings={leagueSettings}
+                draft={memoizedDraft}
+                teams={teams}
+              />
               <ScrollArea className="h-full">
                 <div className="p-4">
                   <DraftedPlayers
@@ -338,7 +346,7 @@ const handleSubmitPick = async () => {
             </div>
           </ScrollArea>
         </SheetContent>
-        
+
         {/* Floating action button for small screens */}
         <SheetTrigger asChild>
           <Button

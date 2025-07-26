@@ -101,11 +101,11 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draft, teamKey, t
   };
 
   return (
-    <Table>
+    <Table className="w-full min-w-0">
       <TableHeader>
         <TableRow>
           {positionNeeds.map((need) => (
-            <TableHead key={need.position} className="text-center p-2">
+            <TableHead key={need.position} className="text-center p-1 text-xs">
               {need.position}
             </TableHead>
           ))}
@@ -114,18 +114,18 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draft, teamKey, t
       <TableBody>
         <TableRow>
           {positionNeeds.map((need) => (
-            <TableCell key={need.position} className="p-0">
+            <TableCell key={need.position} className="p-0 min-w-0">
               <Popover>
                 <PopoverTrigger asChild>
                   <button 
                     className={`w-full h-full p-2 ${getSeverityColor(need.needed, need.filled)} hover:opacity-80 transition-opacity`}
                   >
-                    <span className="font-bold">
+                    <span className="font-medium text-xs">
                       {need.filled}/{need.needed}
                     </span>
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-48">
+                <PopoverContent className="min-w-0">
                   <div className="space-y-2">
                     <h3 className="font-bold">{need.position} Players:</h3>
                     {need.players.length > 0 ? (
