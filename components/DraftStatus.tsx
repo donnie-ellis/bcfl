@@ -110,14 +110,14 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams,
 
           <div className="text-center">
             <p className="text-sm font-semibold">Picks until {possesiveTitle(team.name)} next pick:</p>
-            <p className="text-lg">
+            <div className="text-lg">
               {picksUntilNextTeamPickDisplay === 0 ? 
                 <Badge className='bg-green-400 hover:bg-green-400'>On the clock</Badge>
                 : picksUntilNextTeamPickDisplay === 1 ?
                 <Badge className='bg-yellow-400 hover:bg-yellow-400'>On deck</Badge>
                 : <Badge>{picksUntilNextTeamPick}</Badge>
               }
-            </p>
+            </div>
           </div>
 
           {lastPickedPlayer && lastPickTeam ? (

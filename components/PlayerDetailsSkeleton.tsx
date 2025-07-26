@@ -13,9 +13,8 @@ const PlayerDetailsSkeleton: React.FC<PlayerDetailsSkeletonProps> = ({
     currentPickNumber = null,
     pickNumber = null
 }) => {
-    if (currentPickNumber && pickNumber) {
-        const untilPickNumber = pickNumber - currentPickNumber;
-    }
+    const isNow = currentPickNumber !== null && pickNumber !== null && (pickNumber - currentPickNumber) === 0;
+    const untilPickNumber = currentPickNumber !== null && pickNumber !== null ? pickNumber - currentPickNumber : null;
   return (
     <Card className="p-3">
       <CardContent className="p-0">
@@ -30,7 +29,10 @@ const PlayerDetailsSkeleton: React.FC<PlayerDetailsSkeletonProps> = ({
               { currentPickNumber && pickNumber ? 
                <> 
                     <h3 className="font-semibold text-sm">Turns until pick:</h3>
-                    <Badge className="bg-secondary text-primary text-xs px-1.5 py-0.5 shrink-0">{pickNumber - currentPickNumber}</Badge>
+                    <Badge 
+                      className={`bg-secondary text-primary text-xs px-1.5 py-0.5 shrink-0 ${isNow && 'bg-green-400'}`}>
+                      {isNow ? 'Now' : untilPickNumber }
+                    </Badge>
                </>
               :
               <>

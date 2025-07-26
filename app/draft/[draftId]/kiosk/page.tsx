@@ -257,6 +257,7 @@ const KioskPage: React.FC = () => {
               picks={memoizedDraft.picks}
               teamKey={currentPick.team_key}
               teamName={teams ? teams.find(team => team.team_key === currentPick.team_key)?.name : ''}
+              currentPick={memoizedDraft.current_pick}
               className="pl-4"
             />
           )}
