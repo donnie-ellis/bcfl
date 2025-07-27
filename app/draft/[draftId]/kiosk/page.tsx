@@ -318,12 +318,15 @@ const KioskPage: React.FC = () => {
             </Card>
           )}
           <div>
-            <h2 className="text-xl font-bold mb-4">
+            <h2 className="text-2xl font-semibold mb-6">
               {!selectedPlayer 
-                ? "Select a player to proceed" 
-                : `Ready to draft ${selectedPlayer?.full_name}?`} </h2>
-              {selectedPlayer && (
-            <div className={`flex group columns-2 gap-6}`}>
+                ? 'Select a player to proceed'
+                : `Ready to draft ${selectedPlayer?.full_name}?`}
+              {!selectedPlayer && 
+                <span className="text-primary ml-4">→</span>
+              }
+              </h2>
+            <div className={`flex columns-2 gap-6 transition-all duration-500 ${selectedPlayer ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"} overflow-hidden`}>
               <PlayerDetails player={selectedPlayer} />
               <SubmitPickButton
                 isCurrentUserPick={true}
@@ -331,10 +334,9 @@ const KioskPage: React.FC = () => {
                 currentPick={currentPick}
                 onSubmitPick={handleSubmitPick}
                 isPickSubmitting={isPickSubmitting}
-                className={`transition-all duration-500 ease-in-out scale-95 hover:scale-100`}
+                className='scale-95 hover:scale-100 transition-transform duration-300 ease-in-out'
               />
             </div>
-              )}
           </div>
         </div>
 
