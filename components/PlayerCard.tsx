@@ -4,13 +4,14 @@ import { PlayerWithADP, Player, formatStatus, EnhancedPlayerWithADP } from '@/li
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Tooltip, 
-  TooltipContent, 
-  TooltipProvider, 
-  TooltipTrigger 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
 } from "@/components/ui/tooltip";
 import { Button } from './ui/button';
+import { ListPlus } from 'lucide-react';
 
 interface DraftQueueRef {
   addToQueue: (player: Player) => void;
@@ -50,7 +51,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Card 
+          <Card
             className={cardClasses}
             onClick={isDrafted ? undefined : onClick}
           >
@@ -73,6 +74,20 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
                   Drafted
                 </Badge>
               )}
+              {onAddToQueue && !isDrafted && (
+                <Button
+                  variant={"secondary"}
+                  size={"icon"}
+                  className="cursor-pointer hover:bg-secondary/40 hover:shadow"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddToQueue(player);
+                  }}
+                >
+                  <ListPlus className="w-4 h-4" />
+                </Button>
+              )}
+
             </CardContent>
           </Card>
         </TooltipTrigger>
@@ -82,16 +97,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
             <p><strong>Team:</strong> {player.editorial_team_full_name}</p>
             {player.bye_weeks && <p><strong>Bye Week{player.bye_weeks.length > 1 && 's'}:</strong> {player.bye_weeks.join(', ')}</p>}
             <p><strong>Status:</strong> <Badge variant={getSeverityColor(player.status)}>{formatStatus(player.status)}</Badge></p>
-            {onAddToQueue && !isDrafted && (
-                <Button 
-                  className="btn btn-secondary ml-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAddToQueue(player);}}
-                >
-                  +
-                </Button>
-              )}
           </div>
         </TooltipContent>
       </Tooltip>

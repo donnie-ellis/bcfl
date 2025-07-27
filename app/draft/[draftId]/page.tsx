@@ -22,7 +22,9 @@ import { Loader2, Menu, Plus } from "lucide-react";
 import { motion } from 'framer-motion';
 import TeamNeeds from '@/components/TeamNeeds';
 import DraftQueue from '@/components/DraftQueue';
-import { set } from 'lodash';
+
+// Union type for all possible player types in the queue
+type QueuePlayer = Player | PlayerWithADP | EnhancedPlayerWithADP;
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -37,7 +39,7 @@ const DraftPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("draft");
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [picks, setPicks] = useState<PickWithPlayerAndTeam[]>([]);
-  const [queue, setQueue] = useState<(PlayerWithADP | EnhancedPlayerWithADP | Player)[]>([]);
+  const [queue, setQueue] = useState<QueuePlayer[]>([]);
 
   const { data: draftData, mutate: mutateDraft } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher);
   const { data: picksData, mutate: mutatePicks } = useSWR<Pick[]>(
@@ -192,12 +194,11 @@ const DraftPage: React.FC = () => {
     }
   };
 
-  const addToQueue = (player: | PlayerWithADP | EnhancedPlayerWithADP | Player) => {
+  const addToQueue = (player: QueuePlayer) => {
     if (!queue.find(p => p.id === player.id)) {
       setQueue(prev => [...prev, player]);
     }
   };
-
 
   const memoizedDraft = useMemo(() => {
     if (draftData && picks.length > 0) {
@@ -273,7 +274,8 @@ const DraftPage: React.FC = () => {
               <DraftQueue
                 queue={queue}
                 setQueue={setQueue}
-                managerId={team?.manager_id}
+                managerId={team?.team_id}
+                onPlayerClick={(player) => setSelectedPlayer(player)}
               />
             </ScrollArea>
           </div>
@@ -312,6 +314,7 @@ const DraftPage: React.FC = () => {
                 onPlayerSelect={handlePlayerSelect}
                 draft={memoizedDraft}
                 selectedPlayer={selectedPlayer}
+                onAddToQueue={addToQueue}
               />
             </TabsContent>
             <TabsContent value="draft" className="grow overflow-hidden">
