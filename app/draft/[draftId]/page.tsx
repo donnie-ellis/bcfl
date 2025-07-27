@@ -19,7 +19,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Loader2, Menu, Plus } from "lucide-react";
-import { motion } from 'framer-motion';
 import TeamNeeds from '@/components/TeamNeeds';
 import DraftQueue from '@/components/DraftQueue';
 
@@ -196,6 +195,7 @@ const DraftPage: React.FC = () => {
 
   const addToQueue = (player: QueuePlayer) => {
     if (!queue.find(p => p.id === player.id)) {
+      toast.success(`${player.full_name} has been added to your queue.`);
       setQueue(prev => [...prev, player]);
     }
   };
@@ -382,6 +382,14 @@ const DraftPage: React.FC = () => {
                   </Button>
                 </div>
               }
+            </div>
+            <div>
+            <DraftQueue
+                queue={queue}
+                setQueue={setQueue}
+                managerId={team?.team_id}
+                onPlayerClick={(player) => setSelectedPlayer(player)}
+              />
             </div>
           </ScrollArea>
         </SheetContent>

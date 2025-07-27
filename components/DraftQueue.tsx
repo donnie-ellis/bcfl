@@ -1,11 +1,11 @@
 import { EnhancedPlayerWithADP, Player, PlayerWithADP } from '@/lib/types';
 import { useEffect, useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult, DroppableProps } from 'react-beautiful-dnd';
-import { Button } from './ui/button';
-import { Card, CardContent } from './ui/card';
-import { AvatarFallback } from '@radix-ui/react-avatar';
-import { Avatar, AvatarImage } from './ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ListMinus, MoveDown, MoveUp, Trash2 } from 'lucide-react';
+import { toast } from "sonner";
 
 // Union type for all possible player types in the queue
 type QueuePlayer = Player | PlayerWithADP | EnhancedPlayerWithADP;
@@ -37,6 +37,7 @@ export default function DraftQueue({ queue, setQueue, managerId, onPlayerDrafted
 
     const removeFromQueue = (playerId: number | string): void => {
         setQueue(prev => prev.filter(p => p.id !== playerId));
+        toast.warning(`Removed player from queue`);
     };
 
     const moveUp = (index: number): void => {
@@ -61,6 +62,7 @@ export default function DraftQueue({ queue, setQueue, managerId, onPlayerDrafted
 
     const clearQueue = (): void => {
         setQueue([]);
+        toast.warning("Cleared draft queue");
     };
 
     // React Beautiful DND handler
