@@ -1,21 +1,28 @@
 // ./components/PlayerCard.tsx
-import React, { ComponentProps } from 'react';
-import { PlayerWithADP, Player, formatStatus } from '@/lib/types/player.types';
+import React, { ComponentProps, useRef } from 'react';
+import { PlayerWithADP, Player, formatStatus, EnhancedPlayerWithADP } from '@/lib/types/player.types';
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Tooltip, 
-  TooltipContent, 
-  TooltipProvider, 
-  TooltipTrigger 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
 } from "@/components/ui/tooltip";
+import { Button } from './ui/button';
+import { ListPlus } from 'lucide-react';
+
+interface DraftQueueRef {
+  addToQueue: (player: Player) => void;
+}
 
 interface PlayerCardProps {
   player: PlayerWithADP | Player;
   isDrafted: boolean | undefined;
   onClick: () => void;
   fadeDrafted?: boolean;
+  onAddToQueue?: (player: Player | PlayerWithADP | EnhancedPlayerWithADP) => void;
 }
 
 type BadgeVariant = ComponentProps<typeof Badge>['variant'];
@@ -30,7 +37,10 @@ const getSeverityColor = (status: string | null): BadgeVariant => {
   }
 }
 
-const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fadeDrafted = false }) => {
+const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fadeDrafted = false, onAddToQueue }) => {
+
+  const queueRef = useRef<DraftQueueRef>(null);
+
   const cardClasses = `
     mb-2 cursor-pointer transition-all duration-300
     ${isDrafted ? (fadeDrafted ? 'opacity-50' : '') : 'hover:bg-accent'}
@@ -41,7 +51,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Card 
+          <Card
             className={cardClasses}
             onClick={isDrafted ? undefined : onClick}
           >
@@ -64,6 +74,20 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
                   Drafted
                 </Badge>
               )}
+              {onAddToQueue && !isDrafted && (
+                <Button
+                  variant={"secondary"}
+                  size={"icon"}
+                  className="cursor-pointer hover:bg-secondary/40 hover:shadow"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddToQueue(player);
+                  }}
+                >
+                  <ListPlus className="w-4 h-4" />
+                </Button>
+              )}
+
             </CardContent>
           </Card>
         </TooltipTrigger>

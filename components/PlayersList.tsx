@@ -2,7 +2,7 @@
 'use client'
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { PlayerWithADP, Draft, Pick, EnhancedPlayerWithADP } from '@/lib/types/';
+import { PlayerWithADP, Draft, Pick, EnhancedPlayerWithADP, Player } from '@/lib/types/';
 import PlayerFilters from './PlayerFilters';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import PlayerCard from '@/components/PlayerCard';
@@ -15,11 +15,13 @@ interface PlayersListProps {
   draft: Draft;
   selectedPlayer: PlayerWithADP | null;
   className?: string;
+  enableQueue?: boolean;
+  onAddToQueue?: (player: PlayerWithADP | EnhancedPlayerWithADP | Player) => void;
 }
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
-const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerSelect, draft, selectedPlayer, className }) => {
+const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerSelect, draft, selectedPlayer, className, enableQueue = false, onAddToQueue }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
   const [hideSelected, setHideSelected] = useState(true);
@@ -114,6 +116,7 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
                     isDrafted={player.is_drafted}
                     onClick={() => handlePlayerClick(player)}
                     fadeDrafted={true}
+                    onAddToQueue={onAddToQueue}
                   />
               ))
             )}
