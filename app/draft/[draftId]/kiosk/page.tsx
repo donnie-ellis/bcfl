@@ -20,10 +20,9 @@ import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import TeamNeeds from '@/components/TeamNeeds';
 import { parseTeamLogos, possesiveTitle } from '@/lib/types/team.types';
-import { AnimatePresence, motion } from 'framer-motion';
+import TeamBreakdown from '@/components/TeamBreakdown';
 
 type MemoizedDraft = Omit<Draft, 'picks'> & { picks: PickWithPlayerAndTeam[] };
 
@@ -309,30 +308,34 @@ const KioskPage: React.FC = () => {
                   leagueSettings={leagueSettings}
                   teams={teams}
                 />
+                <TeamBreakdown
+                  leagueSettings={leagueSettings}
+                  draft={memoizedDraft}
+                  teamKey={currentTeam.team_key}
+                  teams={teams}
+                  />
               </CardContent>
             </Card>
           )}
-          {selectedPlayer && (
-            <AnimatePresence>
-              <motion.div
-                key="playerSelected"
-                initial={{ opacity: 0, y: 100 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 100 }}
-                transition={{ duration: 0.2 }}
-                className='space-y-4'
-              >
-                <PlayerDetails player={selectedPlayer} />
-                <SubmitPickButton
-                  isCurrentUserPick={true}
-                  selectedPlayer={selectedPlayer}
-                  currentPick={currentPick}
-                  onSubmitPick={handleSubmitPick}
-                  isPickSubmitting={isPickSubmitting}
-                />
-              </motion.div>
-            </AnimatePresence>
-          )}
+          <div>
+            <h2 className="text-xl font-bold mb-4">
+              {!selectedPlayer 
+                ? "Select a player to proceed" 
+                : `Ready to draft ${selectedPlayer?.full_name}?`} </h2>
+              {selectedPlayer && (
+            <div className={`flex group columns-2 gap-6}`}>
+              <PlayerDetails player={selectedPlayer} />
+              <SubmitPickButton
+                isCurrentUserPick={true}
+                selectedPlayer={selectedPlayer}
+                currentPick={currentPick}
+                onSubmitPick={handleSubmitPick}
+                isPickSubmitting={isPickSubmitting}
+                className={`transition-all duration-500 ease-in-out scale-95 hover:scale-100`}
+              />
+            </div>
+              )}
+          </div>
         </div>
 
         {/* Right Column */}

@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-@config '../tailwind.config.ts';
+@custom-variant dark (&:is(.dark *));
 
 /*
   The default border color has changed to `currentcolor` in Tailwind CSS v4,
@@ -124,9 +124,30 @@
   --warn-foreground: oklch(0 0 0);
 }
 
+/* Custom grid template columns for draft grid */
+@utility grid-cols-8 {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+}
+
+@utility grid-cols-10 {
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+}
+
+@utility grid-cols-12 {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+@utility grid-cols-14 {
+  grid-template-columns: repeat(14, minmax(0, 1fr));
+}
+
+@utility grid-cols-16 {
+  grid-template-columns: repeat(16, minmax(0, 1fr));
+}
+
 @theme inline {
   --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-foreground: var(--foreground);  
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
@@ -180,11 +201,20 @@
   --shadow-xl: var(--shadow-xl);
   --shadow-2xl: var(--shadow-2xl);
 }
-  @layer base {
-    * {
-      @apply border-border;
-    }
-    body {
-      @apply bg-background text-foreground;
-    }
+
+@layer base {
+  * {
+    @apply border-border;
   }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@utility container {
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 2rem;
+  padding-right: 2rem;
+  max-width: 1400px;
+}
