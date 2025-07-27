@@ -95,17 +95,17 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draft, teamKey, t
 
   const getSeverityColor = (needed: number, filled: number) => {
     const remaining = needed - filled;
-    if (remaining <= 0) return 'bg-green-100 dark:bg-green-900';
-    if (remaining === 1) return 'bg-yellow-100 dark:bg-yellow-900';
-    return 'bg-red-100 dark:bg-red-900';
+    if (remaining <= 0) return 'bg-success hover:bg-success/90 text-success-foreground hover:text-success-foreground transition-colors duration-200 cursor-default';
+    if (remaining === 1) return "bg-warn hover:bg-warn/90 text-warn-foreground hover:text-warn-foreground transition-colors duration-200 cursor-default";
+    return "bg-destructive hover:bg-destructive/90 text-destructive-foreground hover:text-destructive-foreground transition-colors duration-200 cursor-default";
   };
 
   return (
-    <Table>
+    <Table className="w-full min-w-0">
       <TableHeader>
         <TableRow>
           {positionNeeds.map((need) => (
-            <TableHead key={need.position} className="text-center p-2">
+            <TableHead key={need.position} className="text-center text-muted-foreground p-1 text-xs">
               {need.position}
             </TableHead>
           ))}
@@ -114,18 +114,18 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draft, teamKey, t
       <TableBody>
         <TableRow>
           {positionNeeds.map((need) => (
-            <TableCell key={need.position} className="p-0">
+            <TableCell key={need.position} className="p-0 min-w-0">
               <Popover>
                 <PopoverTrigger asChild>
                   <button 
-                    className={`w-full h-full p-2 ${getSeverityColor(need.needed, need.filled)} hover:opacity-80 transition-opacity`}
+                    className={`w-full h-full p-2 ${getSeverityColor(need.needed, need.filled)} transition-colors cursor-pointer`}
                   >
-                    <span className="font-bold">
+                    <span className="font-medium text-xs">
                       {need.filled}/{need.needed}
                     </span>
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-48">
+                <PopoverContent className="min-w-0">
                   <div className="space-y-2">
                     <h3 className="font-bold">{need.position} Players:</h3>
                     {need.players.length > 0 ? (

@@ -18,8 +18,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Loader2, Menu } from "lucide-react";
+import { Loader2, Menu, Plus } from "lucide-react";
 import { motion } from 'framer-motion';
+import TeamNeeds from '@/components/TeamNeeds';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -47,30 +48,24 @@ const DraftPage: React.FC = () => {
   const { data: players } = useSWR<Player[]>(draftData ? `/api/db/league/${draftData.league_id}/players` : null, fetcher);
 
   const updatePicksAndDraft = useCallback((latestDraft: Draft, latestPicks: Pick[]) => {
-    console.log('updatePicksAndDraft called');
-  
     if (!latestDraft || !latestPicks || !players || !teams) {
       console.log('Missing required data, returning early');
       return;
     }
-  
+
     const updatedPicks: PickWithPlayerAndTeam[] = latestPicks.map(pick => ({
       ...pick,
       player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
       team: teams.find(t => t.team_key === pick.team_key) ?? {} as Team
     }));
-  
-    console.log('Updated picks:', updatedPicks);
     setPicks(updatedPicks);
-  
+
     const updatedCurrentPick = updatedPicks.find(p => !p.is_picked) || null;
-    console.log('Updated Current Pick:', updatedCurrentPick);
-  
+
     if (updatedCurrentPick && latestDraft.current_pick !== updatedCurrentPick.total_pick_number) {
-      console.log('Updating draft data', { oldPick: latestDraft.current_pick, newPick: updatedCurrentPick.total_pick_number });
       mutateDraft({ ...latestDraft, current_pick: updatedCurrentPick.total_pick_number }, false);
     }
-  
+
     setCurrentPick(updatedCurrentPick);
   }, [players, teams, mutateDraft]);
 
@@ -78,12 +73,12 @@ const DraftPage: React.FC = () => {
     if (updatedPick.is_picked && updatedPick.player_id) {
       const player = players?.find(p => p.id === updatedPick.player_id);
       const team = teams?.find(t => t.team_key === updatedPick.team_key);
-      
+
       if (player && team) {
         toast.success(
-          `${team.name} drafted ${player.full_name}`,
+          `${team.name} has made pick #${updatedPick.total_pick_number}`,
           {
-            description: `${player.editorial_team_full_name} - ${player.display_position}`,
+            description: `${player.full_name} (${player.editorial_team_abbr}) - ${player.display_position}`,
             duration: 5000,
           }
         );
@@ -93,16 +88,15 @@ const DraftPage: React.FC = () => {
 
   useEffect(() => {
     if (!supabase || !draftId) return;
-  
+
     const picksSubscription = supabase
       .channel(`picks_${draftId}`)
-      .on('postgres_changes', { 
-        event: 'UPDATE', 
-        schema: 'public', 
-        table: 'picks', 
-        filter: `draft_id=eq.${draftId}` 
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'picks',
+        filter: `draft_id=eq.${draftId}`
       }, async (payload) => {
-        console.log('Websocket update received:', payload);
         const updatedPick = payload.new as Pick;
         if (updatedPick.is_picked) {
           notifyPickMade(updatedPick);
@@ -118,19 +112,24 @@ const DraftPage: React.FC = () => {
           updatePicksAndDraft(latestDraft, latestPicks);
         }
       })
-      .subscribe();
-  
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Subscribed to picks updates');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Error subscribing to picks updates');
+        }
+      });
+
     return () => {
       supabase.removeChannel(picksSubscription);
     };
   }, [supabase, draftId, notifyPickMade, updatePicksAndDraft, mutateDraft, mutatePicks]);
 
-useEffect(() => {
-  if (draftData && picksData && players && teams) {
-    console.log('Calling updatePicksAndDraft from useEffect');
-    updatePicksAndDraft(draftData, picksData);
-  }
-}, [draftData, picksData, players, teams, updatePicksAndDraft]);
+  useEffect(() => {
+    if (draftData && picksData && players && teams) {
+      updatePicksAndDraft(draftData, picksData);
+    }
+  }, [draftData, picksData, players, teams, updatePicksAndDraft]);
 
   const handlePlayerSelect = useCallback((player: PlayerWithADP) => {
     setSelectedPlayer(player);
@@ -147,48 +146,48 @@ useEffect(() => {
 
   const isCurrentUserPick = currentPick?.team_key === team?.team_key;
 
-const handleSubmitPick = async () => {
-  setIsPickSubmitting(true);
-  if (!selectedPlayer || !currentPick || !draftData) {
-    toast.error("Unable to submit pick. Please try again.");
-    setIsPickSubmitting(false);
-    return;
-  }
-
-  try {
-    const response = await fetch(`/api/db/draft/${draftId}/pick`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        pickId: currentPick.id,
-        playerId: selectedPlayer.id,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to submit pick');
+  const handleSubmitPick = async () => {
+    setIsPickSubmitting(true);
+    if (!selectedPlayer || !currentPick || !draftData) {
+      toast.error("Unable to submit pick. Please try again.");
+      setIsPickSubmitting(false);
+      return;
     }
 
-    setSelectedPlayer(null);
-    // Fetch latest data
-    const [latestDraft, latestPicks] = await Promise.all([
-      fetch(`/api/db/draft/${draftId}`).then(res => res.json()),
-      fetch(`/api/db/draft/${draftId}/picks`).then(res => res.json())
-    ]);
-    // Update SWR cache
-    mutateDraft(latestDraft, false);
-    mutatePicks(latestPicks, false);
-    // Update local state
-    updatePicksAndDraft(latestDraft, latestPicks);
-  } catch (error) {
-    console.error('Error submitting pick:', error);
-    toast.error("Failed to submit pick. Please try again.");
-  } finally {
-    setIsPickSubmitting(false);
-  }
-};
+    try {
+      const response = await fetch(`/api/db/draft/${draftId}/pick`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          pickId: currentPick.id,
+          playerId: selectedPlayer.id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit pick');
+      }
+
+      setSelectedPlayer(null);
+      // Fetch latest data
+      const [latestDraft, latestPicks] = await Promise.all([
+        fetch(`/api/db/draft/${draftId}`).then(res => res.json()),
+        fetch(`/api/db/draft/${draftId}/picks`).then(res => res.json())
+      ]);
+      // Update SWR cache
+      mutateDraft(latestDraft, false);
+      mutatePicks(latestPicks, false);
+      // Update local state
+      updatePicksAndDraft(latestDraft, latestPicks);
+    } catch (error) {
+      console.error('Error submitting pick:', error);
+      toast.error("Failed to submit pick. Please try again.");
+    } finally {
+      setIsPickSubmitting(false);
+    }
+  };
 
   const memoizedDraft = useMemo(() => {
     if (draftData && picks.length > 0) {
@@ -211,7 +210,7 @@ const handleSubmitPick = async () => {
   return (
     <div className="flex flex-col h-screen">
       <DraftHeader league={leagueData} draft={memoizedDraft} />
-      <div className="flex-grow overflow-hidden flex flex-col md:flex-row">
+      <div className="grow overflow-hidden flex flex-col md:flex-row">
         {/* Desktop View */}
         <div className="hidden md:flex w-full h-[calc(100vh-64px)]">
 
@@ -222,13 +221,13 @@ const handleSubmitPick = async () => {
               onPlayerSelect={handlePlayerSelectMd}
               draft={memoizedDraft}
               selectedPlayer={selectedPlayer}
-              className="md:bg-gradient-to-l from-background to-muted"
+              className="md:bg-linear-to-l from-background to-muted/50"
             />
           </div>
-          
+
           {/* Middle Column */}
           <div className="w-1/2 h-full overflow-hidden flex flex-col">
-            <ScrollArea className="flex-grow">
+            <ScrollArea className="grow">
               <div className="p-4 space-y-4">
                 <DraftStatus
                   draft={memoizedDraft}
@@ -236,38 +235,49 @@ const handleSubmitPick = async () => {
                   teams={teams}
                   team={team}
                 />
-                {selectedPlayer && (
-                  <motion.div
-                    key="playerSelected"
-                    initial={{ opacity: 0, y: 100 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 1, y: 100 }}
-                    transition={{ duration: 0.2 }}
-                    className='space-y-4'
-                  >
-                    <SubmitPickButton
-                      isCurrentUserPick={isCurrentUserPick}
-                      selectedPlayer={selectedPlayer}
-                      currentPick={currentPick}
-                      onSubmitPick={handleSubmitPick}
-                      isPickSubmitting={isPickSubmitting}
-                    />
-                    <PlayerDetails 
-                      player={selectedPlayer} 
-                    />
-                  </motion.div>
-                )}
+              </div>
+              <div className="p-4">
+                <h2 className="text-2xl font-semibold mb-6">
+                  {!selectedPlayer 
+                    ? 
+                    <>
+                      <span className="text-primary mr-4">←</span> <span>Select a Player</span>
+                    </>
+                    : `Do you want to draft ${selectedPlayer.full_name}?`}
+                </h2>
+                <div className={`flex columns-2 gap-6 transition-all duration-500 ${selectedPlayer ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"} overflow-hidden`}>
+                  <SubmitPickButton
+                    isCurrentUserPick={isCurrentUserPick}
+                    selectedPlayer={selectedPlayer}
+                    currentPick={currentPick}
+                    onSubmitPick={handleSubmitPick}
+                    isPickSubmitting={isPickSubmitting}
+                    className="scale-95 hover:scale-100 transition-transform duration-300 ease-in-out"
+                  />
+                  <PlayerDetails
+                    player={selectedPlayer}
+                  />
+                </div>
               </div>
             </ScrollArea>
           </div>
 
           {/* Right Column */}
           <div className="w-1/4 overflow-hidden flex flex-col">
+            <div>
+              <TeamNeeds
+                teamKey={team?.team_key}
+                leagueSettings={leagueSettings}
+                draft={memoizedDraft}
+                teams={teams}
+              />
+            </div>
             <DraftedPlayers
               picks={memoizedDraft.picks}
               teamKey={team.team_key}
               teamName={team.name}
-              className="md:bg-gradient-to-r from-background to-muted"
+              currentPick={memoizedDraft.current_pick}
+              className="md:bg-linear-to-r from-background to-muted/50"
             />
           </div>
         </div>
@@ -275,12 +285,12 @@ const handleSubmitPick = async () => {
         {/* Small screen layout */}
         <div className="md:hidden flex flex-col h-full">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-            <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
+            <TabsList className="grid w-full grid-cols-3 shrink-0">
               <TabsTrigger value="players">Players</TabsTrigger>
               <TabsTrigger value="draft">Draft</TabsTrigger>
               <TabsTrigger value="team">My Team</TabsTrigger>
             </TabsList>
-            <TabsContent value="players" className="flex-grow overflow-hidden">
+            <TabsContent value="players" className="grow overflow-hidden">
               <PlayersList
                 draftId={draftId}
                 onPlayerSelect={handlePlayerSelect}
@@ -288,7 +298,7 @@ const handleSubmitPick = async () => {
                 selectedPlayer={selectedPlayer}
               />
             </TabsContent>
-            <TabsContent value="draft" className="flex-grow overflow-hidden">
+            <TabsContent value="draft" className="grow overflow-hidden">
               <ScrollArea className="h-full">
                 <div className="p-4 space-y-4">
                   <DraftStatus
@@ -300,13 +310,20 @@ const handleSubmitPick = async () => {
                 </div>
               </ScrollArea>
             </TabsContent>
-            <TabsContent value="team" className="flex-grow overflow-hidden">
+            <TabsContent value="team" className="grow overflow-hidden">
+              <TeamNeeds
+                teamKey={team?.team_key}
+                leagueSettings={leagueSettings}
+                draft={memoizedDraft}
+                teams={teams}
+              />
               <ScrollArea className="h-full">
                 <div className="p-4">
                   <DraftedPlayers
                     picks={memoizedDraft.picks}
                     teamKey={team.team_key}
                     teamName={team.name}
+                    currentPick={memoizedDraft.current_pick}
                   />
                 </div>
               </ScrollArea>
@@ -321,7 +338,7 @@ const handleSubmitPick = async () => {
           <SheetHeader>
             <SheetTitle>Make your pick</SheetTitle>
           </SheetHeader>
-          <ScrollArea className="flex-grow">
+          <ScrollArea className="grow">
             <div className="p-4 space-y-4">
               <SubmitPickButton
                 isCurrentUserPick={isCurrentUserPick}
@@ -330,20 +347,33 @@ const handleSubmitPick = async () => {
                 onSubmitPick={handleSubmitPick}
                 isPickSubmitting={isPickSubmitting}
               />
-              <PlayerDetails
-                player={selectedPlayer}
-              />
+              {selectedPlayer ?
+                <PlayerDetails
+                  player={selectedPlayer}
+                />
+                :
+                <div>
+                  <h1>No player selected</h1>
+                  <Button
+                    onClick={() => { setActiveTab("players"); setIsSheetOpen(false); }}
+                    variant="outline"
+                    className='flex items-center justify-center w-full h-12'
+                  >
+                    Click to choose a player
+                  </Button>
+                </div>
+              }
             </div>
           </ScrollArea>
         </SheetContent>
-        
+
         {/* Floating action button for small screens */}
         <SheetTrigger asChild>
           <Button
             size="icon"
-            className="fixed right-4 bottom-4 rounded-full shadow-lg md:hidden"
+            className={`fixed right-4 bottom-4 rounded-full shadow-lg md:hidden ${isCurrentUserPick ? 'animate-pulse ring-4 ring-success' : 'opacity-60 transition-opacity duration-300'}`}
           >
-            <Menu className="h-6 w-6" />
+            <Plus className="h-8 w-8" />
           </Button>
         </SheetTrigger>
       </Sheet>

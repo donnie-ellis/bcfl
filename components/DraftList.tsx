@@ -27,7 +27,7 @@ const DraftList: React.FC<DraftListProps> = ({ draft, currentTeamKey }) => {
                 onClick={() => {}}
               />
             ) : (
-              <div className="flex-grow bg-gray-100 rounded-lg p-4">
+              <div className="grow bg-gray-100 rounded-lg p-4">
                 <p className="font-semibold">Pick {pick.total_pick_number} (Overall)</p>
                 <p className="text-gray-500">Not yet selected</p>
               </div>
