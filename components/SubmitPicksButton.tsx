@@ -10,6 +10,7 @@ interface SubmitPickButtonProps {
   currentPick: Pick | null;
   onSubmitPick: () => void;
   isPickSubmitting: boolean;
+  className?: string;
 }
 
 const SubmitPickButton: React.FC<SubmitPickButtonProps> = ({
@@ -17,7 +18,8 @@ const SubmitPickButton: React.FC<SubmitPickButtonProps> = ({
   selectedPlayer,
   currentPick,
   onSubmitPick,
-  isPickSubmitting
+  isPickSubmitting,
+  className,
 }) => {
   const isDisabled = !isCurrentUserPick || !selectedPlayer || !currentPick || selectedPlayer.is_picked || isPickSubmitting;
   const buttonText = !isCurrentUserPick
@@ -25,7 +27,7 @@ const SubmitPickButton: React.FC<SubmitPickButtonProps> = ({
     : isPickSubmitting
       ? (
         <>
-          <Loader2 /> ...drafting {selectedPlayer?.full_name}
+          <Loader2 className="animate-spin" /> ...drafting {selectedPlayer?.full_name}
         </>
       )
       : selectedPlayer
@@ -35,7 +37,7 @@ const SubmitPickButton: React.FC<SubmitPickButtonProps> = ({
     <Button
       onClick={onSubmitPick}
       disabled={isDisabled}
-      className={`w-full ${isDisabled ? 'bg-gray-300' : 'bg-success hover:bg-success/90 text-success-foreground hover:text-success-foreground'}`}
+      className={`w-full ${isDisabled ? 'bg-primary/25 text-primary-foreground/25' : 'bg-primary text-primary-foreground'} ${isPickSubmitting && 'border-primary'} ${className}`}
     >
       {buttonText}
     </Button>
