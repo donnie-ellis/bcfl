@@ -8,7 +8,7 @@ import PlayersList from '@/components/PlayersList';
 import DraftedPlayers from '@/components/DraftedPlayers';
 import DraftStatus from '@/components/DraftStatus';
 import PlayerDetails from '@/components/PlayerDetails';
-import { League, Draft, LeagueSettings, Player, Team, Pick, PlayerWithADP } from '@/lib/types/';
+import { League, Draft, LeagueSettings, Player, Team, Pick, PlayerWithADP, EnhancedPlayerWithADP } from '@/lib/types/';
 import { PickWithPlayerAndTeam } from '@/lib/types/pick.types';
 import SubmitPickButton from '@/components/SubmitPicksButton';
 import { toast } from "sonner";
@@ -21,6 +21,8 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Menu, Plus } from "lucide-react";
 import { motion } from 'framer-motion';
 import TeamNeeds from '@/components/TeamNeeds';
+import DraftQueue from '@/components/DraftQueue';
+import { set } from 'lodash';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -35,6 +37,7 @@ const DraftPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("draft");
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [picks, setPicks] = useState<PickWithPlayerAndTeam[]>([]);
+  const [queue, setQueue] = useState<(PlayerWithADP | EnhancedPlayerWithADP | Player)[]>([]);
 
   const { data: draftData, mutate: mutateDraft } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher);
   const { data: picksData, mutate: mutatePicks } = useSWR<Pick[]>(
@@ -189,6 +192,13 @@ const DraftPage: React.FC = () => {
     }
   };
 
+  const addToQueue = (player: | PlayerWithADP | EnhancedPlayerWithADP | Player) => {
+    if (!queue.find(p => p.id === player.id)) {
+      setQueue(prev => [...prev, player]);
+    }
+  };
+
+
   const memoizedDraft = useMemo(() => {
     if (draftData && picks.length > 0) {
       return {
@@ -222,6 +232,7 @@ const DraftPage: React.FC = () => {
               draft={memoizedDraft}
               selectedPlayer={selectedPlayer}
               className="md:bg-linear-to-l from-background to-muted/50"
+              onAddToQueue={addToQueue}
             />
           </div>
 
@@ -259,6 +270,11 @@ const DraftPage: React.FC = () => {
                   />
                 </div>
               </div>
+              <DraftQueue
+                queue={queue}
+                setQueue={setQueue}
+                managerId={team?.manager_id}
+              />
             </ScrollArea>
           </div>
 

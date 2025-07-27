@@ -1,6 +1,6 @@
 // ./components/PlayerCard.tsx
-import React, { ComponentProps } from 'react';
-import { PlayerWithADP, Player, formatStatus } from '@/lib/types/player.types';
+import React, { ComponentProps, useRef } from 'react';
+import { PlayerWithADP, Player, formatStatus, EnhancedPlayerWithADP } from '@/lib/types/player.types';
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -10,12 +10,18 @@ import {
   TooltipProvider, 
   TooltipTrigger 
 } from "@/components/ui/tooltip";
+import { Button } from './ui/button';
+
+interface DraftQueueRef {
+  addToQueue: (player: Player) => void;
+}
 
 interface PlayerCardProps {
   player: PlayerWithADP | Player;
   isDrafted: boolean | undefined;
   onClick: () => void;
   fadeDrafted?: boolean;
+  onAddToQueue?: (player: Player | PlayerWithADP | EnhancedPlayerWithADP) => void;
 }
 
 type BadgeVariant = ComponentProps<typeof Badge>['variant'];
@@ -30,7 +36,10 @@ const getSeverityColor = (status: string | null): BadgeVariant => {
   }
 }
 
-const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fadeDrafted = false }) => {
+const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fadeDrafted = false, onAddToQueue }) => {
+
+  const queueRef = useRef<DraftQueueRef>(null);
+
   const cardClasses = `
     mb-2 cursor-pointer transition-all duration-300
     ${isDrafted ? (fadeDrafted ? 'opacity-50' : '') : 'hover:bg-accent'}
@@ -73,6 +82,16 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
             <p><strong>Team:</strong> {player.editorial_team_full_name}</p>
             {player.bye_weeks && <p><strong>Bye Week{player.bye_weeks.length > 1 && 's'}:</strong> {player.bye_weeks.join(', ')}</p>}
             <p><strong>Status:</strong> <Badge variant={getSeverityColor(player.status)}>{formatStatus(player.status)}</Badge></p>
+            {onAddToQueue && !isDrafted && (
+                <Button 
+                  className="btn btn-secondary ml-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddToQueue(player);}}
+                >
+                  +
+                </Button>
+              )}
           </div>
         </TooltipContent>
       </Tooltip>
