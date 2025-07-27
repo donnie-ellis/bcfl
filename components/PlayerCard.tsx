@@ -1,5 +1,5 @@
 // ./components/PlayerCard.tsx
-import React from 'react';
+import React, { ComponentProps } from 'react';
 import { PlayerWithADP, Player, formatStatus } from '@/lib/types/player.types';
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -18,19 +18,21 @@ interface PlayerCardProps {
   fadeDrafted?: boolean;
 }
 
-const getSeverityColor = (status: string | null): string => {
-  if (!status) return "bg-green-400";
+type BadgeVariant = ComponentProps<typeof Badge>['variant'];
+
+const getSeverityColor = (status: string | null): BadgeVariant => {
+  if (!status) return "success";
   switch (status) {
-    case "": return "bg-green-400 hover:bg-green-400";
-    case "Q":
-    case "D": return "bg-yellow-400 hover:bg-yellow-400";
-    default: return "bg-red-400 hover:bg-red-400";
+    case "": return "success";
+    case "Q": return "warn";
+    case "D": return "warn";
+    default: return "destructive";
   }
 }
 
 const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fadeDrafted = false }) => {
   const cardClasses = `
-    mb-2 cursor-pointer transition-all
+    mb-2 cursor-pointer transition-all duration-300
     ${isDrafted ? (fadeDrafted ? 'opacity-50' : '') : 'hover:bg-accent'}
     ${isDrafted ? 'cursor-not-allowed' : 'cursor-pointer'}
   `;
@@ -48,7 +50,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
                 <AvatarImage src={player.headshot_url as string} alt={player.full_name || 'N/A'} />
                 <AvatarFallback>{player.full_name || 'NA'.split(' ').map(n => n[0]).join('')}</AvatarFallback>
               </Avatar>
-              <div className="flex-grow">
+              <div className="grow">
                 <p className="font-semibold">{player.full_name}</p>
                 <p className="text-sm">
                   <span className="font-medium text-primary">{player.display_position}</span>
@@ -70,7 +72,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
             <p><strong>Position:</strong> {player.display_position}</p>
             <p><strong>Team:</strong> {player.editorial_team_full_name}</p>
             {player.bye_weeks && <p><strong>Bye Week{player.bye_weeks.length > 1 && 's'}:</strong> {player.bye_weeks.join(', ')}</p>}
-            <p><strong>Status:</strong> <Badge className={getSeverityColor(player.status)}>{formatStatus(player.status)}</Badge></p>
+            <p><strong>Status:</strong> <Badge variant={getSeverityColor(player.status)}>{formatStatus(player.status)}</Badge></p>
           </div>
         </TooltipContent>
       </Tooltip>

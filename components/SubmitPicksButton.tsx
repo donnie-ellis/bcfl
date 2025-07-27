@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Pick, PlayerWithADP } from '@/lib/types/';
-import { Loader2 } from 'lucide-react';
+import { Clock, Loader2 } from 'lucide-react';
 
 interface SubmitPickButtonProps {
   isCurrentUserPick: boolean;
@@ -10,6 +10,7 @@ interface SubmitPickButtonProps {
   currentPick: Pick | null;
   onSubmitPick: () => void;
   isPickSubmitting: boolean;
+  className?: string;
 }
 
 const SubmitPickButton: React.FC<SubmitPickButtonProps> = ({
@@ -17,15 +18,19 @@ const SubmitPickButton: React.FC<SubmitPickButtonProps> = ({
   selectedPlayer,
   currentPick,
   onSubmitPick,
-  isPickSubmitting
+  isPickSubmitting,
+  className,
 }) => {
   const isDisabled = !isCurrentUserPick || !selectedPlayer || !currentPick || selectedPlayer.is_picked || isPickSubmitting;
   const buttonText = !isCurrentUserPick
-    ? 'Waiting for your turn...'
+    ? <>
+      <Clock className="inline mr-2" h-4 w-4 />
+      Waiting for your turn...
+    </>
     : isPickSubmitting
       ? (
         <>
-          <Loader2 /> ...drafting {selectedPlayer?.full_name}
+          <Loader2 className="animate-spin" /> ...drafting {selectedPlayer?.full_name}
         </>
       )
       : selectedPlayer
@@ -35,7 +40,7 @@ const SubmitPickButton: React.FC<SubmitPickButtonProps> = ({
     <Button
       onClick={onSubmitPick}
       disabled={isDisabled}
-      className={`w-full ${isDisabled ? 'bg-gray-300' : 'bg-green-500 hover:bg-green-600'}`}
+      className={`w-full ${isDisabled ? 'bg-primary/25 text-primary-foreground/40' : 'bg-primary text-primary-foreground'} ${isPickSubmitting && 'border-primary'} ${className}`}
     >
       {buttonText}
     </Button>

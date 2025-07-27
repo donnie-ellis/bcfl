@@ -21,7 +21,7 @@ const DraftSquare: React.FC<DraftSquareProps> = memo(({ pick, isCurrentPick, onS
   const teamLogoUrl = useMemo(() => teamLogos.length > 0 ? teamLogos[0].url : '', [teamLogos]);
 
   const Square = () => (
-    <Card className={`w-full h-full ${isCurrentPick ? 'border-2 border-blue-500' : ''}`}>
+    <Card className={`w-full h-full ${isCurrentPick ? 'border-2 border-primary animate-pulse' : ''} hover:bg-muted`}>
       <CardContent className="p-2 h-full flex flex-col justify-between">
         {isLoading ? (
           <>
@@ -35,7 +35,7 @@ const DraftSquare: React.FC<DraftSquareProps> = memo(({ pick, isCurrentPick, onS
               <p className="font-bold">Pick {pick.pick_number}</p>
               <p className="truncate">{sizedTitle(pick.team?.name || '')}</p>
             </div>
-            <div className="flex items-center justify-center flex-grow">
+            <div className="flex items-center justify-center grow">
               <Avatar className="h-12 w-12">
                 {pick.is_picked ? (
                   <AvatarImage src={pick.player?.headshot_url || pick.player?.image_url || ''} alt={pick.player?.full_name} />

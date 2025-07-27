@@ -277,12 +277,12 @@ const DraftBoardPage: React.FC = () => {
       <div className="flex flex-col h-screen">
         {MemoizedDraftHeader}
         <Alert className="mx-4 my-4 max-w-[calc(100%-2rem)]">
-            <AlertTitle className="flex-grow text-center mx-2">Draft Completed</AlertTitle>
-          <AlertDescription className="text-center mt-2 flex-grow">
+          <AlertTitle className="grow text-center mx-2">Draft Completed</AlertTitle>
+          <AlertDescription className="text-center mt-2 grow">
             The draft has been completed. You can review the final draft results below.
           </AlertDescription>
         </Alert>
-        <ScrollArea className="flex-grow">
+        <ScrollArea className="grow">
           <div className="p-4 space-y-8">
             {rounds.map((round, index) => (
               <Card key={round} ref={(el) => setRoundRef(el, index)}>
@@ -313,7 +313,7 @@ const DraftBoardPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen bg-muted/50">
       {MemoizedDraftHeader}
       <div className="p-4">
         <Select
@@ -332,7 +332,7 @@ const DraftBoardPage: React.FC = () => {
           </SelectContent>
         </Select>
       </div>
-      <ScrollArea className="flex-grow">
+      <ScrollArea className="grow">
         <div className="p-4 space-y-8">
           {isMobile ? (
             <Card>
@@ -383,11 +383,11 @@ const DraftBoardPage: React.FC = () => {
       </ScrollArea>
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent className="w-full sm:max-w-md flex flex-col h-full">
-          <SheetHeader className="flex-shrink-0">
+          <SheetHeader className="shrink-0">
             <SheetTitle>{currentPick?.team ? 'Set Pick for ' + currentPick.team.name : 'Set Pick'}</SheetTitle>
           </SheetHeader>
-          <div className="flex-grow flex flex-col overflow-hidden mt-4">
-            <div className="flex-grow overflow-hidden">
+          <div className="grow flex flex-col overflow-hidden mt-4">
+            <div className="grow overflow-hidden">
               <PlayersList
                 draftId={draftId}
                 onPlayerSelect={setSelectedPlayer}
@@ -396,7 +396,7 @@ const DraftBoardPage: React.FC = () => {
               />
             </div>
             {selectedPlayer && (
-              <div className="flex-shrink-0 mt-4">
+              <div className="shrink-0 mt-4">
                 <PlayerCard
                   player={selectedPlayer}
                   isDrafted={false}

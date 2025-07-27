@@ -11,8 +11,8 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
-import TeamNeeds from './TeamNeeds';
 import { Badge } from '@/components/ui/badge';
+import RecentPicks from './RecentPicks';
 
 interface DraftStatusProps {
   draft: Draft | null;
@@ -72,7 +72,7 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams,
   const picksUntilNextTeamPickDisplay = picksUntilNextTeamPick === -1 ? 'No more picks' : picksUntilNextTeamPick;
 
   return (
-    <Card className="">
+    <Card className={currentTeam === team ? "border-primary" : "border-muted"}>
       <CardHeader className="pb-2">
         <CardTitle className="text-center">Round {round} Pick {pickInRound}</CardTitle>
       </CardHeader>
@@ -110,16 +110,16 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams,
 
           <div className="text-center">
             <p className="text-sm font-semibold">Picks until {possesiveTitle(team.name)} next pick:</p>
-            <p className="text-lg">
+            <div className="text-lg">
               {picksUntilNextTeamPickDisplay === 0 ? 
-                <Badge className='bg-green-400 hover:bg-green-400'>On the clock</Badge>
+                <Badge className='cursor-default' variant={'success'}>On the clock</Badge>
                 : picksUntilNextTeamPickDisplay === 1 ?
-                <Badge className='bg-yellow-400 hover:bg-yellow-400'>On deck</Badge>
-                : <Badge>{picksUntilNextTeamPick}</Badge>
+                <Badge className="cursor-default" variant={'warn'}>On deck</Badge>
+                : <Badge className="cursor-default" variant={'default'}>{picksUntilNextTeamPick}</Badge>
               }
-            </p>
+            </div>
           </div>
-
+          <h3 className="text-lg font-semibold text-center mt-4">Previous Picks</h3>
           {lastPickedPlayer && lastPickTeam ? (
             <div>
               <p className="text-xs mb-1">Last Picked Player ({lastPickTeam.name}):</p>
@@ -132,13 +132,7 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams,
           ) : (
             <p className="text-sm text-center">No players picked yet</p>
           )}
-
-          <TeamNeeds 
-            teamKey={team?.team_key}
-            draft={draft}
-            leagueSettings={leagueSettings}
-            teams={teams}
-          />
+          <RecentPicks draft={draft} />
         </div>
       </CardContent>
     </Card>

@@ -7,9 +7,7 @@ import PlayerFilters from './PlayerFilters';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import PlayerCard from '@/components/PlayerCard';
 import { Skeleton } from "@/components/ui/skeleton";
-import { motion, AnimatePresence } from "framer-motion";
 import useSWR from 'swr';
-import { Separator } from './ui/separator';
 
 interface PlayersListProps {
   draftId: string;
@@ -80,9 +78,9 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         <h2 className='text-2xl ml-4 py-2 font-bold text-primary text-center'>Players</h2>
-        <div className="py-2">
+        <div className="p-2 pl-4">
           <PlayerFilters
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
@@ -94,41 +92,31 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
           />
         </div>
       </div>
-      <Separator className='ml-4' />
-      <ScrollArea className="flex-grow">
+      <ScrollArea className="grow">
         <div className="p-4 pr-3">
-          <AnimatePresence>
             {!playersData ? (
               Array.from({ length: 10 }).map((_, index) => (
-                <motion.div
-                  key={`skeleton-${index}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <Skeleton className="h-20 w-full mb-2" />
-                </motion.div>
+                <div className='rounded-lg bg-background h-20 w-full mb-2' key={index}>
+                  <div className="flex items-center justify-between p-4">
+                    <Skeleton className="h-12 w-12 rounded-full" />
+                    <div className='flex flex-col space-y-2 w-full ml-4'>
+                      <Skeleton className="h-6 w-1/2" />
+                      <Skeleton className="h-4 w-3/4" />
+                    </div>
+                  </div>
+                </div>
               ))
             ) : (
               filteredPlayers.map((player) => (
-                <motion.div
-                  key={player.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 20 }}
-                  transition={{ duration: 0.2 }}
-                  whileTap={{ scale: 0.85}}
-                >
                   <PlayerCard
+                    key={player.id}
                     player={player}
                     isDrafted={player.is_drafted}
                     onClick={() => handlePlayerClick(player)}
                     fadeDrafted={true}
                   />
-                </motion.div>
               ))
             )}
-          </AnimatePresence>
         </div>
       </ScrollArea>
     </div>

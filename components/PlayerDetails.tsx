@@ -1,24 +1,24 @@
 // ./components/PlayerDetails.tsx
-import React from 'react';
-import { PlayerWithADP, formatStatus } from '@/lib/types/';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { ComponentProps } from 'react';
+import { Player, PlayerWithADP, formatStatus } from '@/lib/types/';
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface PlayerDetailsProps {
-  player: PlayerWithADP | null;
+  player: PlayerWithADP | Player | null;
 }
 
 const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
   if (!player) {
     return (
-      <Card className="h-full flex items-center justify-center">
-        <CardContent>
-          <p className="text-center text-gray-500">Select a player to view details</p>
-        </CardContent>
+      <Card className="p-4 flex items-center justify-center min-h-[80px]">
+        <p className="text-sm text-muted-foreground">Select a player to view details</p>
       </Card>
     );
   }
+
+  type BadgeVariant = ComponentProps<typeof Badge>['variant'];
 
   // Helper function to format bye weeks
   const formatByeWeeks = (byeWeeks: any): string => {
@@ -26,45 +26,62 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
     return byeWeeks.join(', ');
   };
 
-  const getSeverityColor = (status: string | null): string => {
-    if (!status) return "bg-green-400";
+  const getSeverityColor = (status: string | null): BadgeVariant => {
+    if (!status) return "success";
     switch (status) {
-      case "": return "bg-green-400 hover:bg-green-400";
-      case "Q":
-      case "D": return "bg-yellow-400 hover:bg-yellow-400";
-      default: return "bg-red-400 hover:bg-red-400";
+      case "": return "success";
+      case "Q": return "warn";
+      case "D": return "warn";
+      default: return "destructive";
     }
   }
 
   return (
-    <Card className="">
-      <CardHeader className="pb-2">
-        <div className="flex flex-wrap items-center gap-4">
-          <Avatar className="h-20 w-20 flex-shrink-0">
+    <Card className="p-3 hover:bg-accent">
+      <CardContent className="p-0">
+        <div className="flex items-center gap-3">
+          {/* Avatar */}
+          <Avatar className="h-12 w-12 rounded">
             <AvatarImage src={player.headshot_url as string} alt={player.full_name || 'NA'} />
-            <AvatarFallback>{player.full_name || 'NA'.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+            <AvatarFallback className="text-xs">
+              {player.full_name?.split(' ').map(n => n[0]).join('') || 'NA'}
+            </AvatarFallback>
           </Avatar>
-          <div className="flex-grow">
-            <div className="flex items-center gap-2 flex-wrap">
-              <CardTitle className="text-2xl">{player.full_name}</CardTitle>
-              <Badge className={`${getSeverityColor(player.status)}`}>{formatStatus(player.status)}</Badge>
+
+          {/* Main Content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-semibold text-sm truncate">{player.full_name}</h3>
+              <Badge 
+                variant={getSeverityColor(player.status)}
+                className={`text-xs px-1.5 py-0.5 shrink-0 cursor-default`}
+              >
+                {formatStatus(player.status)}
+              </Badge>
             </div>
-            <p className="text-sm text-gray-500">{player.editorial_team_full_name}</p>
-          </div>
-          <div className="flex flex-wrap gap-2 w-full sm:w-auto mt-2 sm:mt-0">
-            {player.eligible_positions ? player.eligible_positions.map((position, index) => (
-              <Badge key={index} variant="secondary">{position}</Badge>
-            )) : ''}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-4">
-          <div className="flex-grow">
-            <strong>Bye Week:</strong> {formatByeWeeks(player.bye_weeks)}
-          </div>
-          <div className="flex-grow">
-            <strong>ADP:</strong> {player.adp_formatted}
+            
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mb-2">
+              <span className="truncate">{player.editorial_team_full_name}</span>
+              {player.eligible_positions && (
+                <div className="flex gap-1">
+                  {player.eligible_positions.slice(0, 3).map((position, index) => (
+                    <Badge key={index} variant="outline" className="text-xs px-1.5 py-0.5 cursor-default">
+                      {position}
+                    </Badge>
+                  ))}
+                  {player.eligible_positions.length > 3 && (
+                    <Badge variant="outline" className="text-xs px-1.5 py-0.5 cursor-default">
+                      +{player.eligible_positions.length - 3}
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Bye: {formatByeWeeks(player.bye_weeks)}</span>
+              {player.adp_formatted && <span className="font-medium">ADP: {player.adp_formatted}</span>}
+            </div>
           </div>
         </div>
       </CardContent>

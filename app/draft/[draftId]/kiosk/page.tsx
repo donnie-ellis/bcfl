@@ -20,10 +20,9 @@ import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import TeamNeeds from '@/components/TeamNeeds';
 import { parseTeamLogos, possesiveTitle } from '@/lib/types/team.types';
-import { AnimatePresence, motion } from 'framer-motion';
+import TeamBreakdown from '@/components/TeamBreakdown';
 
 type MemoizedDraft = Omit<Draft, 'picks'> & { picks: PickWithPlayerAndTeam[] };
 
@@ -81,9 +80,9 @@ const KioskPage: React.FC = () => {
 
       if (player && team) {
         toast.success(
-          `${team.name} drafted ${player.full_name}`,
+          `${team.name} has made pick #${updatedPick.total_pick_number}`,
           {
-            description: `${player.editorial_team_full_name} - ${player.display_position}`,
+            description: `${player.full_name} (${player.editorial_team_abbr}) - ${player.display_position}`,
             duration: 5000,
           }
         );
@@ -108,7 +107,14 @@ const KioskPage: React.FC = () => {
           notifyPickMade(updatedPick);
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('Subscribed to picks updates for draft:', draftId);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Error subscribing to picks updates:', status);
+        }
+      });
 
     return () => {
       supabase.removeChannel(picksSubscription);
@@ -223,7 +229,7 @@ const KioskPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-muted">
+    <div className="flex flex-col h-screen bg-muted/50">
       {leagueData && memoizedDraft && (
         <DraftHeader league={leagueData} draft={memoizedDraft} />
       )}
@@ -241,7 +247,7 @@ const KioskPage: React.FC = () => {
             />
           )}
           <div className="mt-4 flex items-center">
-            <Progress value={draftProgress} className="flex-grow mr-4" />
+            <Progress value={draftProgress} className="grow mr-4" />
             <span className="text-sm font-medium">
               Pick {memoizedDraft?.current_pick} of {memoizedDraft?.total_picks}
             </span>
@@ -250,13 +256,14 @@ const KioskPage: React.FC = () => {
       </div>
 
       {/* Left Column */}
-      <div className="flex-grow overflow-hidden flex">
+      <div className="grow overflow-hidden flex">
         <div className="w-1/4">
           {memoizedDraft && currentPick && (
             <DraftedPlayers
               picks={memoizedDraft.picks}
               teamKey={currentPick.team_key}
               teamName={teams ? teams.find(team => team.team_key === currentPick.team_key)?.name : ''}
+              currentPick={memoizedDraft.current_pick}
               className="pl-4"
             />
           )}
@@ -272,7 +279,7 @@ const KioskPage: React.FC = () => {
                     <AvatarImage src={getTeamLogoUrl(currentTeam.team_logos)} alt={currentTeam.name} />
                     <AvatarFallback>{currentTeam.name[0]}</AvatarFallback>
                   </Avatar>
-                  <div className="flex-grow">
+                  <div className="grow">
                     <div className="flex justify-between items-center">
                       <h2 className='text-2xl font-bold'>{possesiveTitle(currentTeam.name)} draft summary</h2>
                       <div className="text-right">
@@ -294,37 +301,44 @@ const KioskPage: React.FC = () => {
                   </div>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex-grow overflow-hidden space-y-4">
+              <CardContent className="grow overflow-hidden space-y-4">
                 <TeamNeeds
                   draft={memoizedDraft}
                   teamKey={currentTeam.team_key}
                   leagueSettings={leagueSettings}
                   teams={teams}
                 />
+                <TeamBreakdown
+                  leagueSettings={leagueSettings}
+                  draft={memoizedDraft}
+                  teamKey={currentTeam.team_key}
+                  teams={teams}
+                  />
               </CardContent>
             </Card>
           )}
-          {selectedPlayer && (
-            <AnimatePresence>
-              <motion.div
-                key="playerSelected"
-                initial={{ opacity: 0, y: 100 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 100 }}
-                transition={{ duration: 0.2 }}
-                className='space-y-4'
-              >
-                <PlayerDetails player={selectedPlayer} />
-                <SubmitPickButton
-                  isCurrentUserPick={true}
-                  selectedPlayer={selectedPlayer}
-                  currentPick={currentPick}
-                  onSubmitPick={handleSubmitPick}
-                  isPickSubmitting={isPickSubmitting}
-                />
-              </motion.div>
-            </AnimatePresence>
-          )}
+          <div className="p-4">
+            <h2 className="text-2xl font-semibold mb-6 text-right">
+              {!selectedPlayer 
+                ? 
+                <>
+                  <span>Select a player to proceed</span>
+                  <span className="text-primary ml-4">→</span>
+                </>
+                : `Ready to draft ${selectedPlayer?.full_name}?`}
+              </h2>
+            <div className={`flex columns-2 gap-6 transition-all duration-500 ${selectedPlayer ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"} overflow-hidden`}>
+              <PlayerDetails player={selectedPlayer} />
+              <SubmitPickButton
+                isCurrentUserPick={true}
+                selectedPlayer={selectedPlayer}
+                currentPick={currentPick}
+                onSubmitPick={handleSubmitPick}
+                isPickSubmitting={isPickSubmitting}
+                className='scale-95 hover:scale-100 transition-transform duration-300 ease-in-out'
+              />
+            </div>
+          </div>
         </div>
 
         {/* Right Column */}
