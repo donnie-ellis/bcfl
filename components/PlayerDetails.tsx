@@ -1,5 +1,5 @@
 // ./components/PlayerDetails.tsx
-import React from 'react';
+import React, { ComponentProps } from 'react';
 import { Player, PlayerWithADP, formatStatus } from '@/lib/types/';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,28 +18,30 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
     );
   }
 
+  type BadgeVariant = ComponentProps<typeof Badge>['variant'];
+
   // Helper function to format bye weeks
   const formatByeWeeks = (byeWeeks: any): string => {
     if (!byeWeeks || byeWeeks.length === 0) return 'N/A';
     return byeWeeks.join(', ');
   };
 
-  const getSeverityColor = (status: string | null): string => {
-    if (!status) return "bg-green-400";
+  const getSeverityColor = (status: string | null): BadgeVariant => {
+    if (!status) return "success";
     switch (status) {
-      case "": return "bg-green-400 hover:bg-green-400";
-      case "Q":
-      case "D": return "bg-yellow-400 hover:bg-yellow-400";
-      default: return "bg-red-400 hover:bg-red-400";
+      case "": return "success";
+      case "Q": return "warn";
+      case "D": return "warn";
+      default: return "destructive";
     }
   }
 
   return (
-    <Card className="p-3">
+    <Card className="p-3 hover:bg-accent">
       <CardContent className="p-0">
         <div className="flex items-center gap-3">
           {/* Avatar */}
-          <Avatar className="h-12 w-12 shrink-0">
+          <Avatar className="h-12 w-12 rounded">
             <AvatarImage src={player.headshot_url as string} alt={player.full_name || 'NA'} />
             <AvatarFallback className="text-xs">
               {player.full_name?.split(' ').map(n => n[0]).join('') || 'NA'}
@@ -50,7 +52,10 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-semibold text-sm truncate">{player.full_name}</h3>
-              <Badge className={`${getSeverityColor(player.status)} text-xs px-1.5 py-0.5 shrink-0`}>
+              <Badge 
+                variant={getSeverityColor(player.status)}
+                className={`text-xs px-1.5 py-0.5 shrink-0 cursor-default`}
+              >
                 {formatStatus(player.status)}
               </Badge>
             </div>
@@ -60,12 +65,12 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
               {player.eligible_positions && (
                 <div className="flex gap-1">
                   {player.eligible_positions.slice(0, 3).map((position, index) => (
-                    <Badge key={index} variant="outline" className="text-xs px-1.5 py-0.5">
+                    <Badge key={index} variant="outline" className="text-xs px-1.5 py-0.5 cursor-default">
                       {position}
                     </Badge>
                   ))}
                   {player.eligible_positions.length > 3 && (
-                    <Badge variant="outline" className="text-xs px-1.5 py-0.5">
+                    <Badge variant="outline" className="text-xs px-1.5 py-0.5 cursor-default">
                       +{player.eligible_positions.length - 3}
                     </Badge>
                   )}

@@ -33,7 +33,7 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = React.memo(({
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
-      <h2 className='text-2xl font-bold text-center'>
+      <h2 className='text-2xl font-bold text-center text-primary'>
         {teamName ? possesiveTitle(teamName) + ' team' : 'Team'}
       </h2>
       <Separator className='mt-2' />
@@ -41,7 +41,7 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = React.memo(({
         <div className='pr-3'>
           {teamPicks.map((pick) => (
             <div key={pick.id} className="mb-4">
-              <div className="font-semibold text-sm text-gray-500 mb-1">
+              <div className="font-semibold text-sm text-muted-foreground mb-1">
                 Round {pick.round_number}, Pick {pick.pick_number} (Overall: {pick.total_pick_number})
               </div>
               {pick.player ? <PlayerDetails player={pick.player} /> : <PlayerDetailsSkeleton pickNumber={pick.total_pick_number} currentPickNumber={currentPick} />}

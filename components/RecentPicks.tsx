@@ -27,7 +27,7 @@ const RecentPicks: React.FC<RecentPicksProps> = ({ draft }) => {
             .slice(draft.current_pick - 11, draft.current_pick - 2)
             .sort((a, b) => b.pick_number - a.pick_number)
             .map((pick: Pick) => (
-                <li key={pick.pick_number} className="flex items-center justify-between p-2 border-b">
+                <li key={pick.pick_number} className="flex items-center justify-between p-2 border-b hover:bg-accent cursor-default">
                     <span>{playerInfo(pick.player)}</span>
                     <span className="text-sm text-muted-foreground">{teamInfo(pick.team)}</span>
                 </li>

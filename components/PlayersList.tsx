@@ -8,7 +8,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import PlayerCard from '@/components/PlayerCard';
 import { Skeleton } from "@/components/ui/skeleton";
 import useSWR from 'swr';
-import { Separator } from './ui/separator';
 
 interface PlayersListProps {
   draftId: string;
