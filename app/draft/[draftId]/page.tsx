@@ -369,7 +369,7 @@ const DraftPage: React.FC = () => {
         <SheetTrigger asChild>
           <Button
             size="icon"
-            className={`fixed right-4 bottom-4 rounded-full shadow-lg md:hidden ${isCurrentUserPick ? 'animate-pulse ring-4 ring-green-400' : 'opacity-60 transition-opacity duration-300'}`}
+            className={`fixed right-4 bottom-4 rounded-full shadow-lg md:hidden ${isCurrentUserPick ? 'animate-pulse ring-4 ring-success' : 'opacity-60 transition-opacity duration-300'}`}
           >
             <Plus className="h-8 w-8" />
           </Button>

@@ -35,7 +35,7 @@ const SubmitPickButton: React.FC<SubmitPickButtonProps> = ({
     <Button
       onClick={onSubmitPick}
       disabled={isDisabled}
-      className={`w-full ${isDisabled ? 'bg-gray-300' : 'bg-green-500 hover:bg-green-600'}`}
+      className={`w-full ${isDisabled ? 'bg-gray-300' : 'bg-success hover:bg-success/90 text-success-foreground hover:text-success-foreground'}`}
     >
       {buttonText}
     </Button>
