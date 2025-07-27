@@ -317,14 +317,15 @@ const KioskPage: React.FC = () => {
               </CardContent>
             </Card>
           )}
-          <div>
-            <h2 className="text-2xl font-semibold mb-6">
+          <div className="p-4">
+            <h2 className="text-2xl font-semibold mb-6 text-right">
               {!selectedPlayer 
-                ? 'Select a player to proceed'
+                ? 
+                <>
+                  <span>Select a player to proceed</span>
+                  <span className="text-primary ml-4">→</span>
+                </>
                 : `Ready to draft ${selectedPlayer?.full_name}?`}
-              {!selectedPlayer && 
-                <span className="text-primary ml-4">→</span>
-              }
               </h2>
             <div className={`flex columns-2 gap-6 transition-all duration-500 ${selectedPlayer ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"} overflow-hidden`}>
               <PlayerDetails player={selectedPlayer} />

@@ -235,40 +235,42 @@ const DraftPage: React.FC = () => {
                   teams={teams}
                   team={team}
                 />
-                {selectedPlayer && (
-                  <motion.div
-                    key="playerSelected"
-                    initial={{ opacity: 0, y: 100 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 1, y: 100 }}
-                    transition={{ duration: 0.2 }}
-                    className='space-y-4'
-                  >
-                    <SubmitPickButton
-                      isCurrentUserPick={isCurrentUserPick}
-                      selectedPlayer={selectedPlayer}
-                      currentPick={currentPick}
-                      onSubmitPick={handleSubmitPick}
-                      isPickSubmitting={isPickSubmitting}
-                    />
-                    <PlayerDetails
-                      player={selectedPlayer}
-                    />
-                  </motion.div>
-                )}
+              </div>
+              <div className="p-4">
+                <h2 className="text-2xl font-semibold mb-6">
+                  {!selectedPlayer 
+                    ? 
+                    <>
+                      <span className="text-primary mr-4">←</span> <span>Select a Player</span>
+                    </>
+                    : `Do you want to draft ${selectedPlayer.full_name}?`}
+                </h2>
+                <div className={`flex columns-2 gap-6 transition-all duration-500 ${selectedPlayer ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"} overflow-hidden`}>
+                  <SubmitPickButton
+                    isCurrentUserPick={isCurrentUserPick}
+                    selectedPlayer={selectedPlayer}
+                    currentPick={currentPick}
+                    onSubmitPick={handleSubmitPick}
+                    isPickSubmitting={isPickSubmitting}
+                    className="scale-95 hover:scale-100 transition-transform duration-300 ease-in-out"
+                  />
+                  <PlayerDetails
+                    player={selectedPlayer}
+                  />
+                </div>
               </div>
             </ScrollArea>
           </div>
 
           {/* Right Column */}
           <div className="w-1/4 overflow-hidden flex flex-col">
-          <div>
-            <TeamNeeds
-              teamKey={team?.team_key}
-              leagueSettings={leagueSettings}
-              draft={memoizedDraft}
-              teams={teams} 
-            />
+            <div>
+              <TeamNeeds
+                teamKey={team?.team_key}
+                leagueSettings={leagueSettings}
+                draft={memoizedDraft}
+                teams={teams}
+              />
             </div>
             <DraftedPlayers
               picks={memoizedDraft.picks}
@@ -348,18 +350,18 @@ const DraftPage: React.FC = () => {
               {selectedPlayer ?
                 <PlayerDetails
                   player={selectedPlayer}
-                /> 
-              :
-              <div>
-                <h1>No player selected</h1>
-                <Button 
-                  onClick={() => {setActiveTab("players"); setIsSheetOpen(false);}}
-                  variant="outline"
-                  className='flex items-center justify-center w-full h-12'
+                />
+                :
+                <div>
+                  <h1>No player selected</h1>
+                  <Button
+                    onClick={() => { setActiveTab("players"); setIsSheetOpen(false); }}
+                    variant="outline"
+                    className='flex items-center justify-center w-full h-12'
                   >
                     Click to choose a player
                   </Button>
-              </div>
+                </div>
               }
             </div>
           </ScrollArea>

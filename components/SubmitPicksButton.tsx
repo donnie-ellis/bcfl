@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Pick, PlayerWithADP } from '@/lib/types/';
-import { Loader2 } from 'lucide-react';
+import { Clock, Loader2 } from 'lucide-react';
 
 interface SubmitPickButtonProps {
   isCurrentUserPick: boolean;
@@ -23,7 +23,10 @@ const SubmitPickButton: React.FC<SubmitPickButtonProps> = ({
 }) => {
   const isDisabled = !isCurrentUserPick || !selectedPlayer || !currentPick || selectedPlayer.is_picked || isPickSubmitting;
   const buttonText = !isCurrentUserPick
-    ? 'Waiting for your turn...'
+    ? <>
+      <Clock className="inline mr-2" h-4 w-4 />
+      Waiting for your turn...
+    </>
     : isPickSubmitting
       ? (
         <>
@@ -37,7 +40,7 @@ const SubmitPickButton: React.FC<SubmitPickButtonProps> = ({
     <Button
       onClick={onSubmitPick}
       disabled={isDisabled}
-      className={`w-full ${isDisabled ? 'bg-primary/25 text-primary-foreground/25' : 'bg-primary text-primary-foreground'} ${isPickSubmitting && 'border-primary'} ${className}`}
+      className={`w-full ${isDisabled ? 'bg-primary/25 text-primary-foreground/40' : 'bg-primary text-primary-foreground'} ${isPickSubmitting && 'border-primary'} ${className}`}
     >
       {buttonText}
     </Button>
