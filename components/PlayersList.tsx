@@ -117,6 +117,7 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
                     onClick={() => handlePlayerClick(player)}
                     fadeDrafted={true}
                     onAddToQueue={onAddToQueue}
+                    selectedPlayer={selectedPlayer}
                   />
               ))
             )}
