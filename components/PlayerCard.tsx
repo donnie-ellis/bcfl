@@ -23,6 +23,7 @@ interface PlayerCardProps {
   onClick: () => void;
   fadeDrafted?: boolean;
   onAddToQueue?: (player: Player | PlayerWithADP | EnhancedPlayerWithADP) => void;
+  selectedPlayer?: Player | PlayerWithADP | EnhancedPlayerWithADP | null;
 }
 
 type BadgeVariant = ComponentProps<typeof Badge>['variant'];
@@ -37,7 +38,7 @@ const getSeverityColor = (status: string | null): BadgeVariant => {
   }
 }
 
-const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fadeDrafted = false, onAddToQueue }) => {
+const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fadeDrafted = false, onAddToQueue, selectedPlayer }) => {
 
   const queueRef = useRef<DraftQueueRef>(null);
 
@@ -52,7 +53,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
       <Tooltip>
         <TooltipTrigger asChild>
           <Card
-            className={cardClasses}
+            className={`${cardClasses} ${selectedPlayer && selectedPlayer.id === player.id ? 'bg-secondary border-primary' : ''}`}
             onClick={isDrafted ? undefined : onClick}
           >
             <CardContent className="p-3 flex items-center space-x-3">
