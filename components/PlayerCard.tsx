@@ -78,7 +78,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
                 <Button
                   variant={"secondary"}
                   size={"icon"}
-                  className="cursor-pointer hover:bg-secondary/40 hover:shadow"
+                  className="hover:bg-secondary/40 hover:shadow"
                   onClick={(e) => {
                     e.stopPropagation();
                     onAddToQueue(player);

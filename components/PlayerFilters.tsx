@@ -55,8 +55,7 @@ const PlayerFilters: React.FC<PlayerFiltersProps> = ({
         <CollapsibleTrigger asChild>
           <Button
             variant="ghost"
-            className="w-full justify-between p-4 hover:bg-muted/50 transition-colors duration-1000 cursor-pointer"
-          >
+            className="w-full justify-between p-4 hover:bg-muted/50 transition-colors duration-1000">
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4" />
               <span className="font-medium">Filters</span>
