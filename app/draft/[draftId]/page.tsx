@@ -48,7 +48,8 @@ type DraftPageAction =
   | { type: 'SET_QUEUE'; payload: QueuePlayer[] }
   | { type: 'ADD_TO_QUEUE'; payload: QueuePlayer }
   | { type: 'UPDATE_PICKS_AND_DRAFT'; payload: { picks: PickWithPlayerAndTeam[]; currentPick: PickWithPlayerAndTeam | null } }
-  | { type: 'RESET_AFTER_PICK' };
+  | { type: 'RESET_AFTER_PICK' }
+  | { type: 'REMOVE_DRAFTED_FROM_QUEUE'; payload: number | string };
 
 // Initial state
 const initialState: DraftPageState = {
@@ -95,6 +96,11 @@ const draftPageReducer = (state: DraftPageState, action: DraftPageAction): Draft
         selectedPlayer: null,
         isPickSubmitting: false,
       };
+    case 'REMOVE_DRAFTED_FROM_QUEUE':
+      return {
+        ...state,
+        queue: state.queue.filter(p => p.id !== action.payload)
+      };
     default:
       return state;
   }
@@ -134,6 +140,11 @@ const DraftPage: React.FC = () => {
 
     const updatedCurrentPick = updatedPicks.find(p => !p.is_picked) || null;
 
+    // Get drafted player IDs to remove from queue
+    const draftedPlayerIds = updatedPicks
+      .filter(pick => pick.is_picked && pick.player_id)
+      .map(pick => pick.player_id as number | string);
+
     // Batch all state updates together
     unstable_batchedUpdates(() => {
       dispatch({
@@ -142,6 +153,11 @@ const DraftPage: React.FC = () => {
           picks: updatedPicks,
           currentPick: updatedCurrentPick,
         }
+      });
+
+      // Remove drafted players from queue
+      draftedPlayerIds.forEach(playerId => {
+        dispatch({ type: 'REMOVE_DRAFTED_FROM_QUEUE', payload: playerId });
       });
 
       // Update SWR cache if current pick changed
