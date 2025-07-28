@@ -145,7 +145,7 @@ export default function DraftQueue({ queue, setQueue, managerId, onPlayerDrafted
                                                             variant={"secondary"}
                                                             size="icon"
                                                             title="Move up in queue"
-                                                            className="cursor-pointer hover:bg-secondary/40 hover:shadow"
+                                                            className="hover:bg-secondary/40 hover:shadow"
                                                         >
                                                             <MoveUp className="w-4 h-4" />
                                                         </Button>
@@ -158,7 +158,7 @@ export default function DraftQueue({ queue, setQueue, managerId, onPlayerDrafted
                                                             variant={"secondary"}
                                                             size="icon"
                                                             title="Move down in queue"
-                                                            className="cursor-pointer hover:bg-secondary/40 hover:shadow"
+                                                            className="hover:bg-secondary/40 hover:shadow"
                                                         >
                                                             <MoveDown className="w-4 h-4" />
                                                         </Button>
@@ -169,7 +169,7 @@ export default function DraftQueue({ queue, setQueue, managerId, onPlayerDrafted
                                                                     removeFromQueue(player.id);
                                                                 }
                                                             }}
-                                                            className="cursor-pointer hover:bg-destructive/40 hover:shadow"
+                                                            className="hover:bg-destructive/40 hover:shadow"
                                                             title="Remove from queue"
                                                             variant={"secondary"}
                                                             size="icon"
