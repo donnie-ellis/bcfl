@@ -232,7 +232,7 @@ const DraftPage: React.FC = () => {
               onPlayerSelect={handlePlayerSelectMd}
               draft={memoizedDraft}
               selectedPlayer={selectedPlayer}
-              className="md:bg-linear-to-l from-background to-muted/50"
+              className=""
               onAddToQueue={addToQueue}
             />
           </div>
@@ -282,7 +282,7 @@ const DraftPage: React.FC = () => {
 
           {/* Right Column */}
           <div className="w-1/4 overflow-hidden flex flex-col">
-            <div>
+            <div className="flex-min-0">
               <TeamNeeds
                 teamKey={team?.team_key}
                 leagueSettings={leagueSettings}
@@ -290,13 +290,15 @@ const DraftPage: React.FC = () => {
                 teams={teams}
               />
             </div>
-            <DraftedPlayers
-              picks={memoizedDraft.picks}
-              teamKey={team.team_key}
-              teamName={team.name}
-              currentPick={memoizedDraft.current_pick}
-              className="md:bg-linear-to-r from-background to-muted/50"
-            />
+            <div className="flex-1 min-h-0 px-2">
+              <DraftedPlayers
+                picks={memoizedDraft.picks}
+                teamKey={team.team_key}
+                teamName={team.name}
+                currentPick={memoizedDraft.current_pick}
+                className="h-full"
+              />
+            </div>
           </div>
         </div>
 
