@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from '@/components/ui/button';
 
 interface TeamNeedsProps {
   leagueSettings: LeagueSettings;
@@ -95,9 +96,9 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draft, teamKey, t
 
   const getSeverityColor = (needed: number, filled: number) => {
     const remaining = needed - filled;
-    if (remaining <= 0) return 'bg-success hover:bg-success/90 text-success-foreground hover:text-success-foreground transition-colors duration-200 cursor-default';
-    if (remaining === 1) return "bg-warn hover:bg-warn/90 text-warn-foreground hover:text-warn-foreground transition-colors duration-200 cursor-default";
-    return "bg-destructive hover:bg-destructive/90 text-destructive-foreground hover:text-destructive-foreground transition-colors duration-200 cursor-default";
+    if (remaining <= 0) return 'bg-success hover:bg-success/90 text-success-foreground hover:text-success-foreground transition-colors duration-200 cursor-default data-[state=open]:bg-success/50';
+    if (remaining === 1) return "bg-warn hover:bg-warn/90 text-warn-foreground hover:text-warn-foreground transition-colors duration-200 cursor-default data-[state=open]:bg-warn/50";
+    return "bg-destructive hover:bg-destructive/90 text-destructive-foreground hover:text-destructive-foreground transition-colors duration-200 cursor-default data-[state=open]:bg-destructive/50";
   };
 
   return (
@@ -117,13 +118,13 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draft, teamKey, t
             <TableCell key={need.position} className="p-0 min-w-0">
               <Popover>
                 <PopoverTrigger asChild>
-                  <button 
-                    className={`w-full h-full p-2 ${getSeverityColor(need.needed, need.filled)} transition-colors cursor-pointer`}
+                  <Button 
+                    className={`w-full rounded-none h-full p-2 ${getSeverityColor(need.needed, need.filled)} transition-colors duration-200 cursor-pointer`}
                   >
                     <span className="font-medium text-xs">
                       {need.filled}/{need.needed}
                     </span>
-                  </button>
+                  </Button>
                 </PopoverTrigger>
                 <PopoverContent className="min-w-0">
                   <div className="space-y-2">
