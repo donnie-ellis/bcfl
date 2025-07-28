@@ -1,7 +1,8 @@
 // ./app/draft/[draftId]/page.tsx
 'use client'
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useReducer, useEffect, useCallback, useMemo } from 'react';
+import { unstable_batchedUpdates } from 'react-dom';
 import { useParams } from 'next/navigation';
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
 import PlayersList from '@/components/PlayersList';
@@ -25,6 +26,80 @@ import DraftQueue from '@/components/DraftQueue';
 // Union type for all possible player types in the queue
 type QueuePlayer = Player | PlayerWithADP | EnhancedPlayerWithADP;
 
+// Define the state interface
+interface DraftPageState {
+  selectedPlayer: PlayerWithADP | null;
+  isPickSubmitting: boolean;
+  currentPick: PickWithPlayerAndTeam | null;
+  activeTab: string;
+  isSheetOpen: boolean;
+  picks: PickWithPlayerAndTeam[];
+  queue: QueuePlayer[];
+}
+
+// Define action types
+type DraftPageAction =
+  | { type: 'SET_SELECTED_PLAYER'; payload: PlayerWithADP | null }
+  | { type: 'SET_IS_PICK_SUBMITTING'; payload: boolean }
+  | { type: 'SET_CURRENT_PICK'; payload: PickWithPlayerAndTeam | null }
+  | { type: 'SET_ACTIVE_TAB'; payload: string }
+  | { type: 'SET_IS_SHEET_OPEN'; payload: boolean }
+  | { type: 'SET_PICKS'; payload: PickWithPlayerAndTeam[] }
+  | { type: 'SET_QUEUE'; payload: QueuePlayer[] }
+  | { type: 'ADD_TO_QUEUE'; payload: QueuePlayer }
+  | { type: 'UPDATE_PICKS_AND_DRAFT'; payload: { picks: PickWithPlayerAndTeam[]; currentPick: PickWithPlayerAndTeam | null } }
+  | { type: 'RESET_AFTER_PICK' };
+
+// Initial state
+const initialState: DraftPageState = {
+  selectedPlayer: null,
+  isPickSubmitting: false,
+  currentPick: null,
+  activeTab: "draft",
+  isSheetOpen: false,
+  picks: [],
+  queue: [],
+};
+
+// Reducer function
+const draftPageReducer = (state: DraftPageState, action: DraftPageAction): DraftPageState => {
+  switch (action.type) {
+    case 'SET_SELECTED_PLAYER':
+      return { ...state, selectedPlayer: action.payload };
+    case 'SET_IS_PICK_SUBMITTING':
+      return { ...state, isPickSubmitting: action.payload };
+    case 'SET_CURRENT_PICK':
+      return { ...state, currentPick: action.payload };
+    case 'SET_ACTIVE_TAB':
+      return { ...state, activeTab: action.payload };
+    case 'SET_IS_SHEET_OPEN':
+      return { ...state, isSheetOpen: action.payload };
+    case 'SET_PICKS':
+      return { ...state, picks: action.payload };
+    case 'SET_QUEUE':
+      return { ...state, queue: action.payload };
+    case 'ADD_TO_QUEUE':
+      if (state.queue.find(p => p.id === action.payload.id)) {
+        return state;
+      }
+      return { ...state, queue: [...state.queue, action.payload] };
+    case 'UPDATE_PICKS_AND_DRAFT':
+      return {
+        ...state,
+        picks: action.payload.picks,
+        currentPick: action.payload.currentPick,
+      };
+    case 'RESET_AFTER_PICK':
+      return {
+        ...state,
+        selectedPlayer: null,
+        isPickSubmitting: false,
+      };
+    default:
+      return state;
+  }
+};
+
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 const DraftPage: React.FC = () => {
@@ -32,13 +107,7 @@ const DraftPage: React.FC = () => {
   const draftId = params.draftId as string;
   const supabase = useSupabaseClient();
 
-  const [selectedPlayer, setSelectedPlayer] = useState<PlayerWithADP | null>(null);
-  const [isPickSubmitting, setIsPickSubmitting] = useState(false);
-  const [currentPick, setCurrentPick] = useState<PickWithPlayerAndTeam | null>(null);
-  const [activeTab, setActiveTab] = useState<string>("draft");
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [picks, setPicks] = useState<PickWithPlayerAndTeam[]>([]);
-  const [queue, setQueue] = useState<QueuePlayer[]>([]);
+  const [state, dispatch] = useReducer(draftPageReducer, initialState);
 
   const { data: draftData, mutate: mutateDraft } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher);
   const { data: picksData, mutate: mutatePicks } = useSWR<Pick[]>(
@@ -62,15 +131,24 @@ const DraftPage: React.FC = () => {
       player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
       team: teams.find(t => t.team_key === pick.team_key) ?? {} as Team
     }));
-    setPicks(updatedPicks);
 
     const updatedCurrentPick = updatedPicks.find(p => !p.is_picked) || null;
 
-    if (updatedCurrentPick && latestDraft.current_pick !== updatedCurrentPick.total_pick_number) {
-      mutateDraft({ ...latestDraft, current_pick: updatedCurrentPick.total_pick_number }, false);
-    }
+    // Batch all state updates together
+    unstable_batchedUpdates(() => {
+      dispatch({
+        type: 'UPDATE_PICKS_AND_DRAFT',
+        payload: {
+          picks: updatedPicks,
+          currentPick: updatedCurrentPick,
+        }
+      });
 
-    setCurrentPick(updatedCurrentPick);
+      // Update SWR cache if current pick changed
+      if (updatedCurrentPick && latestDraft.current_pick !== updatedCurrentPick.total_pick_number) {
+        mutateDraft({ ...latestDraft, current_pick: updatedCurrentPick.total_pick_number }, false);
+      }
+    });
   }, [players, teams, mutateDraft]);
 
   const notifyPickMade = useCallback((updatedPick: Pick) => {
@@ -109,11 +187,13 @@ const DraftPage: React.FC = () => {
             fetch(`/api/db/draft/${draftId}`).then(res => res.json()),
             fetch(`/api/db/draft/${draftId}/picks`).then(res => res.json())
           ]);
-          // Update SWR cache
-          mutateDraft(latestDraft, false);
-          mutatePicks(latestPicks, false);
-          // Update local state
-          updatePicksAndDraft(latestDraft, latestPicks);
+          
+          // Batch SWR cache updates and local state updates
+          unstable_batchedUpdates(() => {
+            mutateDraft(latestDraft, false);
+            mutatePicks(latestPicks, false);
+            updatePicksAndDraft(latestDraft, latestPicks);
+          });
         }
       })
       .subscribe((status) => {
@@ -136,25 +216,28 @@ const DraftPage: React.FC = () => {
   }, [draftData, picksData, players, teams, updatePicksAndDraft]);
 
   const handlePlayerSelect = useCallback((player: PlayerWithADP) => {
-    setSelectedPlayer(player);
-    setIsSheetOpen(true);
+    unstable_batchedUpdates(() => {
+      dispatch({ type: 'SET_SELECTED_PLAYER', payload: player });
+      dispatch({ type: 'SET_IS_SHEET_OPEN', payload: true });
+    });
   }, []);
 
   const handlePlayerSelectMd = async (player: PlayerWithADP) => {
-    if (player && player === selectedPlayer) {
-      setSelectedPlayer(null);
+    if (player && player === state.selectedPlayer) {
+      dispatch({ type: 'SET_SELECTED_PLAYER', payload: null });
     } else {
-      setSelectedPlayer(player);
+      dispatch({ type: 'SET_SELECTED_PLAYER', payload: player });
     }
   }
 
-  const isCurrentUserPick = currentPick?.team_key === team?.team_key;
+  const isCurrentUserPick = state.currentPick?.team_key === team?.team_key;
 
   const handleSubmitPick = async () => {
-    setIsPickSubmitting(true);
-    if (!selectedPlayer || !currentPick || !draftData) {
+    dispatch({ type: 'SET_IS_PICK_SUBMITTING', payload: true });
+    
+    if (!state.selectedPlayer || !state.currentPick || !draftData) {
       toast.error("Unable to submit pick. Please try again.");
-      setIsPickSubmitting(false);
+      dispatch({ type: 'SET_IS_PICK_SUBMITTING', payload: false });
       return;
     }
 
@@ -165,8 +248,8 @@ const DraftPage: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          pickId: currentPick.id,
-          playerId: selectedPlayer.id,
+          pickId: state.currentPick.id,
+          playerId: state.selectedPlayer.id,
         }),
       });
 
@@ -174,41 +257,42 @@ const DraftPage: React.FC = () => {
         throw new Error('Failed to submit pick');
       }
 
-      setSelectedPlayer(null);
       // Fetch latest data
       const [latestDraft, latestPicks] = await Promise.all([
         fetch(`/api/db/draft/${draftId}`).then(res => res.json()),
         fetch(`/api/db/draft/${draftId}/picks`).then(res => res.json())
       ]);
-      // Update SWR cache
-      mutateDraft(latestDraft, false);
-      mutatePicks(latestPicks, false);
-      // Update local state
-      updatePicksAndDraft(latestDraft, latestPicks);
+      
+      // Batch all updates together
+      unstable_batchedUpdates(() => {
+        dispatch({ type: 'RESET_AFTER_PICK' });
+        mutateDraft(latestDraft, false);
+        mutatePicks(latestPicks, false);
+        updatePicksAndDraft(latestDraft, latestPicks);
+      });
     } catch (error) {
       console.error('Error submitting pick:', error);
       toast.error("Failed to submit pick. Please try again.");
-    } finally {
-      setIsPickSubmitting(false);
+      dispatch({ type: 'SET_IS_PICK_SUBMITTING', payload: false });
     }
   };
 
   const addToQueue = (player: QueuePlayer) => {
-    if (!queue.find(p => p.id === player.id)) {
+    if (!state.queue.find(p => p.id === player.id)) {
       toast.success(`${player.full_name} has been added to your queue.`);
-      setQueue(prev => [...prev, player]);
+      dispatch({ type: 'ADD_TO_QUEUE', payload: player });
     }
   };
 
   const memoizedDraft = useMemo(() => {
-    if (draftData && picks.length > 0) {
+    if (draftData && state.picks.length > 0) {
       return {
         ...draftData,
-        picks: picks
+        picks: state.picks
       };
     }
     return undefined;
-  }, [draftData, picks]);
+  }, [draftData, state.picks]);
 
   if (!memoizedDraft || !leagueData || !leagueSettings || !teams || !team || !players) {
     return (
@@ -231,8 +315,8 @@ const DraftPage: React.FC = () => {
               draftId={draftId}
               onPlayerSelect={handlePlayerSelectMd}
               draft={memoizedDraft}
-              selectedPlayer={selectedPlayer}
-              className=""
+              selectedPlayer={state.selectedPlayer}
+              className="md:bg-linear-to-l from-background to-muted/50"
               onAddToQueue={addToQueue}
             />
           </div>
@@ -250,39 +334,39 @@ const DraftPage: React.FC = () => {
               </div>
               <div className="p-4">
                 <h2 className="text-2xl font-semibold mb-6">
-                  {!selectedPlayer 
+                  {!state.selectedPlayer 
                     ? 
                     <>
                       <span className="text-primary mr-4">←</span> <span>Select a Player</span>
                     </>
-                    : `Do you want to draft ${selectedPlayer.full_name}?`}
+                    : `Do you want to draft ${state.selectedPlayer.full_name}?`}
                 </h2>
-                <div className={`flex columns-2 gap-6 transition-all duration-500 ${selectedPlayer ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"} overflow-hidden`}>
+                <div className={`flex columns-2 gap-6 transition-all duration-500 ${state.selectedPlayer ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"} overflow-hidden`}>
                   <SubmitPickButton
                     isCurrentUserPick={isCurrentUserPick}
-                    selectedPlayer={selectedPlayer}
-                    currentPick={currentPick}
+                    selectedPlayer={state.selectedPlayer}
+                    currentPick={state.currentPick}
                     onSubmitPick={handleSubmitPick}
-                    isPickSubmitting={isPickSubmitting}
+                    isPickSubmitting={state.isPickSubmitting}
                     className="scale-95 hover:scale-100 transition-transform duration-300 ease-in-out"
                   />
                   <PlayerDetails
-                    player={selectedPlayer}
+                    player={state.selectedPlayer}
                   />
                 </div>
               </div>
               <DraftQueue
-                queue={queue}
-                setQueue={setQueue}
+                queue={state.queue}
+                setQueue={(queue) => dispatch({ type: 'SET_QUEUE', payload: queue })}
                 managerId={team?.team_id}
-                onPlayerClick={(player) => setSelectedPlayer(player)}
+                onPlayerClick={(player) => dispatch({ type: 'SET_SELECTED_PLAYER', payload: player })}
               />
             </ScrollArea>
           </div>
 
           {/* Right Column */}
           <div className="w-1/4 overflow-hidden flex flex-col">
-            <div className="flex-min-0">
+            <div className="flex-shrink-0">
               <TeamNeeds
                 teamKey={team?.team_key}
                 leagueSettings={leagueSettings}
@@ -290,13 +374,13 @@ const DraftPage: React.FC = () => {
                 teams={teams}
               />
             </div>
-            <div className="flex-1 min-h-0 px-2">
+            <div className="flex-1 min-h-0">
               <DraftedPlayers
                 picks={memoizedDraft.picks}
                 teamKey={team.team_key}
                 teamName={team.name}
                 currentPick={memoizedDraft.current_pick}
-                className="h-full"
+                className="md:bg-linear-to-r from-background to-muted/50 h-full"
               />
             </div>
           </div>
@@ -304,7 +388,7 @@ const DraftPage: React.FC = () => {
 
         {/* Small screen layout */}
         <div className="md:hidden flex flex-col h-full">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+          <Tabs value={state.activeTab} onValueChange={(tab) => dispatch({ type: 'SET_ACTIVE_TAB', payload: tab })} className="flex flex-col h-full">
             <TabsList className="grid w-full grid-cols-3 shrink-0">
               <TabsTrigger value="players">Players</TabsTrigger>
               <TabsTrigger value="draft">Draft</TabsTrigger>
@@ -315,7 +399,7 @@ const DraftPage: React.FC = () => {
                 draftId={draftId}
                 onPlayerSelect={handlePlayerSelect}
                 draft={memoizedDraft}
-                selectedPlayer={selectedPlayer}
+                selectedPlayer={state.selectedPlayer}
                 onAddToQueue={addToQueue}
               />
             </TabsContent>
@@ -354,7 +438,7 @@ const DraftPage: React.FC = () => {
       </div>
 
       {/* Sheet for small screens */}
-      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+      <Sheet open={state.isSheetOpen} onOpenChange={(open) => dispatch({ type: 'SET_IS_SHEET_OPEN', payload: open })}>
         <SheetContent side="bottom" className="h-[50vh] flex flex-col md:hidden">
           <SheetHeader>
             <SheetTitle>Make your pick</SheetTitle>
@@ -363,20 +447,25 @@ const DraftPage: React.FC = () => {
             <div className="p-4 space-y-4">
               <SubmitPickButton
                 isCurrentUserPick={isCurrentUserPick}
-                selectedPlayer={selectedPlayer}
-                currentPick={currentPick}
+                selectedPlayer={state.selectedPlayer}
+                currentPick={state.currentPick}
                 onSubmitPick={handleSubmitPick}
-                isPickSubmitting={isPickSubmitting}
+                isPickSubmitting={state.isPickSubmitting}
               />
-              {selectedPlayer ?
+              {state.selectedPlayer ?
                 <PlayerDetails
-                  player={selectedPlayer}
+                  player={state.selectedPlayer}
                 />
                 :
                 <div>
                   <h1>No player selected</h1>
                   <Button
-                    onClick={() => { setActiveTab("players"); setIsSheetOpen(false); }}
+                    onClick={() => { 
+                      unstable_batchedUpdates(() => {
+                        dispatch({ type: 'SET_ACTIVE_TAB', payload: "players" });
+                        dispatch({ type: 'SET_IS_SHEET_OPEN', payload: false });
+                      });
+                    }}
                     variant="outline"
                     className='flex items-center justify-center w-full h-12'
                   >
@@ -387,10 +476,10 @@ const DraftPage: React.FC = () => {
             </div>
             <div>
             <DraftQueue
-                queue={queue}
-                setQueue={setQueue}
+                queue={state.queue}
+                setQueue={(queue) => dispatch({ type: 'SET_QUEUE', payload: queue })}
                 managerId={team?.team_id}
-                onPlayerClick={(player) => setSelectedPlayer(player)}
+                onPlayerClick={(player) => dispatch({ type: 'SET_SELECTED_PLAYER', payload: player })}
               />
             </div>
           </ScrollArea>
