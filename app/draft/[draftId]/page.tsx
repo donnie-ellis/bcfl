@@ -284,6 +284,17 @@ const DraftPage: React.FC = () => {
     }
   };
 
+  const queueActions = {
+    setQueue: (updater: QueuePlayer[] | ((prev: QueuePlayer[]) => QueuePlayer[])) => {
+      if (typeof updater === 'function') {
+        const newQueue = updater(state.queue);
+        dispatch({ type: 'SET_QUEUE', payload: newQueue });
+      } else {
+        dispatch({ type: 'SET_QUEUE', payload: updater });
+      }
+    }
+  };
+
   const memoizedDraft = useMemo(() => {
     if (draftData && state.picks.length > 0) {
       return {
@@ -357,7 +368,7 @@ const DraftPage: React.FC = () => {
               </div>
               <DraftQueue
                 queue={state.queue}
-                setQueue={(queue) => dispatch({ type: 'SET_QUEUE', payload: queue })}
+                setQueue={queueActions.setQueue}
                 managerId={team?.team_id}
                 onPlayerClick={(player) => dispatch({ type: 'SET_SELECTED_PLAYER', payload: player })}
               />
@@ -477,7 +488,7 @@ const DraftPage: React.FC = () => {
             <div>
             <DraftQueue
                 queue={state.queue}
-                setQueue={(queue) => dispatch({ type: 'SET_QUEUE', payload: queue })}
+                setQueue={queueActions.setQueue}
                 managerId={team?.team_id}
                 onPlayerClick={(player) => dispatch({ type: 'SET_SELECTED_PLAYER', payload: player })}
               />
