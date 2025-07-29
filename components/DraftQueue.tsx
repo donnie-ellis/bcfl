@@ -112,7 +112,7 @@ export default function DraftQueue({ queue, setQueue, managerId, onPlayerDrafted
                                             <Card 
                                                 ref={provided.innerRef} 
                                                 {...provided.draggableProps} 
-                                                className={`flex ${snapshot.isDragging ? 'shadow-md' : ''} w-full border my-1 cursor-default`}
+                                                className={`flex ${snapshot.isDragging ? 'shadow-md' : ''} w-full border my-1 cursor-default hover:bg-accent`}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     // Only call onPlayerClick if the player is PlayerWithADP compatible
