@@ -1,11 +1,11 @@
 // ./app/api/db/league/[leagueKey]/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { League } from '@/lib/types';
 import { Database } from '@/lib/types/database.types';
+import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
+const supabase = getServerSupabaseClient();
 
 export async function GET(
   request: NextRequest,

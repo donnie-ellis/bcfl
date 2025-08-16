@@ -25,7 +25,7 @@ export async function PUT(
     const { data: draft, error: draftError } = await supabase
       .from('drafts')
       .select('league_id')
-      .eq('id', draftId)
+      .eq('id', parseInt(draftId))
       .single();
 
     if (draftError) throw draftError;
@@ -41,7 +41,7 @@ export async function PUT(
       .from('picks')
       .update({ is_keeper: isKeeper })
       .eq('id', pickId)
-      .eq('draft_id', draftId);
+      .eq('draft_id', parseInt(draftId));
 
     if (updateError) throw updateError;
 
