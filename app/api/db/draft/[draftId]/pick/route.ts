@@ -24,7 +24,7 @@ export async function GET(
     const { data: draft, error: draftError } = await supabase
       .from('drafts')
       .select('current_pick')
-      .eq('id', draftId)
+      .eq('id', parseInt(draftId))
       .single();
 
     if (draftError) throw draftError;
@@ -32,7 +32,7 @@ export async function GET(
     const { data: currentPick, error: pickError } = await supabase
       .from('picks')
       .select(`*`)
-      .eq('draft_id', draftId)
+      .eq('draft_id', parseInt(draftId))
       .eq('total_pick_number', draft.current_pick as number)
       .single();
 
@@ -152,7 +152,7 @@ export async function DELETE(
     const { data: draft, error: draftError } = await supabase
       .from('drafts')
       .select('league_id')
-      .eq('id', draftId)
+      .eq('id', parseInt(draftId))
       .single();
 
     if (draftError) throw draftError;
@@ -168,7 +168,7 @@ export async function DELETE(
       .from('picks')
       .select('player_id')
       .eq('id', pickId)
-      .eq('draft_id', draftId)
+      .eq('draft_id', parseInt(draftId))
       .single();
 
     if (pickError) throw pickError;
@@ -178,7 +178,7 @@ export async function DELETE(
       .from('picks')
       .update({ player_id: null, is_picked: false, picked_by: null, is_keeper: false })
       .eq('id', pickId)
-      .eq('draft_id', draftId);
+      .eq('draft_id', parseInt(draftId));
 
     if (clearPickError) throw clearPickError;
 
@@ -187,7 +187,7 @@ export async function DELETE(
       const { error: draftPlayerError } = await supabase
         .from('draft_players')
         .update({ is_picked: false })
-        .eq('draft_id', draftId)
+        .eq('draft_id', parseInt(draftId))
         .eq('player_id', pick.player_id);
 
       if (draftPlayerError) throw draftPlayerError;

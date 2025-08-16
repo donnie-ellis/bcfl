@@ -1,10 +1,10 @@
 // ./app/api/db/draft/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
 import { importPlayers, getJobStatus } from '@/lib/playersImport';
+import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
+const supabase = getServerSupabaseClient();
 
 // POST
 export async function POST(request: NextRequest) {

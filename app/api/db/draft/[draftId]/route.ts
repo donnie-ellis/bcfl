@@ -1,10 +1,11 @@
 // ./app/api/draft/[draftId]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient, PostgrestError } from '@supabase/supabase-js';
 import { getServerAuthSession } from "@/auth";
 import { requestYahoo } from '@/lib/yahoo';
+import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
+const supabase = getServerSupabaseClient();
+
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest, { params }: { params: { draftId:
     const { data: draft, error: draftError } = await supabase
       .from('drafts')
       .select('*')
-      .eq('id', draftId)
+      .eq('id', parseInt(draftId))
       .single();
 
     if (draftError) throw draftError;
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest, { params }: { params: { draftId:
           name
         )
       `)
-      .eq('draft_id', draftId)
+      .eq('draft_id', parseInt(draftId))
       .order('total_pick_number', { ascending: true });
 
     if (picksError) throw picksError;

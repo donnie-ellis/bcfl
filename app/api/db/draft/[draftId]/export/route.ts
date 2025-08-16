@@ -1,14 +1,14 @@
 // ./app/api/db/draft/[draftId]/export/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { getServerAuthSession } from "@/auth";
 import { createObjectCsvStringifier } from 'csv-writer';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { League } from '@/lib/types/league.types';
+import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
+const supabase = getServerSupabaseClient();
 
 export async function GET(
   request: NextRequest,
@@ -29,7 +29,7 @@ export async function GET(
     const { data: draft, error: draftError } = await supabase
       .from('drafts')
       .select('*, leagues(*)')
-      .eq('id', draftId)
+      .eq('id', parseInt(draftId))
       .single();
 
     if (draftError) throw draftError;
@@ -51,7 +51,7 @@ export async function GET(
           team_logos
         )
       `)
-      .eq('draft_id', draftId)
+      .eq('draft_id', parseInt(draftId))
       .order('total_pick_number', { ascending: true });
 
     if (picksError) throw picksError;

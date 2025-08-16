@@ -1,15 +1,28 @@
 import { getServerSession, type NextAuthOptions } from "next-auth";
-import { createClient } from '@supabase/supabase-js';
 import { JWT } from "next-auth/jwt";
+import { Account, User, Profile } from "next-auth";
+import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
+const supabase = getServerSupabaseClient();
 
 interface ExtendedJWT extends JWT {
     accessToken?: string;
     refreshToken?: string;
     expiresAt?: number;
     userId?: string;
-  }
+    error?: string;
+}
+
+interface ExtendedSession {
+    user: {
+        id: string;
+        name?: string | null;
+        email?: string | null;
+        image?: string | null;
+    };
+    accessToken?: string;
+    expires: string;
+}
 
 export const authOptions: NextAuthOptions = {
     session: {
@@ -36,12 +49,17 @@ export const authOptions: NextAuthOptions = {
                 }
             },
             token: "https://api.login.yahoo.com/oauth2/get_token",
-            profile(profile) {
+            profile(profile: Profile & { 
+                sub: string; 
+                name?: string; 
+                email?: string; 
+                picture?: string; 
+            }) {
                 return {
                     id: profile.sub,
-                    name: profile.name,
-                    email: profile.email,
-                    image: profile.picture
+                    name: profile.name || null,
+                    email: profile.email || null,
+                    image: profile.picture || null
                 }
             },
             client: {
@@ -52,8 +70,8 @@ export const authOptions: NextAuthOptions = {
         },
     ],
     callbacks: {
-        async signIn({ user, account }) {
-            if (!user.email) return false;
+        async signIn({ user, account }: { user: User; account: Account | null }) {
+            if (!user.email || !account) return false;
 
             // Check if user exists, if not create a new user
             const { data: existingUser, error: userError } = await supabase
@@ -67,10 +85,10 @@ export const authOptions: NextAuthOptions = {
                 return false;
             }
 
-            let userId = user.id; // Use the ID provided by Yahoo
+            const userId = user.id; // Use the ID provided by Yahoo
 
             if (!existingUser) {
-                const { data: newUser, error: createError } = await supabase
+                const { error: createError } = await supabase
                     .from('users')
                     .insert({
                         id: userId,
@@ -92,9 +110,9 @@ export const authOptions: NextAuthOptions = {
                 .from('sessions')
                 .insert({
                     user_id: userId,
-                    access_token: account!.access_token,
-                    refresh_token: account!.refresh_token,
-                    expires_at: new Date(account!.expires_at! * 1000).toISOString()
+                    access_token: account.access_token!,
+                    refresh_token: account.refresh_token!,
+                    expires_at: new Date(account.expires_at! * 1000).toISOString()
                 });
 
             if (sessionError) {
@@ -104,7 +122,11 @@ export const authOptions: NextAuthOptions = {
 
             return true;
         },
-        async jwt({ token, account, user}: { token: ExtendedJWT, account: any, user: any }) {
+        async jwt({ token, account, user }: { 
+            token: ExtendedJWT; 
+            account: Account | null; 
+            user: User | null; 
+        }) {
             if (account && user) {
                 token.accessToken = account.access_token;
                 token.refreshToken = account.refresh_token;
@@ -123,9 +145,9 @@ export const authOptions: NextAuthOptions = {
                                 'Content-Type': 'application/x-www-form-urlencoded',
                             },
                             body: new URLSearchParams({
-                                client_id: process.env.YAHOO_CLIENT_ID! as string,
-                                client_secret: process.env.YAHOO_CLIENT_SECRET! as string,
-                                refresh_token: token.refreshToken as string,
+                                client_id: process.env.YAHOO_CLIENT_ID!,
+                                client_secret: process.env.YAHOO_CLIENT_SECRET!,
+                                refresh_token: token.refreshToken!,
                                 grant_type: 'refresh_token',
                             }),
                         }
@@ -145,7 +167,7 @@ export const authOptions: NextAuthOptions = {
                             refresh_token: refreshedTokens.refresh_token ?? token.refreshToken,
                             expires_at: new Date(Date.now() + refreshedTokens.expires_in * 1000).toISOString()
                         })
-                        .eq('user_id', token.userId);
+                        .eq('user_id', token.userId!);
 
                     if (updateError) {
                         console.error("Error updating session:", updateError);
@@ -156,7 +178,7 @@ export const authOptions: NextAuthOptions = {
                         ...token,
                         accessToken: refreshedTokens.access_token,
                         refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
-                        expiresAt: Date.now() + refreshedTokens.expires_in * 1000,
+                        expiresAt: Math.floor(Date.now() / 1000) + refreshedTokens.expires_in,
                     };
                 } catch (error) {
                     console.error("Error refreshing access token", error);
@@ -166,8 +188,10 @@ export const authOptions: NextAuthOptions = {
 
             return token;
         },
-        async session({ session, token }) {
-
+        async session({ session, token }: { 
+            session: ExtendedSession; 
+            token: ExtendedJWT; 
+        }) {
             if (token.userId) {
                 const { data: userData, error: userError } = await supabase
                     .from('users')
@@ -181,7 +205,7 @@ export const authOptions: NextAuthOptions = {
                     session.user = {
                         ...session.user,
                         ...userData,
-                        id: token.userId as string
+                        id: token.userId
                     };
                 }
 

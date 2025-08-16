@@ -1,9 +1,9 @@
 // ./app/api/db/league/[leagueKey]/teams/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { Team } from '@/lib/types';
+import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
+const supabase = getServerSupabaseClient();
 
 function prepareTeamForUpsert(team: Team, leagueId: string) {
   return {
