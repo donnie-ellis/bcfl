@@ -29,13 +29,10 @@ type TimerAction =
   | { type: 'RESET_TIMER'; payload: { time: number } }
   | { type: 'SET_LAST_SYNC'; payload: Date };
 
-function timerReducer(state: TimerState, action: TimerAction): TimerState {
-  console.log('🔄 Reducer action:', action.type, action.payload);
-  
+function timerReducer(state: TimerState, action: TimerAction): TimerState {  
   switch (action.type) {
     case 'UPDATE_ALL':
       const newState = { ...state, ...action.payload };
-      console.log('🔄 New state after UPDATE_ALL:', newState);
       return newState;
       
     case 'START_TIMER':
@@ -126,7 +123,6 @@ const DraftTimer: React.FC<DraftTimerProps> = ({
 
   // Update supabase ref when client changes
   useEffect(() => {
-    console.log('Supabase client in DraftTimer:', supabase);
     supabaseRef.current = supabase;
   }, [supabase]);
 
@@ -148,16 +144,6 @@ const DraftTimer: React.FC<DraftTimerProps> = ({
     
     return `${sign}${mins}:${secs.toString().padStart(2, '0')}`;
   };
-
-  // Debug render
-  console.log('🎨 DraftTimer rendering with:', {
-    timeRemaining,
-    timerState,
-    isActive,
-    isConnected,
-    formattedTime: formatTime(timeRemaining),
-    renderCount: Math.random() // Shows if component is actually re-rendering
-  });
 
   // Get timer display color based on remaining time
   const getTimerColor = () => {
@@ -185,18 +171,12 @@ const DraftTimer: React.FC<DraftTimerProps> = ({
 
   // Sync with server
   const syncWithServer = useCallback(async () => {
-    console.log('syncWithServer called - checking conditions...');
-    console.log('- supabaseRef.current:', !!supabaseRef.current);
-    console.log('- draftId:', draftId);
-    console.log('- mountedRef.current:', mountedRef.current);
-    
     if (!supabaseRef.current || !draftId || !mountedRef.current) {
       console.log('Aborting sync - missing requirements');
       return;
     }
 
     try {
-      console.log('Executing sync query for draft:', draftId);
       
       const { data, error } = await supabaseRef.current
         .from('draft_timer_events')
@@ -209,19 +189,12 @@ const DraftTimer: React.FC<DraftTimerProps> = ({
         console.error('Error fetching timer events:', error);
         return;
       }
-      
-      console.log('Query completed. Data:', data);
-      console.log('mountedRef.current after query:', mountedRef.current);
-      
+            
       if (data && data.length > 0 && mountedRef.current) {
         const latestEvent = data[0];
         const serverTime = new Date().getTime();
         const eventTime = new Date(latestEvent.created_at).getTime();
         const timeDiff = (serverTime - eventTime) / 1000;
-
-        console.log('Latest timer event:', latestEvent);
-        console.log('Time diff from event (seconds):', timeDiff);
-        console.log('Event age (minutes):', timeDiff / 60);
 
         // Check if event is stale (more than 10 minutes old)
         const isStaleEvent = timeDiff > 600; // 10 minutes
@@ -230,17 +203,11 @@ const DraftTimer: React.FC<DraftTimerProps> = ({
         }
 
         let adjustedTime = latestEvent.seconds_remaining;
-        console.log('latestEvent: ', latestEvent.event_type);
         
-        if (latestEvent.event_type === 'start' || latestEvent.event_type === 'resume') {
-          console.log('Processing start/resume event');
-          
+        if (latestEvent.event_type === 'start' || latestEvent.event_type === 'resume') {          
           if (isStaleEvent) {
             // If event is stale, treat as expired but continue tracking
-            console.log('Stale start/resume event - setting to expired but continuing');
             adjustedTime = latestEvent.seconds_remaining - timeDiff; // Allow deep negative
-            
-            console.log('🚀 Dispatching EXPIRE_TIMER with time:', adjustedTime);
             dispatch({ type: 'EXPIRE_TIMER', payload: { time: Math.round(adjustedTime) } });
             dispatch({ type: 'SET_CONNECTED', payload: true });
             
@@ -254,7 +221,6 @@ const DraftTimer: React.FC<DraftTimerProps> = ({
             // Normal start/resume
             adjustedTime = latestEvent.seconds_remaining - timeDiff;
             
-            console.log('🚀 Dispatching START_TIMER with time:', adjustedTime);
             dispatch({ type: 'START_TIMER', payload: { time: Math.round(adjustedTime) } });
             dispatch({ type: 'SET_CONNECTED', payload: true });
             
@@ -271,7 +237,6 @@ const DraftTimer: React.FC<DraftTimerProps> = ({
           startTimeRef.current = null;
           initialTimeRef.current = null;
         } else if (latestEvent.event_type === 'expire') {
-            console.log('Timer expired event received');
           // Continue tracking time after expiration
           adjustedTime = latestEvent.seconds_remaining - timeDiff;
           dispatch({ type: 'EXPIRE_TIMER', payload: { time: Math.round(adjustedTime) } });
@@ -279,10 +244,6 @@ const DraftTimer: React.FC<DraftTimerProps> = ({
           startTimeRef.current = serverTime;
           initialTimeRef.current = adjustedTime;
         }
-
-        console.log('Timer sync completed - dispatched actions');
-      } else {
-        console.log('No timer events found or component unmounted');
       }
     } catch (error) {
       console.error('Error syncing with server:', error);
@@ -298,15 +259,8 @@ const DraftTimer: React.FC<DraftTimerProps> = ({
   // Setup realtime subscription
   useEffect(() => {
     if (!supabaseRef.current || !draftId || !mountedRef.current) {
-      console.log('Skipping realtime setup:', { 
-        hasClient: !!supabaseRef.current, 
-        hasDraftId: !!draftId, 
-        mounted: mountedRef.current 
-      });
       return;
     }
-
-    console.log('Setting up realtime subscription for draft:', draftId);
 
     const channelName = `draft_timer_${draftId}`;
     const channel = supabaseRef.current.channel(channelName, {
@@ -326,42 +280,34 @@ const DraftTimer: React.FC<DraftTimerProps> = ({
         }, 
         (payload) => {
           if (!mountedRef.current) {
-            console.log('Ignoring realtime event - component unmounted');
             return;
           }
-          
-          console.log('Received timer event:', payload);
-          
+                    
           const event = payload.new;
           const serverTime = new Date().getTime();
           const eventTime = new Date(event.created_at).getTime();
           const latency = serverTime - eventTime;
 
           let adjustedTime = event.seconds_remaining;
-          console.log('Processing event type:', event.event_type, 'with adjustedTime:', adjustedTime);
 
           switch (event.event_type) {
             case 'start':
             case 'resume':
               // Compensate for network latency, allow negative values
               adjustedTime = event.seconds_remaining - (latency / 1000);
-              console.log('Realtime: Setting timer to running, adjustedTime:', adjustedTime);
               dispatch({ type: 'START_TIMER', payload: { time: Math.round(adjustedTime) } });
               startTimeRef.current = serverTime;
               initialTimeRef.current = adjustedTime;
-              console.log('Timer started/resumed:', adjustedTime);
               break;
             
             case 'pause':
               dispatch({ type: 'PAUSE_TIMER', payload: { time: event.seconds_remaining } });
-              console.log('Timer paused:', event.seconds_remaining);
               break;
             
             case 'reset':
               dispatch({ type: 'RESET_TIMER', payload: { time: event.seconds_remaining } });
               startTimeRef.current = null;
               initialTimeRef.current = null;
-              console.log('Timer reset:', event.seconds_remaining);
               break;
             
             case 'expire':
@@ -373,7 +319,6 @@ const DraftTimer: React.FC<DraftTimerProps> = ({
               if (onTimerExpire) {
                 onTimerExpire();
               }
-              console.log('Timer expired, continuing to track time');
               break;
             
             case 'sync':
@@ -384,14 +329,11 @@ const DraftTimer: React.FC<DraftTimerProps> = ({
                 const serverExpectedTime = event.seconds_remaining;
                 const drift = Math.abs(expectedTime - serverExpectedTime);
                 
-                console.log('Sync event - drift:', drift, 'expected:', expectedTime, 'server:', serverExpectedTime);
-                
                 // Only adjust if drift is significant (>1 second)
                 if (drift > 1) {
                   startTimeRef.current = serverTime;
                   initialTimeRef.current = serverExpectedTime;
                   dispatch({ type: 'SET_TIME', payload: Math.round(serverExpectedTime) });
-                  console.log('Timer adjusted for drift');
                 }
               } else {
                 dispatch({ type: 'SET_TIME', payload: event.seconds_remaining });
@@ -402,14 +344,11 @@ const DraftTimer: React.FC<DraftTimerProps> = ({
           dispatch({ type: 'SET_LAST_SYNC', payload: new Date() });
         })
       .subscribe((status) => {
-        console.log('Realtime subscription status:', status, 'for draft:', draftId);
         
         if (status === 'SUBSCRIBED') {
-          console.log('Successfully subscribed to timer channel');
           dispatch({ type: 'SET_CONNECTED', payload: true });
           // Initial sync when connected
           setTimeout(() => {
-            console.log('Triggering initial sync after subscription');
             syncWithServer();
           }, 100); // Small delay to ensure state is updated
         } else if (status === 'CHANNEL_ERROR') {
@@ -419,15 +358,13 @@ const DraftTimer: React.FC<DraftTimerProps> = ({
           console.warn('Channel closed');
           dispatch({ type: 'SET_CONNECTED', payload: false });
         } else {
-          console.log('Other subscription status:', status);
-          dispatch({ type: 'SET_CONNECTED', payload: status === 'SUBSCRIBED' });
+          dispatch({ type: 'SET_CONNECTED', payload: status === 'TIMED_OUT' });
         }
       });
 
     channelRef.current = channel;
 
     return () => {
-      console.log('Cleaning up realtime subscription');
       if (channelRef.current) {
         channelRef.current.unsubscribe();
         channelRef.current = null;
@@ -451,7 +388,6 @@ const DraftTimer: React.FC<DraftTimerProps> = ({
             
             // Check for expiration (but continue tracking)
             if (newTime <= 0 && timerState !== 'expired') {
-              console.log('Timer expired, but continuing to track time');
               dispatch({ type: 'EXPIRE_TIMER', payload: { time: Math.round(newTime) } });
               // Don't set isActive to false - keep tracking
               if (onTimerExpire) {
