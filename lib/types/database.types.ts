@@ -7,10 +7,30 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -78,42 +98,98 @@ export type Database = {
           },
         ]
       }
+      draft_timer_events: {
+        Row: {
+          created_at: string
+          draft_id: number
+          event_type: string
+          id: number
+          metadata: Json | null
+          original_duration: number | null
+          pick_id: number | null
+          seconds_remaining: number
+          triggered_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          draft_id: number
+          event_type: string
+          id?: number
+          metadata?: Json | null
+          original_duration?: number | null
+          pick_id?: number | null
+          seconds_remaining?: number
+          triggered_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          draft_id?: number
+          event_type?: string
+          id?: number
+          metadata?: Json | null
+          original_duration?: number | null
+          pick_id?: number | null
+          seconds_remaining?: number
+          triggered_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "draft_timer_events_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       drafts: {
         Row: {
           created_at: string | null
           current_pick: number | null
           draft_order: Json | null
           id: number
+          is_paused: boolean | null
           league_id: string | null
           name: string
+          pick_seconds: number | null
           rounds: number
           status: string | null
           total_picks: number
           updated_at: string | null
+          use_timer: boolean | null
         }
         Insert: {
           created_at?: string | null
           current_pick?: number | null
           draft_order?: Json | null
           id?: number
+          is_paused?: boolean | null
           league_id?: string | null
           name: string
+          pick_seconds?: number | null
           rounds: number
           status?: string | null
           total_picks: number
           updated_at?: string | null
+          use_timer?: boolean | null
         }
         Update: {
           created_at?: string | null
           current_pick?: number | null
           draft_order?: Json | null
           id?: number
+          is_paused?: boolean | null
           league_id?: string | null
           name?: string
+          pick_seconds?: number | null
           rounds?: number
           status?: string | null
           total_picks?: number
           updated_at?: string | null
+          use_timer?: boolean | null
         }
         Relationships: [
           {
@@ -441,6 +517,7 @@ export type Database = {
           is_keeper: boolean | null
           is_picked: boolean | null
           pick_number: number
+          pick_time_seconds: number | null
           picked_by: string | null
           player_id: number | null
           round_number: number
@@ -455,6 +532,7 @@ export type Database = {
           is_keeper?: boolean | null
           is_picked?: boolean | null
           pick_number: number
+          pick_time_seconds?: number | null
           picked_by?: string | null
           player_id?: number | null
           round_number: number
@@ -469,6 +547,7 @@ export type Database = {
           is_keeper?: boolean | null
           is_picked?: boolean | null
           pick_number?: number
+          pick_time_seconds?: number | null
           picked_by?: string | null
           player_id?: number | null
           round_number?: number
@@ -884,6 +963,26 @@ export type Database = {
       }
     }
     Views: {
+      latest_draft_timer_state: {
+        Row: {
+          created_at: string | null
+          draft_id: number | null
+          event_type: string | null
+          original_duration: number | null
+          pick_id: number | null
+          seconds_remaining: number | null
+          triggered_by: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "draft_timer_events_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       players_with_adp: {
         Row: {
           adp: number | null
@@ -948,16 +1047,27 @@ export type Database = {
         Args: { p_draft_id: number }
         Returns: undefined
       }
+      get_current_timer_state: {
+        Args: { draft_id_param: number }
+        Returns: {
+          event_type: string
+          seconds_remaining: number
+          original_duration: number
+          time_elapsed_since_event: number
+          calculated_remaining: number
+          is_expired: boolean
+        }[]
+      }
       get_player_with_adp: {
         Args:
           | { p_draft_id: number; p_player_id: number }
           | { p_player_id: number }
         Returns: {
-          adp: number
-          adp_formatted: string
-          full_name: string
           id: number
           player_key: string
+          full_name: string
+          adp: number
+          adp_formatted: string
           source_id: number
         }[]
       }
@@ -975,6 +1085,16 @@ export type Database = {
           p_pick_id: number
           p_picked_by: string
           p_player_id: number
+        }
+        Returns: Json
+      }
+      submit_draft_pick_with_timing: {
+        Args: {
+          p_draft_id: number
+          p_pick_id: number
+          p_picked_by: string
+          p_player_id: number
+          p_time_remaining?: number
         }
         Returns: Json
       }
@@ -1106,7 +1226,11 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
 } as const
+
