@@ -187,7 +187,7 @@ const KioskPage: React.FC = () => {
     return () => {
       supabase.removeChannel(picksSubscription);
     };
-  }, [supabase, draftId, mutatePicks, notifyPickMade, players, teams]);
+  }, [supabase, draftId, mutatePicks, notifyPickMade]);
 
   useEffect(() => {
     updatePicksAndDraft();

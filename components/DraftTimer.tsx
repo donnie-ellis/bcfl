@@ -344,7 +344,7 @@ const DraftTimer: React.FC<DraftTimerProps> = ({
           dispatch({ type: 'SET_LAST_SYNC', payload: new Date() });
         })
       .subscribe((status) => {
-        
+        console.log('Channel status:', status);
         if (status === 'SUBSCRIBED') {
           dispatch({ type: 'SET_CONNECTED', payload: true });
           // Initial sync when connected
