@@ -94,7 +94,7 @@ export async function POST(
     }
 
     // Call the submit_draft_pick function
-    const { data, error } = await supabase.rpc('submit_draft_pick', {
+    const { data, error } = await supabase.rpc('submit_draft_pick_with_timing', {
       p_draft_id: parseInt(draftId),
       p_pick_id: pickId,
       p_player_id: playerId,
