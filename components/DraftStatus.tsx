@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/hover-card";
 import { Badge } from '@/components/ui/badge';
 import RecentPicks from './RecentPicks';
+import DraftTimer from '@/components/DraftTimer';
 
 interface DraftStatusProps {
   draft: Draft | null;
@@ -105,11 +106,14 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams,
           <p className="text-center text-sm font-semibold">
             Pick {currentPick} of {draft.total_picks}
           </p>
-
           <Progress value={progress} className="w-full" />
+          <DraftTimer
+            draftId={draft.id}
+            onTimerExpire={() => {}}
+          />
 
           <div className="text-center">
-            <p className="text-sm font-semibold">Picks until {possesiveTitle(team.name)} next pick:</p>
+            <p className="text-sm font-semibold">{possesiveTitle(team.name)} next pick:</p>
             <div className="text-lg">
               {picksUntilNextTeamPickDisplay === 0 ? 
                 <Badge className='cursor-default' variant={'success'}>On the clock</Badge>
