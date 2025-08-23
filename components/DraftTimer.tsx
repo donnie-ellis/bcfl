@@ -1,11 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback, useReducer } from 'react';
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
 import { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
+import { Timer, AlertTriangle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 type DraftTimerProps = {
   draftId: number;
   onTimerExpire?: () => void;
   className?: string;
+  size?: 'sm' | 'md' | 'lg';
+  showProgress?: boolean;
+  pickDuration?: number;
 };
 
 type TimerStates = 'stopped' | 'running' | 'paused' | 'expired';
@@ -105,7 +110,10 @@ const initialState: TimerState = {
 const DraftTimer: React.FC<DraftTimerProps> = ({ 
   draftId, 
   onTimerExpire,
-  className = "" 
+  className = "",
+  size = 'md',
+  showProgress = true,
+  pickDuration = 90
 }) => {
   const [state, dispatch] = useReducer(timerReducer, initialState);
   const { timeRemaining, isActive, timerState, isConnected, lastSync } = state;
@@ -119,7 +127,6 @@ const DraftTimer: React.FC<DraftTimerProps> = ({
   const initialTimeRef = useRef<number | null>(null);
   const isTabActiveRef = useRef<boolean>(true);
   const mountedRef = useRef<boolean>(true);
-
 
   // Update supabase ref when client changes
   useEffect(() => {
@@ -147,12 +154,52 @@ const DraftTimer: React.FC<DraftTimerProps> = ({
 
   // Get timer display color based on remaining time
   const getTimerColor = () => {
-    if (timeRemaining === null) return 'text-gray-500';
-    if (timeRemaining < 0) return 'text-red-600 animate-pulse'; // Pulsing red for negative time
+    if (timeRemaining === null) return 'text-muted-foreground';
+    if (timeRemaining < 0) return 'text-red-600';
     if (timeRemaining <= 0) return 'text-red-600';
-    if (timeRemaining <= 10) return 'text-yellow-600';
+    if (timeRemaining <= 30) return 'text-yellow-600';
     return 'text-green-600';
   };
+
+  // Get progress color
+  const getProgressColor = () => {
+    if (timeRemaining === null) return 'text-muted-foreground/20';
+    if (timeRemaining < 0) return 'text-red-500';
+    if (timeRemaining <= 30) return 'text-yellow-500';
+    return 'text-green-500';
+  };
+
+  // Calculate progress 
+  const getProgress = () => {
+    if (timeRemaining === null) return 0;
+    const maxTime = pickDuration;
+    if (timeRemaining < 0) return 100;
+    return ((maxTime - timeRemaining) / maxTime) * 100;
+  };
+
+  // Size configurations
+  const sizeConfig = {
+    sm: {
+      circle: 'w-12 h-12',
+      icon: 'w-4 h-4',
+      text: 'text-lg',
+      label: 'text-xs'
+    },
+    md: {
+      circle: 'w-16 h-16',
+      icon: 'w-5 h-5',
+      text: 'text-2xl',
+      label: 'text-sm'
+    },
+    lg: {
+      circle: 'w-20 h-20',
+      icon: 'w-6 h-6',
+      text: 'text-4xl',
+      label: 'text-lg'
+    }
+  };
+
+  const config = sizeConfig[size];
 
   // Handle page visibility changes
   useEffect(() => {
@@ -177,7 +224,6 @@ const DraftTimer: React.FC<DraftTimerProps> = ({
     }
 
     try {
-      
       const { data, error } = await supabaseRef.current
         .from('draft_timer_events')
         .select('*')
@@ -344,7 +390,6 @@ const DraftTimer: React.FC<DraftTimerProps> = ({
           dispatch({ type: 'SET_LAST_SYNC', payload: new Date() });
         })
       .subscribe((status) => {
-        console.log('Channel status:', status);
         if (status === 'SUBSCRIBED') {
           dispatch({ type: 'SET_CONNECTED', payload: true });
           // Initial sync when connected
@@ -450,22 +495,71 @@ const DraftTimer: React.FC<DraftTimerProps> = ({
   // Don't render if no supabase client
   if (!supabase) {
     return (
-      <div className={`draft-timer ${className}`}>
-        <div className="text-gray-500">Loading timer...</div>
+      <div className={cn("draft-timer", className)}>
+        <div className="text-muted-foreground">Loading timer...</div>
       </div>
     );
   }
 
+  const isOvertime = timeRemaining !== null && timeRemaining < 0;
+  const progress = getProgress();
+
   return (
-    <div className={`draft-timer ${className}`}>
-      <div className={`font-mono text-2xl font-bold ${getTimerColor()}`}>
-        {formatTime(timeRemaining)}
-      </div>
-      <div className="text-xs text-gray-500 mt-1">
-          {timeRemaining !== null && timeRemaining < 0 && (
-            <span className="text-red-500 font-semibold"> (OVERTIME)</span>
+    <div className={cn("draft-timer flex items-center", className)}>
+      {/* Circular Progress Indicator */}
+      {showProgress && (
+        <div className={cn("relative mr-4", config.circle)}>
+          <svg className={cn("transform -rotate-90", config.circle)} viewBox="0 0 32 32">
+            <circle
+              cx="16"
+              cy="16"
+              r="14"
+              stroke="currentColor"
+              strokeWidth="2"
+              fill="transparent"
+              className="text-muted-foreground/20"
+            />
+            <circle
+              cx="16"
+              cy="16"
+              r="14"
+              stroke="currentColor"
+              strokeWidth="2"
+              fill="transparent"
+              strokeDasharray={`${progress * 0.88} 88`}
+              className={cn(
+                "transition-all duration-300",
+                getProgressColor()
+              )}
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Timer className={cn(config.icon, getTimerColor())} />
+          </div>
+        </div>
+      )}
+
+      {/* Timer Display */}
+      <div className="flex flex-col">
+        <div className={cn(
+          "font-mono font-bold transition-colors duration-300",
+          config.text,
+          getTimerColor(),
+          isOvertime && "animate-pulse"
+        )}>
+          {formatTime(timeRemaining)}
+        </div>
+        <div className={cn("font-medium text-muted-foreground", config.label)}>
+          {isOvertime ? (
+            <div className="flex items-center text-red-600">
+              <AlertTriangle className={cn("mr-1", size === 'sm' ? 'w-3 h-3' : 'w-4 h-4')} />
+              OVERTIME
+            </div>
+          ) : (
+            "REMAINING"
           )}
-          {!isTabActiveRef.current && <span> (Tab Inactive)</span>}
+          {!isTabActiveRef.current && <span className="ml-1">(Inactive)</span>}
+        </div>
       </div>
     </div>
   );

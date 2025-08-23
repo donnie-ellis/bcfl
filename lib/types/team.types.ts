@@ -16,7 +16,7 @@ export interface TeamLogo {
 // Extended Team type
 export interface Team extends Omit<BaseTeam, 'team_logos'> {
   managers?: Manager[];
-  team_logos: Json;
+  team_logos: TeamLogo[];
 }
 
 // Team Input type for creating or updating teams
@@ -85,7 +85,7 @@ export interface TeamSearchParams {
 export function parseTeamWithLogos(team: BaseTeam): Team {
   return {
     ...team,
-    team_logos: team.team_logos, // Don't parse here, keep it as Json
+    team_logos: parseTeamLogos(team.team_logos), // Don't parse here, keep it as Json
   };
 }
 
