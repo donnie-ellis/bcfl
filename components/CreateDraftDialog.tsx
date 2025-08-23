@@ -4,11 +4,14 @@ import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { LeagueSettings, parseRosterPositions, Team } from '@/lib/types/';
 import { League, Manager } from '@/lib/yahoo.types';
 import TeamCard from './TeamCard';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Clock, Settings } from 'lucide-react';
 import { toast } from "sonner";
 import { Reorder } from 'framer-motion';
 
@@ -23,6 +26,8 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [draftName, setDraftName] = useState('');
   const [orderedTeams, setOrderedTeams] = useState<Team[]>([]);
+  const [useTimer, setUseTimer] = useState(false);
+  const [pickSeconds, setPickSeconds] = useState(90);
   const [isCreatingDraft, setIsCreatingDraft] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [adpProgress, setAdpProgress] = useState(0);
@@ -31,6 +36,28 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
   useEffect(() => {
     setOrderedTeams(teams);
   }, [teams]);
+
+  // Preset time options for quick selection
+  const timePresets = [
+    { label: '30 seconds', value: 30 },
+    { label: '1 minute', value: 60 },
+    { label: '90 seconds', value: 90 },
+    { label: '2 minutes', value: 120 },
+    { label: '3 minutes', value: 180 },
+    { label: '5 minutes', value: 300 },
+  ];
+
+  const formatTime = (seconds: number) => {
+    if (seconds < 60) {
+      return `${seconds}s`;
+    } else if (seconds % 60 === 0) {
+      return `${Math.floor(seconds / 60)}m`;
+    } else {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      return `${minutes}m ${remainingSeconds}s`;
+    }
+  };
 
   const fetchYahooData = async () => {
     try {
@@ -105,6 +132,11 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
       return;
     }
 
+    if (useTimer && (pickSeconds < 10 || pickSeconds > 600)) {
+      toast.error('Pick time must be between 10 seconds and 10 minutes');
+      return;
+    }
+
     setIsCreatingDraft(true);
     const toastId = toast.loading("Creating draft...");
 
@@ -158,7 +190,9 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
           totalPicks,
           draftOrder: JSON.stringify(draftOrder),
           orderedTeams: JSON.stringify(orderedTeamsJson),
-          status: 'pending'
+          status: 'pending',
+          useTimer,
+          pickSeconds: useTimer ? pickSeconds : null,
         }),
       });
 
@@ -306,6 +340,8 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
     setIsCreatingDraft(false);
     setIsDialogOpen(false);
     setDraftName('');
+    setUseTimer(false);
+    setPickSeconds(90);
     try {
       const draftsResponse = await fetch(`/api/db/league/${leagueKey}/drafts`, {
         method: 'GET',
@@ -331,10 +367,19 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
   };
   
   const handleDialogClose = (open: boolean) => {
-    if (!open) {
+    if (!open && !isCreatingDraft) {
       setDraftName('');
+      setUseTimer(false);
+      setPickSeconds(90);
     }
     setIsDialogOpen(open);
+  };
+
+  const handlePickSecondsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value);
+    if (!isNaN(value) && value >= 10 && value <= 600) {
+      setPickSeconds(value);
+    }
   };
 
   return (
@@ -342,46 +387,169 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
       <DialogTrigger asChild>
         <Button variant="outline" disabled={isCreatingDraft}>Create a new draft</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-hidden">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden">
         <DialogHeader>
-          <DialogTitle>Create Draft Order</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Create Draft Order
+          </DialogTitle>
           <DialogDescription>
-            Enter a draft name and drag and drop teams to set the draft order.
+            Configure your draft settings and drag teams to set the draft order.
           </DialogDescription>
         </DialogHeader>
-        <div className={`mt-4 max-h-[calc(80vh-120px)] overflow-y-auto pr-4 ${isCreatingDraft ? 'pointer-events-none' : ''}`}>
-          <Input
-            placeholder="Draft Name"
-            value={draftName}
-            onChange={(e) => setDraftName(e.target.value)}
-            className="mb-4"
-            disabled={isCreatingDraft}
-          />
-          <Reorder.Group axis='y' values={orderedTeams} onReorder={setOrderedTeams}>
-            <div className='space-y-2'>
-              {orderedTeams.map((team) => (
-                <Reorder.Item key={team.team_id} value={team}>
-                  <TeamCard team={team} />
-                </Reorder.Item>
-              ))}
+        <div className={`mt-4 max-h-[calc(90vh-160px)] overflow-y-auto pr-4 ${isCreatingDraft ? 'pointer-events-none' : ''}`}>
+          {/* Draft Settings */}
+          <div className="space-y-4 mb-6">
+            <div className="space-y-2">
+              <Label htmlFor="draft-name">Draft Name</Label>
+              <Input
+                id="draft-name"
+                placeholder="e.g. 2024 Season Draft"
+                value={draftName}
+                onChange={(e) => setDraftName(e.target.value)}
+                disabled={isCreatingDraft}
+              />
             </div>
-          </Reorder.Group>
-          <Button onClick={handleCreateDraft} className="mt-4 w-full" disabled={isCreatingDraft}>
-            {isCreatingDraft ? 'Creating Draft...' : 'Create Draft'}
+
+            <Separator />
+
+            {/* Timer Settings */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="use-timer"
+                  checked={useTimer}
+                  onCheckedChange={setUseTimer}
+                  disabled={isCreatingDraft}
+                />
+                <Label htmlFor="use-timer" className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Enable Pick Timer
+                </Label>
+              </div>
+
+              {useTimer && (
+                <div className="ml-6 space-y-3 p-4 bg-muted/30 rounded-lg border">
+                  <div className="space-y-2">
+                    <Label htmlFor="pick-seconds">Time per pick (seconds)</Label>
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        id="pick-seconds"
+                        type="number"
+                        min="10"
+                        max="600"
+                        value={pickSeconds}
+                        onChange={handlePickSecondsChange}
+                        disabled={isCreatingDraft}
+                        className="w-24"
+                      />
+                      <span className="text-sm text-muted-foreground">
+                        ({formatTime(pickSeconds)})
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Between 10 seconds and 10 minutes
+                    </p>
+                  </div>
+
+                  {/* Quick time presets */}
+                  <div className="space-y-2">
+                    <Label className="text-sm">Quick presets:</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {timePresets.map((preset) => (
+                        <Button
+                          key={preset.value}
+                          variant={pickSeconds === preset.value ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setPickSeconds(preset.value)}
+                          disabled={isCreatingDraft}
+                          className="text-xs h-7"
+                        >
+                          {preset.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950/20 p-3 rounded border-l-2 border-blue-200 dark:border-blue-800">
+                    <p className="font-medium">Timer Features:</p>
+                    <ul className="mt-1 space-y-1 list-disc list-inside">
+                      <li>Real-time synchronization across all devices</li>
+                      <li>Automatic progression when time expires</li>
+                      <li>Overtime tracking for late picks</li>
+                      <li>Commissioner controls for pause/resume</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <Separator />
+          </div>
+
+          {/* Draft Order */}
+          <div className="space-y-3">
+            <Label className="text-base font-medium">Draft Order</Label>
+            <p className="text-sm text-muted-foreground">
+              Drag teams to reorder. Team at the top picks first.
+            </p>
+            <Reorder.Group axis='y' values={orderedTeams} onReorder={setOrderedTeams}>
+              <div className='space-y-2'>
+                {orderedTeams.map((team, index) => (
+                  <Reorder.Item key={team.team_id} value={team}>
+                    <div className="flex items-center gap-3">
+                      <div className="text-sm font-mono text-muted-foreground w-6 text-center">
+                        {index + 1}
+                      </div>
+                      <div className="flex-1">
+                        <TeamCard team={team} />
+                      </div>
+                    </div>
+                  </Reorder.Item>
+                ))}
+              </div>
+            </Reorder.Group>
+          </div>
+
+          <Button 
+            onClick={handleCreateDraft} 
+            className="mt-6 w-full" 
+            disabled={isCreatingDraft}
+            size="lg"
+          >
+            {isCreatingDraft ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating Draft...
+              </>
+            ) : (
+              <>
+                Create Draft
+                {useTimer && (
+                  <span className="ml-2 text-xs opacity-75">
+                    with {formatTime(pickSeconds)} timer
+                  </span>
+                )}
+              </>
+            )}
           </Button>
         </div>
+
+        {/* Loading overlay */}
         {isCreatingDraft && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70 dark:bg-gray-800 dark:bg-opacity-70 z-50">
-            <div className="text-center">
-              <Loader2 className="h-8 w-8 animate-spin mb-2 mx-auto" />
-              <p>Creating draft and importing players...</p>
-              <p>{importProgress} players imported</p>
-              {importProgress > 0 && (
-                <>
-                  <p className="mt-2">Updating ADP data...</p>
-                  <p>{adpProgress}% complete</p>
-                </>
-              )}
+          <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50 rounded-lg">
+            <div className="text-center space-y-3 p-6">
+              <Loader2 className="h-8 w-8 animate-spin mb-2 mx-auto text-primary" />
+              <div className="space-y-1">
+                <p className="font-medium">Creating draft and importing players...</p>
+                <p className="text-sm text-muted-foreground">{importProgress} players imported</p>
+                {importProgress > 0 && (
+                  <>
+                    <p className="text-sm text-muted-foreground">Updating ADP data...</p>
+                    <p className="text-sm text-muted-foreground">{adpProgress}% complete</p>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         )}
