@@ -71,14 +71,17 @@ export async function POST(
   const userGuid = session.user.id;
 
   try {
-    // Fetch the pick and related team information
+    // Fetch the pick and related team information, plus draft timer settings
     const { data: pick, error: pickError } = await supabase
       .from('picks')
       .select(`
         id,
         team_key,
         drafts!picks_draft_id_fkey (
-          league_id
+          league_id,
+          use_timer,
+          pick_seconds,
+          current_pick
         )
       `)
       .eq('id', pickId)
@@ -93,15 +96,110 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized to make this pick' }, { status: 403 });
     }
 
-    // Call the submit_draft_pick function
+    let timeRemaining: number | null = null;
+
+    // If timer is enabled, get the current timer state
+    if (pick.drafts.use_timer) {
+      try {
+        // Get the latest timer event to calculate remaining time
+        const { data: timerEvents, error: timerError } = await supabase
+          .from('draft_timer_events')
+          .select('*')
+          .eq('draft_id', parseInt(draftId))
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (timerError) {
+          console.error('Error fetching timer events:', timerError);
+        } else if (timerEvents && timerEvents.length > 0) {
+          const latestEvent = timerEvents[0];
+          const now = new Date().getTime();
+          const eventTime = new Date(latestEvent.created_at).getTime();
+          const timeDiff = (now - eventTime) / 1000; // Convert to seconds
+
+          // Calculate remaining time based on event type
+          if (latestEvent.event_type === 'start' || latestEvent.event_type === 'resume') {
+            // Timer was running - calculate remaining time (can be negative for overtime)
+            timeRemaining = Math.round(latestEvent.seconds_remaining - timeDiff);
+          } else if (latestEvent.event_type === 'pause') {
+            // Timer was paused - use the paused time
+            timeRemaining = latestEvent.seconds_remaining;
+          } else if (latestEvent.event_type === 'expire') {
+            // Timer had expired - continue tracking overtime
+            timeRemaining = Math.round(latestEvent.seconds_remaining - timeDiff);
+          } else if (latestEvent.event_type === 'reset') {
+            // Timer was reset - use the reset time
+            timeRemaining = latestEvent.seconds_remaining;
+          }
+        }
+      } catch (timerError) {
+        console.error('Error calculating timer state:', timerError);
+        // Continue without timer data if there's an error
+      }
+    }
+
+    // Call the submit_draft_pick function with timing
     const { data, error } = await supabase.rpc('submit_draft_pick_with_timing', {
       p_draft_id: parseInt(draftId),
       p_pick_id: pickId,
       p_player_id: playerId,
-      p_picked_by: userGuid
+      p_picked_by: userGuid,
+      p_time_remaining: timeRemaining
     });
 
     if (error) throw error;
+
+    // If timer is enabled, start the timer for the next pick
+    if (pick.drafts.use_timer) {
+      try {
+        // Check if there are more picks remaining by getting updated draft info
+        const { data: updatedDraft, error: updatedDraftError } = await supabase
+          .from('drafts')
+          .select('current_pick, total_picks, is_paused')
+          .eq('id', parseInt(draftId))
+          .single();
+
+        if (!updatedDraftError && updatedDraft) {
+          if (updatedDraft.current_pick <= updatedDraft.total_picks) {
+            // There are more picks - start timer for next pick
+            await supabase
+              .from('draft_timer_events')
+              .insert({
+                draft_id: parseInt(draftId),
+                event_type: 'start',
+                pick_id: null, // This is for the next pick, not the one just submitted
+                seconds_remaining: pick.drafts.pick_seconds, // Full time for next pick
+                original_duration: pick.drafts.pick_seconds,
+                triggered_by: userGuid,
+                metadata: { 
+                  reason: 'next_pick_auto_start',
+                  previous_pick: pickId,
+                  current_pick: updatedDraft.current_pick
+                }
+              });
+          } else {
+            // Draft is complete - create final pause event
+            await supabase
+              .from('draft_timer_events')
+              .insert({
+                draft_id: parseInt(draftId),
+                event_type: 'pause',
+                pick_id: pickId,
+                seconds_remaining: 0,
+                original_duration: pick.drafts.pick_seconds,
+                triggered_by: userGuid,
+                metadata: { 
+                  reason: 'draft_completed',
+                  final_pick: pickId 
+                }
+              });
+          }
+        }
+      } catch (timerError) {
+        console.error('Error updating timer state after pick:', timerError);
+        // Don't fail the pick submission if timer update fails
+      }
+    }
 
     // Fetch the updated pick data
     const { data: updatedPick, error: updatedPickError } = await supabase
@@ -176,7 +274,7 @@ export async function DELETE(
     // Clear the pick
     const { error: clearPickError } = await supabase
       .from('picks')
-      .update({ player_id: null, is_picked: false, picked_by: null, is_keeper: false })
+      .update({ player_id: null, is_picked: false, picked_by: null, is_keeper: false, pick_time_seconds: null })
       .eq('id', pickId)
       .eq('draft_id', parseInt(draftId));
 
