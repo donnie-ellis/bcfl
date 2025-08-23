@@ -461,22 +461,11 @@ const DraftTimer: React.FC<DraftTimerProps> = ({
       <div className={`font-mono text-2xl font-bold ${getTimerColor()}`}>
         {formatTime(timeRemaining)}
       </div>
-      
       <div className="text-xs text-gray-500 mt-1">
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></span>
-          <span>{isConnected ? 'Connected' : 'Disconnected'}</span>
-          {lastSync && (
-            <span>• Last sync: {lastSync.toLocaleTimeString()}</span>
-          )}
-        </div>
-        
-        <div className="mt-1">
           {timeRemaining !== null && timeRemaining < 0 && (
             <span className="text-red-500 font-semibold"> (OVERTIME)</span>
           )}
           {!isTabActiveRef.current && <span> (Tab Inactive)</span>}
-        </div>
       </div>
     </div>
   );

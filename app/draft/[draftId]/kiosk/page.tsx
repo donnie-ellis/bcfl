@@ -25,6 +25,8 @@ import TeamNeeds from '@/components/TeamNeeds';
 import { parseTeamLogos, possesiveTitle } from '@/lib/types/team.types';
 import TeamBreakdown from '@/components/TeamBreakdown';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import DraftTimer from '@/components/DraftTimer';
+import AveragePickTime from '@/components/AveragePickTime';
 
 type MemoizedDraft = Omit<Draft, 'picks'> & { picks: PickWithPlayerAndTeam[] };
 
@@ -185,7 +187,7 @@ const KioskPage: React.FC = () => {
     return () => {
       supabase.removeChannel(picksSubscription);
     };
-  }, [supabase, draftId, mutatePicks, notifyPickMade]);
+  }, [supabase, draftId, mutatePicks, notifyPickMade, players, teams]);
 
   useEffect(() => {
     updatePicksAndDraft();
@@ -375,6 +377,13 @@ const KioskPage: React.FC = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    <DraftTimer
+                      draftId={memoizedDraft.id}
+                    />
+                    <AveragePickTime
+                      picks={memoizedDraft.picks}
+                      teamKey={currentTeam.team_key}
+                    />
                     <TeamNeeds
                       draft={memoizedDraft}
                       teamKey={currentTeam.team_key}
