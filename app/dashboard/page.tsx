@@ -229,7 +229,7 @@ const DashboardPage: React.FC = () => {
     <Table>
       <TableBody>
         {teams.map((team) => {
-          const logos: TeamLogo[] = parseTeamLogos(team.team_logos);
+          const logos: TeamLogo[] = team.team_logos;
           const logo = logos.find(l => l.size === 'large') || logos[0];
           
           return (

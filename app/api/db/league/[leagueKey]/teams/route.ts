@@ -1,18 +1,18 @@
 // ./app/api/db/league/[leagueKey]/teams/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { Team } from '@/lib/types';
+import { Json, parseTeamLogos, Team, TeamInput } from '@/lib/types';
 import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
 
 const supabase = getServerSupabaseClient();
 
-function prepareTeamForUpsert(team: Team, leagueId: string) {
+function prepareTeamForUpsert(team: Team, leagueId: string): TeamInput {
   return {
     league_id: leagueId,
     team_key: team.team_key,
     team_id: team.team_id,
     name: team.name,
     url: team.url,
-    team_logos: team.team_logos,
+    team_logos: team.team_logos as unknown as Json,
     waiver_priority: team.waiver_priority,
     number_of_moves: team.number_of_moves,
     number_of_trades: team.number_of_trades,
@@ -36,8 +36,11 @@ export async function GET(
 
     if (error) throw error;
 
-
-    return NextResponse.json(data as Team[]);
+    const teams: Team[] = (data ?? []).map(team => ({
+      ...team,
+      team_logos: parseTeamLogos(team.team_logos),
+    }));
+    return NextResponse.json(teams);
   } catch (error) {
     console.error('Error fetching league settings:', error);
     return NextResponse.json({ error: 'Failed to fetch league settings' }, { status: 500 });
@@ -52,7 +55,10 @@ export async function POST(
   const teams: Team[] = await request.json();
 
   try {
-    const teamsForUpsert = teams.map(team => prepareTeamForUpsert(team, leagueKey));
+    const teamsForUpsert: TeamInput[] = teams.map(team => ({
+      ...prepareTeamForUpsert(team, leagueKey),
+      team_logos: Array.isArray(team.team_logos) ? (team.team_logos as unknown as Json) : [],
+    }));
     const { data, error } = await supabase
       .from('teams')
       .upsert(teamsForUpsert, {
