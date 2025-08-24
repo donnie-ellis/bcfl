@@ -51,7 +51,7 @@ const TeamCard: React.FC<TeamProps> = ({ team }) => {
   return (
     <div className="flex items-center space-x-2 p-2 bg-secondary rounded-md">
       <Avatar className="h-8 w-8">
-        <AvatarImage src={getTeamLogoUrl(team.team_logos)} alt={`${team.name} logo`} />
+        <AvatarImage src={team.team_logos[0].url} alt={`${team.name} logo`} />
         <AvatarFallback>{team.name[0]}</AvatarFallback>
       </Avatar>
       <div className="overflow-hidden">

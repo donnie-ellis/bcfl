@@ -17,10 +17,10 @@ export type Database = {
     Functions: {
       graphql: {
         Args: {
+          extensions?: Json
           operationName?: string
           query?: string
           variables?: Json
-          extensions?: Json
         }
         Returns: Json
       }
@@ -98,42 +98,98 @@ export type Database = {
           },
         ]
       }
+      draft_timer_events: {
+        Row: {
+          created_at: string
+          draft_id: number
+          event_type: string
+          id: number
+          metadata: Json | null
+          original_duration: number | null
+          pick_id: number | null
+          seconds_remaining: number
+          triggered_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          draft_id: number
+          event_type: string
+          id?: number
+          metadata?: Json | null
+          original_duration?: number | null
+          pick_id?: number | null
+          seconds_remaining?: number
+          triggered_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          draft_id?: number
+          event_type?: string
+          id?: number
+          metadata?: Json | null
+          original_duration?: number | null
+          pick_id?: number | null
+          seconds_remaining?: number
+          triggered_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "draft_timer_events_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       drafts: {
         Row: {
           created_at: string | null
           current_pick: number | null
           draft_order: Json | null
           id: number
+          is_paused: boolean | null
           league_id: string | null
           name: string
+          pick_seconds: number | null
           rounds: number
           status: string | null
           total_picks: number
           updated_at: string | null
+          use_timer: boolean | null
         }
         Insert: {
           created_at?: string | null
           current_pick?: number | null
           draft_order?: Json | null
           id?: number
+          is_paused?: boolean | null
           league_id?: string | null
           name: string
+          pick_seconds?: number | null
           rounds: number
           status?: string | null
           total_picks: number
           updated_at?: string | null
+          use_timer?: boolean | null
         }
         Update: {
           created_at?: string | null
           current_pick?: number | null
           draft_order?: Json | null
           id?: number
+          is_paused?: boolean | null
           league_id?: string | null
           name?: string
+          pick_seconds?: number | null
           rounds?: number
           status?: string | null
           total_picks?: number
           updated_at?: string | null
+          use_timer?: boolean | null
         }
         Relationships: [
           {
@@ -149,6 +205,7 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          metadata: Json | null
           progress: number
           status: string
           updated_at: string | null
@@ -156,6 +213,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id: string
+          metadata?: Json | null
           progress: number
           status: string
           updated_at?: string | null
@@ -163,6 +221,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          metadata?: Json | null
           progress?: number
           status?: string
           updated_at?: string | null
@@ -458,6 +517,7 @@ export type Database = {
           is_keeper: boolean | null
           is_picked: boolean | null
           pick_number: number
+          pick_time_seconds: number | null
           picked_by: string | null
           player_id: number | null
           round_number: number
@@ -472,6 +532,7 @@ export type Database = {
           is_keeper?: boolean | null
           is_picked?: boolean | null
           pick_number: number
+          pick_time_seconds?: number | null
           picked_by?: string | null
           player_id?: number | null
           round_number: number
@@ -486,6 +547,7 @@ export type Database = {
           is_keeper?: boolean | null
           is_picked?: boolean | null
           pick_number?: number
+          pick_time_seconds?: number | null
           picked_by?: string | null
           player_id?: number | null
           round_number?: number
@@ -901,6 +963,26 @@ export type Database = {
       }
     }
     Views: {
+      latest_draft_timer_state: {
+        Row: {
+          created_at: string | null
+          draft_id: number | null
+          event_type: string | null
+          original_duration: number | null
+          pick_id: number | null
+          seconds_remaining: number | null
+          triggered_by: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "draft_timer_events_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       players_with_adp: {
         Row: {
           adp: number | null
@@ -917,9 +999,9 @@ export type Database = {
           full_name: string | null
           headshot_url: string | null
           id: number | null
-          is_keeper: boolean | null
           is_picked: boolean | null
           last_name: string | null
+          percent_drafted: number | null
           player_key: string | null
           position_type: string | null
           source_id: number | null
@@ -948,66 +1030,47 @@ export type Database = {
       }
       create_draft_with_picks: {
         Args: {
+          p_draft_order: Json
           p_league_id: string
           p_name: string
-          p_rounds: number
-          p_total_picks: number
-          p_draft_order: Json
-          p_status: string
           p_ordered_teams: Json
+          p_rounds: number
+          p_status: string
+          p_total_picks: number
         }
         Returns: {
           created_draft_id: number
+          debug_info: string
         }[]
       }
       delete_draft: {
-        Args: {
-          p_draft_id: number
-        }
+        Args: { p_draft_id: number }
         Returns: undefined
       }
-      get_player_with_adp:
-        | {
-            Args: {
-              p_player_id: number
-            }
-            Returns: {
-              id: number
-              player_key: string
-              full_name: string
-              adp: number
-              adp_formatted: string
-              source_id: number
-            }[]
-          }
-        | {
-            Args: {
-              p_player_id: number
-              p_draft_id: number
-            }
-            Returns: {
-              id: number
-              player_key: string
-              full_name: string
-              first_name: string
-              last_name: string
-              editorial_team_abbr: string
-              display_position: string
-              position_type: string
-              eligible_positions: string[]
-              status: string
-              editorial_player_key: string
-              editorial_team_key: string
-              editorial_team_full_name: string
-              bye_weeks: string[]
-              uniform_number: string
-              image_url: string
-              adp: number
-              adp_formatted: string
-              source_id: number
-              draft_id: number
-            }[]
-          }
+      get_current_timer_state: {
+        Args: { draft_id_param: number }
+        Returns: {
+          event_type: string
+          seconds_remaining: number
+          original_duration: number
+          time_elapsed_since_event: number
+          calculated_remaining: number
+          is_expired: boolean
+        }[]
+      }
+      get_player_with_adp: {
+        Args:
+          | { p_draft_id: number; p_player_id: number }
+          | { p_player_id: number }
+        Returns: {
+          id: number
+          player_key: string
+          full_name: string
+          adp: number
+          adp_formatted: string
+          source_id: number
+        }[]
+      }
       remove_current_pick_column: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -1016,338 +1079,24 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
-      submit_draft_pick:
-        | {
-            Args: {
-              p_draft_id: number
-              p_pick_id: number
-              p_player_id: number
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_draft_id: number
-              p_pick_id: number
-              p_player_id: number
-              p_picked_by: string
-            }
-            Returns: Json
-          }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
-  storage: {
-    Tables: {
-      buckets: {
-        Row: {
-          allowed_mime_types: string[] | null
-          avif_autodetection: boolean | null
-          created_at: string | null
-          file_size_limit: number | null
-          id: string
-          name: string
-          owner: string | null
-          owner_id: string | null
-          public: boolean | null
-          updated_at: string | null
-        }
-        Insert: {
-          allowed_mime_types?: string[] | null
-          avif_autodetection?: boolean | null
-          created_at?: string | null
-          file_size_limit?: number | null
-          id: string
-          name: string
-          owner?: string | null
-          owner_id?: string | null
-          public?: boolean | null
-          updated_at?: string | null
-        }
-        Update: {
-          allowed_mime_types?: string[] | null
-          avif_autodetection?: boolean | null
-          created_at?: string | null
-          file_size_limit?: number | null
-          id?: string
-          name?: string
-          owner?: string | null
-          owner_id?: string | null
-          public?: boolean | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      migrations: {
-        Row: {
-          executed_at: string | null
-          hash: string
-          id: number
-          name: string
-        }
-        Insert: {
-          executed_at?: string | null
-          hash: string
-          id: number
-          name: string
-        }
-        Update: {
-          executed_at?: string | null
-          hash?: string
-          id?: number
-          name?: string
-        }
-        Relationships: []
-      }
-      objects: {
-        Row: {
-          bucket_id: string | null
-          created_at: string | null
-          id: string
-          last_accessed_at: string | null
-          metadata: Json | null
-          name: string | null
-          owner: string | null
-          owner_id: string | null
-          path_tokens: string[] | null
-          updated_at: string | null
-          user_metadata: Json | null
-          version: string | null
-        }
-        Insert: {
-          bucket_id?: string | null
-          created_at?: string | null
-          id?: string
-          last_accessed_at?: string | null
-          metadata?: Json | null
-          name?: string | null
-          owner?: string | null
-          owner_id?: string | null
-          path_tokens?: string[] | null
-          updated_at?: string | null
-          user_metadata?: Json | null
-          version?: string | null
-        }
-        Update: {
-          bucket_id?: string | null
-          created_at?: string | null
-          id?: string
-          last_accessed_at?: string | null
-          metadata?: Json | null
-          name?: string | null
-          owner?: string | null
-          owner_id?: string | null
-          path_tokens?: string[] | null
-          updated_at?: string | null
-          user_metadata?: Json | null
-          version?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "objects_bucketId_fkey"
-            columns: ["bucket_id"]
-            isOneToOne: false
-            referencedRelation: "buckets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      s3_multipart_uploads: {
-        Row: {
-          bucket_id: string
-          created_at: string
-          id: string
-          in_progress_size: number
-          key: string
-          owner_id: string | null
-          upload_signature: string
-          user_metadata: Json | null
-          version: string
-        }
-        Insert: {
-          bucket_id: string
-          created_at?: string
-          id: string
-          in_progress_size?: number
-          key: string
-          owner_id?: string | null
-          upload_signature: string
-          user_metadata?: Json | null
-          version: string
-        }
-        Update: {
-          bucket_id?: string
-          created_at?: string
-          id?: string
-          in_progress_size?: number
-          key?: string
-          owner_id?: string | null
-          upload_signature?: string
-          user_metadata?: Json | null
-          version?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "s3_multipart_uploads_bucket_id_fkey"
-            columns: ["bucket_id"]
-            isOneToOne: false
-            referencedRelation: "buckets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      s3_multipart_uploads_parts: {
-        Row: {
-          bucket_id: string
-          created_at: string
-          etag: string
-          id: string
-          key: string
-          owner_id: string | null
-          part_number: number
-          size: number
-          upload_id: string
-          version: string
-        }
-        Insert: {
-          bucket_id: string
-          created_at?: string
-          etag: string
-          id?: string
-          key: string
-          owner_id?: string | null
-          part_number: number
-          size?: number
-          upload_id: string
-          version: string
-        }
-        Update: {
-          bucket_id?: string
-          created_at?: string
-          etag?: string
-          id?: string
-          key?: string
-          owner_id?: string | null
-          part_number?: number
-          size?: number
-          upload_id?: string
-          version?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "s3_multipart_uploads_parts_bucket_id_fkey"
-            columns: ["bucket_id"]
-            isOneToOne: false
-            referencedRelation: "buckets"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "s3_multipart_uploads_parts_upload_id_fkey"
-            columns: ["upload_id"]
-            isOneToOne: false
-            referencedRelation: "s3_multipart_uploads"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      can_insert_object: {
+      submit_draft_pick: {
         Args: {
-          bucketid: string
-          name: string
-          owner: string
-          metadata: Json
+          p_draft_id: number
+          p_pick_id: number
+          p_picked_by: string
+          p_player_id: number
         }
-        Returns: undefined
+        Returns: Json
       }
-      extension: {
+      submit_draft_pick_with_timing: {
         Args: {
-          name: string
+          p_draft_id: number
+          p_pick_id: number
+          p_picked_by: string
+          p_player_id: number
+          p_time_remaining?: number
         }
-        Returns: string
-      }
-      filename: {
-        Args: {
-          name: string
-        }
-        Returns: string
-      }
-      foldername: {
-        Args: {
-          name: string
-        }
-        Returns: string[]
-      }
-      get_size_by_bucket: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          size: number
-          bucket_id: string
-        }[]
-      }
-      list_multipart_uploads_with_delimiter: {
-        Args: {
-          bucket_id: string
-          prefix_param: string
-          delimiter_param: string
-          max_keys?: number
-          next_key_token?: string
-          next_upload_token?: string
-        }
-        Returns: {
-          key: string
-          id: string
-          created_at: string
-        }[]
-      }
-      list_objects_with_delimiter: {
-        Args: {
-          bucket_id: string
-          prefix_param: string
-          delimiter_param: string
-          max_keys?: number
-          start_after?: string
-          next_token?: string
-        }
-        Returns: {
-          name: string
-          id: string
-          metadata: Json
-          updated_at: string
-        }[]
-      }
-      operation: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      search: {
-        Args: {
-          prefix: string
-          bucketname: string
-          limits?: number
-          levels?: number
-          offsets?: number
-          search?: string
-          sortcolumn?: string
-          sortorder?: string
-        }
-        Returns: {
-          name: string
-          id: string
-          updated_at: string
-          created_at: string
-          last_accessed_at: string
-          metadata: Json
-        }[]
+        Returns: Json
       }
     }
     Enums: {
@@ -1359,27 +1108,33 @@ export type Database = {
   }
 }
 
-type PublicSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
-  PublicTableNameOrOptions extends
-    | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-        Database[PublicTableNameOrOptions["schema"]]["Views"])
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-      Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
-        PublicSchema["Views"])
-    ? (PublicSchema["Tables"] &
-        PublicSchema["Views"])[PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -1387,20 +1142,24 @@ export type Tables<
     : never
 
 export type TablesInsert<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -1408,20 +1167,24 @@ export type TablesInsert<
     : never
 
 export type TablesUpdate<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -1429,15 +1192,45 @@ export type TablesUpdate<
     : never
 
 export type Enums<
-  PublicEnumNameOrOptions extends
-    | keyof PublicSchema["Enums"]
-    | { schema: keyof Database },
-  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = PublicEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
-    ? PublicSchema["Enums"][PublicEnumNameOrOptions]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
+  public: {
+    Enums: {},
+  },
+} as const
 

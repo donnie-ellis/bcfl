@@ -1,12 +1,12 @@
 // ./app/api/yahoo/league/[leagueKey]/managers/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { getServerAuthSession } from "@/auth";
 import { requestYahoo } from '@/lib/yahoo';
 import { ManagerData } from '@/lib/yahoo.types';
+import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
+const supabase = getServerSupabaseClient();
 
 // GET
 export async function GET(

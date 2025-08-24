@@ -5,26 +5,21 @@ import React, { useReducer, useCallback, useMemo, useEffect } from 'react';
 import { unstable_batchedUpdates } from 'react-dom';
 import { useParams, useRouter } from 'next/navigation';
 import { useSupabaseClient } from '@/lib/useSupabaseClient';
-import { League, Draft, LeagueSettings, PlayerWithADP, Json } from '@/lib/types/';
+import { League, Draft, LeagueSettings, PlayerWithADP } from '@/lib/types/';
 import { Pick, Player, Team } from '@/lib/types/';
 import { PickWithPlayerAndTeam } from '@/lib/types/pick.types';
-import RoundSquares from '@/components/RoundSquares';
 import { toast } from "sonner";
-import DraftedPlayers from '@/components/DraftedPlayers';
-import DraftHeader from '@/components/DraftHeader';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import PlayersList from '@/components/PlayersList';
-import PlayerDetails from '@/components/PlayerDetails';
-import SubmitPickButton from '@/components/SubmitPicksButton';
-import useSWR from 'swr';
-import { Progress } from '@/components/ui/progress';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from 'lucide-react';
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import TeamNeeds from '@/components/TeamNeeds';
-import { parseTeamLogos, possesiveTitle } from '@/lib/types/team.types';
-import TeamBreakdown from '@/components/TeamBreakdown';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
+import useSWR from 'swr';
+import PlayersList from '@/components/PlayersList';
+import DraftedPlayers from '@/components/DraftedPlayers';
+import PositionNeeds from '@/components/draft/kiosk/PostionNeeds';
+import KioskHeader from '@/components/draft/kiosk/KioskHeader';
+import KioskTeamStatus from '@/components/draft/kiosk/KioskTeamStatus';
+import KioskPlayerSelection from '@/components/draft/kiosk/KioskPlayerSelection';
 
 type MemoizedDraft = Omit<Draft, 'picks'> & { picks: PickWithPlayerAndTeam[] };
 
@@ -34,6 +29,7 @@ interface KioskPageState {
   selectedPlayer: PlayerWithADP | null;
   currentPick: PickWithPlayerAndTeam | null;
   picks: PickWithPlayerAndTeam[];
+  isOvertime: boolean;
 }
 
 // Define action types
@@ -42,6 +38,7 @@ type KioskPageAction =
   | { type: 'SET_SELECTED_PLAYER'; payload: PlayerWithADP | null }
   | { type: 'SET_CURRENT_PICK'; payload: PickWithPlayerAndTeam | null }
   | { type: 'SET_PICKS'; payload: PickWithPlayerAndTeam[] }
+  | { type: 'SET_IS_OVERTIME'; payload: boolean }
   | { type: 'UPDATE_PICKS_AND_DRAFT'; payload: { picks: PickWithPlayerAndTeam[]; currentPick: PickWithPlayerAndTeam | null } }
   | { type: 'RESET_AFTER_PICK' };
 
@@ -51,6 +48,7 @@ const initialState: KioskPageState = {
   selectedPlayer: null,
   currentPick: null,
   picks: [],
+  isOvertime: false,
 };
 
 // Reducer function
@@ -64,6 +62,8 @@ const kioskPageReducer = (state: KioskPageState, action: KioskPageAction): Kiosk
       return { ...state, currentPick: action.payload };
     case 'SET_PICKS':
       return { ...state, picks: action.payload };
+    case 'SET_IS_OVERTIME':
+      return { ...state, isOvertime: action.payload };
     case 'UPDATE_PICKS_AND_DRAFT':
       return {
         ...state,
@@ -103,10 +103,23 @@ const KioskPage: React.FC = () => {
   
   const isLoading = !draftData || !leagueData || !leagueSettings || !teams || !players || !state.currentPick;
 
-  const getTeamLogoUrl = (teamLogos: Json): string => {
-    const parsedLogos = parseTeamLogos(teamLogos);
-    return parsedLogos && parsedLogos.length > 0 ? parsedLogos[0].url : '';
-  };
+  // Calculate team needs based on league settings and current picks
+  const calculateTeamNeeds = useCallback((teamKey: string, leagueSettings: LeagueSettings, picks: PickWithPlayerAndTeam[]) => {
+    if (!leagueSettings?.roster_positions) return [];
+
+    // This is a simplified calculation - you'd implement the full logic from your TeamNeeds component
+    const teamPicks = picks.filter(pick => pick.team_key === teamKey && pick.is_picked);
+    
+    // Example position needs - replace with actual calculation from your TeamNeeds component
+    return [
+      { position: "QB", needed: Math.max(0, 1 - teamPicks.filter(p => p.player?.display_position === "QB").length), have: teamPicks.filter(p => p.player?.display_position === "QB").length, total: 1 },
+      { position: "RB", needed: Math.max(0, 2 - teamPicks.filter(p => p.player?.display_position === "RB").length), have: teamPicks.filter(p => p.player?.display_position === "RB").length, total: 2 },
+      { position: "WR", needed: Math.max(0, 3 - teamPicks.filter(p => p.player?.display_position === "WR").length), have: teamPicks.filter(p => p.player?.display_position === "WR").length, total: 3 },
+      { position: "TE", needed: Math.max(0, 1 - teamPicks.filter(p => p.player?.display_position === "TE").length), have: teamPicks.filter(p => p.player?.display_position === "TE").length, total: 1 },
+      { position: "K", needed: Math.max(0, 1 - teamPicks.filter(p => p.player?.display_position === "K").length), have: teamPicks.filter(p => p.player?.display_position === "K").length, total: 1 },
+      { position: "DEF", needed: Math.max(0, 1 - teamPicks.filter(p => p.player?.display_position === "DEF").length), have: teamPicks.filter(p => p.player?.display_position === "DEF").length, total: 1 },
+    ];
+  }, []);
 
   const updatePicksAndDraft = useCallback(() => {
     if (!draftData || !picksData || !players || !teams) return;
@@ -153,6 +166,11 @@ const KioskPage: React.FC = () => {
     }
   }, [players, teams]);
 
+  // Timer expire callback to set overtime state
+  const handleTimerExpire = useCallback(() => {
+    dispatch({ type: 'SET_IS_OVERTIME', payload: true });
+  }, []);
+
   useEffect(() => {
     if (!supabase || !draftId) return;
 
@@ -166,6 +184,9 @@ const KioskPage: React.FC = () => {
       }, (payload) => {
         const updatedPick = payload.new as Pick;
         if (updatedPick.is_picked) {
+          // Reset overtime state when pick is made
+          dispatch({ type: 'SET_IS_OVERTIME', payload: false });
+          
           // Batch the SWR mutation with the notification
           unstable_batchedUpdates(() => {
             mutatePicks();
@@ -224,9 +245,10 @@ const KioskPage: React.FC = () => {
         throw new Error('Failed to submit pick');
       }
 
-      // Batch the reset and SWR mutation
+      // Reset overtime and selection state
       unstable_batchedUpdates(() => {
         dispatch({ type: 'RESET_AFTER_PICK' });
+        dispatch({ type: 'SET_IS_OVERTIME', payload: false });
         mutatePicks();
       });
     } catch (error) {
@@ -245,21 +267,6 @@ const KioskPage: React.FC = () => {
     }
     return undefined;
   }, [draftData, state.picks]);
-
-  const currentRound = useMemo(() => {
-    if (memoizedDraft && memoizedDraft.current_pick && teams) {
-      return Math.ceil(memoizedDraft.current_pick / teams.length);
-    }
-    return 1;
-  }, [memoizedDraft, teams]);
-
-  const draftProgress = useMemo(() => {
-    if (memoizedDraft) {
-      const pickedCount = memoizedDraft.picks.filter(pick => pick.is_picked).length;
-      return (pickedCount / memoizedDraft.total_picks) * 100;
-    }
-    return 0;
-  }, [memoizedDraft]);
 
   useEffect(() => {
     if (memoizedDraft && memoizedDraft.status === 'completed') {
@@ -281,7 +288,22 @@ const KioskPage: React.FC = () => {
     return 0;
   }, [currentTeam, memoizedDraft]);
 
-  if (isLoading && memoizedDraft?.status === 'completed') {
+  const teamNeeds = useMemo(() => {
+    if (currentTeam && leagueSettings && state.picks.length > 0) {
+      return calculateTeamNeeds(currentTeam.team_key, leagueSettings, state.picks);
+    }
+    return [];
+  }, [currentTeam, leagueSettings, state.picks, calculateTeamNeeds]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (memoizedDraft?.status === 'completed') {
     return (
       <Alert>
         <AlertTitle>Draft Completed</AlertTitle>
@@ -290,136 +312,81 @@ const KioskPage: React.FC = () => {
         </AlertDescription>
       </Alert>
     );
-  } else if (isLoading) {
-    <div className="flex items-center justify-center h-screen">
-      <Loader2 className="h-12 w-12 animate-spin text-primary" />
-    </div>
-  };
+  }
 
   return (
-    <div className="flex flex-col h-screen bg-muted/50">
-      {leagueData && memoizedDraft && (
-        <DraftHeader league={leagueData} draft={memoizedDraft} />
+    <div className={cn(
+      "flex flex-col h-screen bg-gradient-to-br from-background via-muted/30 to-background",
+      "min-h-screen transition-all duration-300",
+      state.isOvertime && "ring-8 ring-red-500 ring-opacity-60 shadow-2xl shadow-red-500/30"
+    )}>
+      {/* Header */}
+      {leagueData && memoizedDraft && teams && (
+        <KioskHeader 
+          league={leagueData} 
+          draft={memoizedDraft} 
+          teams={teams}
+          leagueSettings={leagueSettings}
+        />
       )}
-      <div className="flex-none w-full">
-        <div className="p-4">
-          <h2 className="text-2xl font-bold mb-4">Round {currentRound}</h2>
-          {memoizedDraft && leagueSettings && teams && (
-            <RoundSquares
-              draft={memoizedDraft}
-              leagueSettings={leagueSettings}
-              currentRoundOnly={true}
-              isLoading={isLoading}
-              teams={teams}
-              currentRound={currentRound}
-            />
-          )}
-          <div className="mt-4 flex items-center">
-            <Progress value={draftProgress} className="grow mr-4" />
-            <span className="text-sm font-medium">
-              Pick {memoizedDraft?.current_pick} of {memoizedDraft?.total_picks}
-            </span>
-          </div>
-        </div>
-      </div>
 
       {/* Main Content */}
-      <div className="grow overflow-hidden flex">
-        {/* Left Column */}
-        <div className="w-1/4 flex flex-col">
-          {memoizedDraft && state.currentPick && (
-            <div className="flex-1 min-h-0">
-              <DraftedPlayers
-                picks={memoizedDraft.picks}
-                teamKey={state.currentPick.team_key}
-                teamName={teams ? teams.find(team => team.team_key === state.currentPick!.team_key)?.name : ''}
-                currentPick={memoizedDraft.current_pick}
-                className="pl-4 h-full"
-              />
-            </div>
+      <div className="flex-1 overflow-hidden flex min-h-0">
+        {/* Left Column - Current Team's Picks */}
+        <div className="w-1/4 border-r-2 bg-card/30">
+          {memoizedDraft && state.currentPick && currentTeam && (
+            <DraftedPlayers
+              picks={memoizedDraft.picks}
+              teamKey={state.currentPick.team_key}
+              teamName={currentTeam.name}
+              currentPick={memoizedDraft.current_pick}
+              className="h-full"
+            />
           )}
         </div>
 
-        {/* Center Column */}
+        {/* Center Column - Main Draft Interface */}
         <div className="w-1/2 flex flex-col min-h-0">
-          <ScrollArea className="flex-1 p-4">
-            <div className="space-y-4">
-              {state.currentPick && leagueSettings && teams && memoizedDraft && currentTeam && (
-                <Card className="flex flex-col">
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-4">
-                      <Avatar className="h-16 w-16">
-                        <AvatarImage src={getTeamLogoUrl(currentTeam.team_logos)} alt={currentTeam.name} />
-                        <AvatarFallback>{currentTeam.name[0]}</AvatarFallback>
-                      </Avatar>
-                      <div className="grow">
-                        <div className="flex justify-between items-center">
-                          <h2 className='text-2xl font-bold'>{possesiveTitle(currentTeam.name)} draft summary</h2>
-                          <div className="text-right">
-                            <p className="text-sm font-semibold">Remaining Picks</p>
-                            <p className="text-2xl font-bold">{remainingPicks}</p>
-                          </div>
-                        </div>
-                        <div className='flex space-x-2 text-sm'>
-                          {currentTeam.managers?.map((manager, index) => (
-                            <span key={index} className="flex items-center space-x-2">
-                              <span>{manager.nickname ?? 'Unknown'}</span>
-                              <Avatar className="h-4 w-4">
-                                <AvatarImage src={manager.image_url as string} alt={manager.nickname ?? 'Unknown'} />
-                                <AvatarFallback>{(manager.nickname ?? 'U')[0]}</AvatarFallback>
-                              </Avatar>
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <TeamNeeds
-                      draft={memoizedDraft}
-                      teamKey={currentTeam.team_key}
-                      leagueSettings={leagueSettings}
-                      teams={teams}
+          <div className="flex-1 p-6 overflow-y-auto">
+            <div className="space-y-6">
+              {/* Team Status Card */}
+              {currentTeam && (
+                <KioskTeamStatus
+                  team={currentTeam}
+                  remainingPicks={remainingPicks}
+                  draftId={parseInt(draftId)}
+                  picks={state.picks}
+                  isOvertime={state.isOvertime}
+                  pickDuration={draftData.pick_seconds ? draftData.pick_seconds : undefined}
+                />
+              )}
+
+              {/* Position Needs Card */}
+              {teamNeeds.length > 0 && (
+                <Card className="border-2 shadow-lg">
+                  <CardContent className="pt-6">
+                    <PositionNeeds 
+                      needs={teamNeeds}
+                      size="lg"
                     />
-                    <TeamBreakdown
-                      leagueSettings={leagueSettings}
-                      draft={memoizedDraft}
-                      teamKey={currentTeam.team_key}
-                      teams={teams}
-                      />
                   </CardContent>
                 </Card>
               )}
-              <div className="p-4">
-                <h2 className="text-2xl font-semibold mb-6 text-right">
-                  {!state.selectedPlayer 
-                    ? 
-                    <>
-                      <span>Select a player to proceed</span>
-                      <span className="text-primary ml-4">→</span>
-                    </>
-                    : `Ready to draft ${state.selectedPlayer?.full_name}?`}
-                  </h2>
-                <div className={`flex columns-2 gap-6 transition-all duration-500 ${state.selectedPlayer ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"} overflow-hidden`}>
-                  <PlayerDetails player={state.selectedPlayer} />
-                  <SubmitPickButton
-                    isCurrentUserPick={true}
-                    selectedPlayer={state.selectedPlayer}
-                    currentPick={state.currentPick}
-                    onSubmitPick={handleSubmitPick}
-                    isPickSubmitting={state.isPickSubmitting}
-                    className='scale-95 hover:scale-100 transition-transform duration-300 ease-in-out'
-                  />
-                </div>
-              </div>
+
+              {/* Player Selection Section */}
+              <KioskPlayerSelection
+                selectedPlayer={state.selectedPlayer}
+                isSubmitting={state.isPickSubmitting}
+                onSubmitPick={handleSubmitPick}
+              />
             </div>
-          </ScrollArea>
+          </div>
         </div>
 
-        {/* Right Column */}
-        <div className="w-1/4 pr-2 flex flex-col">
+        {/* Right Column - Available Players */}
+        <div className="w-1/4 border-l-2 bg-card/30">
           {memoizedDraft && (
-            <div className="flex-1 min-h-0">
+            <div className="h-full">
               <PlayersList
                 draftId={draftId}
                 onPlayerSelect={handlePlayerSelect}

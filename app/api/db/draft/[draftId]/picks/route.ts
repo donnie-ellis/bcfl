@@ -1,8 +1,8 @@
 // ./app/api/db/draft/[draftId]/picks/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
+const supabase = getServerSupabaseClient();
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -18,7 +18,7 @@ export async function GET(
         *,
         player:players(*)
       `)
-      .eq('draft_id', draftId)
+      .eq('draft_id', parseInt(draftId))
       .order('total_pick_number', { ascending: true });
 
     if (error) throw error;

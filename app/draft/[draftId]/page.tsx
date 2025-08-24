@@ -223,7 +223,7 @@ const DraftPage: React.FC = () => {
     return () => {
       supabase.removeChannel(picksSubscription);
     };
-  }, [supabase, draftId, notifyPickMade, updatePicksAndDraft, mutateDraft, mutatePicks]);
+  }, [supabase, draftId, notifyPickMade, updatePicksAndDraft, mutateDraft, mutatePicks, players, teams]);
 
   useEffect(() => {
     if (draftData && picksData && players && teams) {
