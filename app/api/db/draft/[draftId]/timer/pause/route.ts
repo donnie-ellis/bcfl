@@ -6,7 +6,7 @@ import TimerManager from '@/lib/TimerManager';
 
 const supabase = getServerSupabaseClient();
 
-export default async function POST(request: NextRequest, { params }: {params: { draftId: string } }) {
+export async function POST(request: NextRequest, { params }: {params: { draftId: string } }) {
     const draftId = params.draftId;
 
       // Get the current user's session
@@ -36,14 +36,14 @@ export default async function POST(request: NextRequest, { params }: {params: { 
 
         if (error) {
             console.error('Error checking commissioner status:', error);
-            return false;
+            return NextResponse.json({ error: 'You are not authorized to manage the timer' }, { status: 403 });
         }
         if (!manager || !manager.is_commissioner) {
             return NextResponse.json({ error: 'You are not authorized to manage the timer' }, { status: 403 });
         }
         const timerManager = new TimerManager(supabase);
         const result = await timerManager.pauseTimer(draftId, userGuid);
-        return NextResponse.json({ status: 204 });
+        return new NextResponse(null, { status: 204 });
     } catch (error) {
         console.error('Error pausing timer:', error);
         return NextResponse.json({ error: 'Failed to pause timer' }, { status: 500 });

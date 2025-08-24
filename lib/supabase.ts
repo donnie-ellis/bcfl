@@ -1,7 +1,7 @@
 // ./lib/supabase.ts
 import { createClient } from '@supabase/supabase-js';
 import { League, Team } from '@/lib/types';
-import { Database } from '@/lib/types/database.types';
+import { Database, Json } from '@/lib/types/database.types';
 
 const supabase = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -56,7 +56,7 @@ export async function ensureLeagueExists(leagueKey: string, leagueData: Partial<
     name: team.name,
     team_id: team.team_id,
     url: team.url ?? null,
-    team_logos: team.team_logos,
+    team_logos: team.team_logos as unknown as Json,
     waiver_priority: team.waiver_priority ? team.waiver_priority.toString() : null,
     number_of_moves: team.number_of_moves ?? null,
     number_of_trades: team.number_of_trades ?? null,

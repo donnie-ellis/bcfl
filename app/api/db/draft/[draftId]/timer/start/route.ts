@@ -6,7 +6,7 @@ import TimerManager from '@/lib/TimerManager';
 
 const supabase = getServerSupabaseClient();
 
-export default async function POST(request: NextRequest, { params }: {params: { draftId: string, seconds: number, pickId: string } }) {
+export async function POST(request: NextRequest, { params }: {params: { draftId: string, seconds: number, pickId: string } }) {
     const draftId = params.draftId;
     const seconds = params.seconds;
     const pickId = params.pickId;
@@ -38,7 +38,7 @@ export default async function POST(request: NextRequest, { params }: {params: { 
 
         if (error) {
             console.error('Error checking commissioner status:', error);
-            return false;
+            return NextResponse.json({ error: 'You are not authorized to manage the timer' }, { status: 403 });
         }
         if (!manager || !manager.is_commissioner) {
             return NextResponse.json({ error: 'You are not authorized to manage the timer' }, { status: 403 });
@@ -46,8 +46,9 @@ export default async function POST(request: NextRequest, { params }: {params: { 
         const timerManager = new TimerManager(supabase);
         const result = await timerManager.startTimer(draftId, seconds, pickId);
     
-    return NextResponse.json({ status: 204 });
+    return new NextResponse(null, { status: 204 });
   } catch (error) {
+    console.error('Error starting draft timer:', error);
     return NextResponse.json({ error: 'Failed to start the timer', details: error }, { status: 500 });
 }
 }
