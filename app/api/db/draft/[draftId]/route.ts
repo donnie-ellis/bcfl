@@ -10,8 +10,8 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 // GET
-export async function GET(request: NextRequest, { params }: { params: { draftId: string } }) {
-  const { draftId } = params;
+export async function GET(request: NextRequest, { params }: { params: Promise<{ draftId: string }> }) {
+  const { draftId } = await params;
 
   try {
     // Fetch draft data
@@ -57,9 +57,9 @@ export async function GET(request: NextRequest, { params }: { params: { draftId:
 // DELETE
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { draftId: string } }
+  { params }: { params: Promise<{ draftId: string }> }
 ) {
-  const { draftId } = params;
+  const { draftId } = await params;
 
   // Check if the user is authenticated
   const session = await getServerAuthSession();

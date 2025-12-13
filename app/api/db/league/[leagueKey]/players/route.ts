@@ -7,9 +7,9 @@ const supabase = getServerSupabaseClient();
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { leagueKey: string } }
+  { params }: { params: Promise<{ leagueKey: string }> }
 ) {
-  const { leagueKey } = params;
+  const { leagueKey } = await params;
   const { searchParams } = new URL(request.url);
   const draftId = searchParams.get('draftId');
 
@@ -47,7 +47,7 @@ export async function GET(
       const { data: draftPlayers, error: draftError } = await supabase
         .from('draft_players')
         .select('player_id, is_picked, average_pick, average_round, percent_drafted')
-        .eq('draft_id', draftId);
+        .eq('draft_id', parseInt(draftId));
 
       if (draftError) throw draftError;
 

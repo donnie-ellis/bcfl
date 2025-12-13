@@ -6,10 +6,10 @@ import { getServerAuthSession } from "@/auth";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { leagueKey: string } }
+  { params }: { params: Promise<{ leagueKey: string }> }
 ) {
   const supabase = getServerSupabaseClient();
-  const { leagueKey } = params;
+  const { leagueKey } = await params;
 
   const session = await getServerAuthSession();
   if (!session || !session.user) {

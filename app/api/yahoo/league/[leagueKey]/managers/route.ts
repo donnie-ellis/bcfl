@@ -11,7 +11,7 @@ const supabase = getServerSupabaseClient();
 // GET
 export async function GET(
   request: NextRequest,
-  { params }: { params: { leagueKey: string } }
+  { params }: { params: Promise<{ leagueKey: string }> }
 ) {
   const session = await getServerAuthSession();
   
@@ -19,7 +19,7 @@ export async function GET(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { leagueKey } = params;
+  const { leagueKey } = await params;
 
   try {
     // Fetch managers data from Yahoo
@@ -70,7 +70,7 @@ export async function GET(
 // TODO: This is not used anymore I think.  Get rid of it if not.
 export async function POST(
   request: NextRequest,
-  { params }: { params: { leagueKey: string } }
+  { params }: { params: Promise<{ leagueKey: string }> }
 ) {
   const session = await getServerAuthSession();
   
@@ -78,7 +78,7 @@ export async function POST(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { leagueKey } = params;
+  const { leagueKey } = await params;
 
   try {
     // Fetch managers data from Yahoo

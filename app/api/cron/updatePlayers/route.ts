@@ -2,6 +2,9 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { importPlayers } from '@/lib/playersImport'
+import { getServerSupabaseClient } from '@/lib/serverSupabaseClient'
+
+const supabase = getServerSupabaseClient();
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -16,7 +19,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    await importPlayers(leagueKey)
+    await importPlayers(supabase, leagueKey)
     return NextResponse.json({ message: 'Player update completed successfully' })
   } catch (error) {
     console.error('Failed to update players:', error)

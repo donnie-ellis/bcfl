@@ -12,12 +12,12 @@ export const revalidate = 0;
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { draftId: string } }
+  { params }: { params: Promise<{ draftId: string }> }
 ) {
   const supabase = getServerSupabaseClient();
   if (!supabase) throw error('Error getting supabase client');
 
-  const { draftId } = params;
+  const { draftId } = await params;
 
   try {
     // Fetch the current pick for the draft
@@ -54,12 +54,12 @@ export async function GET(
 // POST
 export async function POST(
   request: NextRequest,
-  { params }: { params: { draftId: string } }
+  { params }: { params: Promise<{ draftId: string }> }
 ) {
   const supabase = getServerSupabaseClient();
   if (!supabase) throw error('Error getting supabase client');
 
-  const { draftId } = params;
+  const { draftId } = await params;
   const { pickId, playerId } = await request.json();
 
   // Get the current user's session
@@ -131,12 +131,12 @@ export async function POST(
 // DELETE
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { draftId: string } }
+  { params }: { params: Promise<{ draftId: string }> }
 ) {
   const supabase = getServerSupabaseClient();
   if (!supabase) throw error('Error getting supabase client');
 
-  const { draftId } = params;
+  const { draftId } = await params;
   const { pickId } = await request.json();
 
   // Get the current user's session

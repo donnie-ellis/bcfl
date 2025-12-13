@@ -1,14 +1,19 @@
 // ./lib/playersImport.ts
-import { getServerSupabaseClient } from './serverSupabaseClient';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { Database } from '@/lib/types/database.types';
 import { fetchAllPlayers } from '@/lib/yahoo';
 import { PlayerInsert } from '@/lib/types/';
 
 const BATCH_SIZE = process.env.DB_IMPORT_BATCH_SIZE ? parseInt(process.env.DB_IMPORT_BATCH_SIZE) : 100;
 const YAHOO_PLAYER_REQUEST_SIZE = process.env.YAHOO_PLAYER_REQUEST_SIZE ? parseInt(process.env.YAHOO_PLAYER_REQUEST_SIZE) : 25;
 
-export async function importPlayers(leagueKey: string, jobId?: string): Promise<void> {
+export async function importPlayers(
+  supabase: SupabaseClient<Database>,
+  leagueKey: string,
+  jobId?: string
+): Promise<void> {
   try {
-    if (jobId) await updateJobStatus(jobId, 'in_progress', 0);
+    if (jobId) await updateJobStatus(supabase, jobId, 'in_progress', 0);
 
     let start = 0;
     let totalImported = 0;
@@ -19,12 +24,12 @@ export async function importPlayers(leagueKey: string, jobId?: string): Promise<
 
       if (players.length > 0) {
         console.log(`Beginning import of ${players.length} players`);
-        await importPlayerBatch(players, jobId, totalImported);
+        await importPlayerBatch(supabase, players, jobId, totalImported);
         totalImported += players.length;
         
         if (jobId) {
           console.log(`Updating job status: ${totalImported} players imported`);
-          await updateJobStatus(jobId, 'in_progress', totalImported);
+          await updateJobStatus(supabase, jobId, 'in_progress', totalImported);
         }
         
         console.log(`Imported ${totalImported} players so far`);
@@ -39,24 +44,28 @@ export async function importPlayers(leagueKey: string, jobId?: string): Promise<
 
     if (jobId) {
       console.log(`Import complete, updating job status to complete`);
-      await updateJobStatus(jobId, 'complete', totalImported);
+      await updateJobStatus(supabase, jobId, 'complete', totalImported);
     }
 
     console.log(`Successfully imported/updated ${totalImported} players.`);
-    await recordSuccessfulImport(leagueKey, totalImported);
+    await recordSuccessfulImport(supabase, leagueKey, totalImported);
 
   } catch (error) {
     console.error('Error in player import:', error);
-    if (jobId) await updateJobStatus(jobId, 'error', 0);
+    if (jobId) await updateJobStatus(supabase, jobId, 'error', 0);
     throw error;
   }
 }
 
-async function importPlayerBatch(players: PlayerInsert[], jobId: string | undefined, importedCount: number) {
-  console.log('Importing players: ', players.length)
-  const supabase = getServerSupabaseClient();
+async function importPlayerBatch(
+  supabase: SupabaseClient<Database>,
+  players: PlayerInsert[],
+  jobId: string | undefined,
+  importedCount: number
+) {
+  console.log('Importing players: ', players.length);
   const playersToInsert = players.map(player => {
-    const { id, ...playerWithoutId } = player; // Remove the id field
+    const { id, ...playerWithoutId } = player;
     return {
       ...playerWithoutId,
       created_at: new Date().toISOString(),
@@ -64,7 +73,6 @@ async function importPlayerBatch(players: PlayerInsert[], jobId: string | undefi
     };
   });
 
-  // Upsert players in batches
   for (let i = 0; i < playersToInsert.length; i += BATCH_SIZE) {
     const batch = playersToInsert.slice(i, i + BATCH_SIZE);
     const { error: playersError } = await supabase
@@ -73,19 +81,21 @@ async function importPlayerBatch(players: PlayerInsert[], jobId: string | undefi
 
     if (playersError) {
       console.error('Error upserting players:', playersError);
-      if (jobId) await updateJobStatus(jobId, 'error', importedCount + i);
+      if (jobId) await updateJobStatus(supabase, jobId, 'error', importedCount + i);
       throw new Error('Failed to upsert players');
     }
 
     const currentImportedCount = importedCount + i + batch.length;
-    if (jobId) await updateJobStatus(jobId, 'in_progress', currentImportedCount);
+    if (jobId) await updateJobStatus(supabase, jobId, 'in_progress', currentImportedCount);
     console.log(`Imported ${currentImportedCount} players`);
   }
 }
 
-
-async function recordSuccessfulImport(leagueKey: string, playerCount: number) {
-  const supabase = getServerSupabaseClient();
+async function recordSuccessfulImport(
+  supabase: SupabaseClient<Database>,
+  leagueKey: string,
+  playerCount: number
+) {
   try {
     await supabase.from('player_import_history').insert({
       league_key: leagueKey,
@@ -97,8 +107,13 @@ async function recordSuccessfulImport(leagueKey: string, playerCount: number) {
   }
 }
 
-async function updateJobStatus(jobId: string, status: 'in_progress' | 'complete' | 'error', progress: number, continuationToken?: number | null) {
-  const supabase = getServerSupabaseClient();
+async function updateJobStatus(
+  supabase: SupabaseClient<Database>,
+  jobId: string,
+  status: 'in_progress' | 'complete' | 'error',
+  progress: number,
+  continuationToken?: number | null
+) {
   try {
     const updateData: any = { id: jobId, status, progress };
     if (continuationToken !== undefined) {
@@ -117,8 +132,10 @@ async function updateJobStatus(jobId: string, status: 'in_progress' | 'complete'
   }
 }
 
-export async function getJobStatus(jobId: string) {
-  const supabase = getServerSupabaseClient();
+export async function getJobStatus(
+  supabase: SupabaseClient<Database>,
+  jobId: string
+) {
   try {
     const { data, error } = await supabase
       .from('import_jobs')
@@ -138,6 +155,11 @@ export async function getJobStatus(jobId: string) {
   }
 }
 
-export async function resumeImport(leagueKey: string, jobId: string, continuationToken: number) {
-  await importPlayers(leagueKey, jobId);
+export async function resumeImport(
+  supabase: SupabaseClient<Database>,
+  leagueKey: string,
+  jobId: string,
+  continuationToken: number
+) {
+  await importPlayers(supabase, leagueKey, jobId);
 }

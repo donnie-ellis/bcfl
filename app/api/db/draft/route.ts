@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     // Start the player import process here
     const importJobId = uuidv4();
-    importPlayers(leagueKey, importJobId).catch(error => {
+    importPlayers(supabase, leagueKey, importJobId).catch(error => {
       console.error('Error during player import:', error);
       // You might want to update the job status to 'error' here as well
     });
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const jobStatus = await getJobStatus(jobId);
+    const jobStatus = await getJobStatus(supabase, jobId);
     return NextResponse.json(jobStatus);
   } catch (error) {
     console.error('Error fetching job status:', error);

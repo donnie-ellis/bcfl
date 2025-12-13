@@ -10,9 +10,9 @@ const supabase = getServerSupabaseClient();
 // POST
 export async function POST(
   request: NextRequest,
-  { params }: { params: { draftId: string } }
+  { params }: { params: Promise<{ draftId: string }> }
 ) {
-  const { draftId } = params;
+  const { draftId } = await params;
   const { leagueId, scoringType, numTeams } = await request.json();
 
   // Check if the user is authenticated
