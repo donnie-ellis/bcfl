@@ -1,6 +1,6 @@
 import { EnhancedPlayerWithADP, Player, PlayerWithADP } from '@/lib/types';
 import { useEffect, useState } from 'react';
-import { DragDropContext, Droppable, Draggable, DropResult, DroppableProps } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable, DropResult, DroppableProps } from '@hello-pangea/dnd';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
