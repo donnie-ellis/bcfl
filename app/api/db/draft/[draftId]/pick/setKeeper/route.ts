@@ -6,10 +6,10 @@ import { Database } from '@/lib/types/database.types';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { draftId: string } }
+  { params }: { params: Promise<{ draftId: string }> }
 ) {
   const supabase = getServerSupabaseClient();
-  const { draftId } = params;
+  const { draftId } = await params;
   const { pickId, isKeeper } = await request.json();
 
   // Get the current user's session

@@ -4,8 +4,8 @@ import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
 
 const supabase = getServerSupabaseClient();
 
-export async function GET(request: NextRequest, { params }: { params: { draftId: string } }) {
-  const draftId = params.draftId;
+export async function GET(request: NextRequest, { params }: { params: Promise<{ draftId: string }> }) {
+  const { draftId } = await params;
 
   try {
     // Fetch draft data

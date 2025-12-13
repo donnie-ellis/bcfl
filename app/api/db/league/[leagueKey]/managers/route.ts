@@ -8,9 +8,9 @@ const supabase = getServerSupabaseClient();
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { leagueKey: string } }
+  { params }: { params: Promise<{ leagueKey: string }> }
 ) {
-  const { leagueKey } = params;
+  const { leagueKey } = await params;
   const managersData: ManagerData[] = await request.json();
 
   try {

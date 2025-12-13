@@ -9,9 +9,9 @@ const supabase = getServerSupabaseClient();
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { leagueKey: string } }
+  { params }: { params: Promise<{ leagueKey: string }> }
 ) {
-  const { leagueKey } = params;
+  const { leagueKey } = await params;
 
   try {
     const { data, error } = await supabase
@@ -31,9 +31,9 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { leagueKey: string } }
+  { params }: { params: Promise<{ leagueKey: string }> }
 ) {
-  const { leagueKey } = params;
+  const { leagueKey } = await params;
   const body: Partial<League> = await request.json();
 
   try {

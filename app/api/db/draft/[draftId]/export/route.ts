@@ -12,9 +12,9 @@ const supabase = getServerSupabaseClient();
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { draftId: string } }
+  { params }: { params: Promise<{ draftId: string }> }
 ) {
-  const { draftId } = params;
+  const { draftId } = await params;
   const { searchParams } = new URL(request.url);
   const type = searchParams.get('type');
 

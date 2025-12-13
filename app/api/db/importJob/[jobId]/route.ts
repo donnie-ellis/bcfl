@@ -10,9 +10,9 @@ export const revalidate = 0;
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { jobId: string } }
+  { params }: { params: Promise<{ jobId: string }> }
 ) {
-  const { jobId } = params;
+  const { jobId } = await params;
 
   try {
     const { data, error } = await supabase

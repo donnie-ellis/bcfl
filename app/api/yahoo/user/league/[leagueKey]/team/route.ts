@@ -7,7 +7,7 @@ import { Team } from '@/lib/types';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { leagueKey: string } }
+  { params }: { params: Promise<{ leagueKey: string }> }
 ) {
   const session = await getServerAuthSession();
   
@@ -15,7 +15,7 @@ export async function GET(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { leagueKey } = params;
+  const { leagueKey } = await params;
 
   try {
     const path = `users;use_login=1/games;game_keys=nfl/teams`;
