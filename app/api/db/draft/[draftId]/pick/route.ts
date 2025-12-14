@@ -24,7 +24,7 @@ export async function GET(
     const { data: draft, error: draftError } = await supabase
       .from('drafts')
       .select('current_pick')
-      .eq('id', draftId)
+      .eq('id', parseInt(draftId))
       .single();
 
     if (draftError) throw draftError;
@@ -32,13 +32,12 @@ export async function GET(
     const { data: currentPick, error: pickError } = await supabase
       .from('picks')
       .select(`*`)
-      .eq('draft_id', draftId)
+      .eq('draft_id', parseInt(draftId))
       .eq('total_pick_number', draft.current_pick as number)
       .single();
 
     if (pickError) throw pickError;
     
-
     return NextResponse.json(currentPick, {
       headers: {
         'Cache-Control': 'no-store, max-age=0'
@@ -50,8 +49,7 @@ export async function GET(
   }
 }
 
-
-// POST
+// POST - Simplified without client-side timer logic
 export async function POST(
   request: NextRequest,
   { params }: { params: { draftId: string } }
@@ -78,7 +76,10 @@ export async function POST(
         id,
         team_key,
         drafts!picks_draft_id_fkey (
-          league_id
+          league_id,
+          use_timer,
+          pick_seconds,
+          current_pick
         )
       `)
       .eq('id', pickId)
@@ -93,15 +94,19 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized to make this pick' }, { status: 403 });
     }
 
-    // Call the submit_draft_pick function
-    const { data, error } = await supabase.rpc('submit_draft_pick', {
+    // Call the simplified submit_draft_pick function (timer calculation now server-side)
+    const { data, error } = await supabase.rpc('submit_draft_pick_with_timing', {
       p_draft_id: parseInt(draftId),
       p_pick_id: pickId,
       p_player_id: playerId,
       p_picked_by: userGuid
+      // No more p_time_remaining - handled server-side
     });
 
     if (error) throw error;
+
+    // If timer is enabled, the database function now handles timer events automatically
+    // No need for manual timer management here
 
     // Fetch the updated pick data
     const { data: updatedPick, error: updatedPickError } = await supabase
@@ -128,7 +133,7 @@ export async function POST(
   }
 }
 
-// DELETE
+// DELETE - unchanged
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { draftId: string } }
@@ -152,7 +157,7 @@ export async function DELETE(
     const { data: draft, error: draftError } = await supabase
       .from('drafts')
       .select('league_id')
-      .eq('id', draftId)
+      .eq('id', parseInt(draftId))
       .single();
 
     if (draftError) throw draftError;
@@ -168,7 +173,7 @@ export async function DELETE(
       .from('picks')
       .select('player_id')
       .eq('id', pickId)
-      .eq('draft_id', draftId)
+      .eq('draft_id', parseInt(draftId))
       .single();
 
     if (pickError) throw pickError;
@@ -176,9 +181,9 @@ export async function DELETE(
     // Clear the pick
     const { error: clearPickError } = await supabase
       .from('picks')
-      .update({ player_id: null, is_picked: false, picked_by: null, is_keeper: false })
+      .update({ player_id: null, is_picked: false, picked_by: null, is_keeper: false, pick_time_seconds: null })
       .eq('id', pickId)
-      .eq('draft_id', draftId);
+      .eq('draft_id', parseInt(draftId));
 
     if (clearPickError) throw clearPickError;
 
@@ -187,7 +192,7 @@ export async function DELETE(
       const { error: draftPlayerError } = await supabase
         .from('draft_players')
         .update({ is_picked: false })
-        .eq('draft_id', draftId)
+        .eq('draft_id', parseInt(draftId))
         .eq('player_id', pick.player_id);
 
       if (draftPlayerError) throw draftPlayerError;

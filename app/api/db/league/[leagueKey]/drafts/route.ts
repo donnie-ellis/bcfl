@@ -1,11 +1,11 @@
 // ./app/api/db/league/[leagueKey]/drafts/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
+import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
+
+const supabase = getServerSupabaseClient();
 
 export async function GET(
   request: NextRequest,

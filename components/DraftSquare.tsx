@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { parseTeamLogos, TeamLogo, sizedTitle } from '@/lib/types/team.types';
+import { Json } from '@/lib/types';
 
 interface DraftSquareProps {
   pick: PickWithPlayerAndTeam;
@@ -17,7 +18,7 @@ interface DraftSquareProps {
 }
 
 const DraftSquare: React.FC<DraftSquareProps> = memo(({ pick, isCurrentPick, onSquareHover, isLoading }) => {
-  const teamLogos: TeamLogo[] = useMemo(() => parseTeamLogos(pick.team?.team_logos || []), [pick.team?.team_logos]);
+  const teamLogos: TeamLogo[] = useMemo(() => pick.team?.team_logos ? parseTeamLogos(pick.team.team_logos as unknown as Json) : [], [pick.team]);
   const teamLogoUrl = useMemo(() => teamLogos.length > 0 ? teamLogos[0].url : '', [teamLogos]);
 
   const Square = () => (

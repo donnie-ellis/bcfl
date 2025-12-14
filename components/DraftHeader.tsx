@@ -1,6 +1,6 @@
 // ./components/DraftHeader.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import Profile from '@/components/Profile';
 import { League, Draft, LeagueSettings } from '@/lib/types/';
@@ -17,6 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import ModifyDraftDialog from '@/components/ModifyDraftDialog';
 
 interface DraftHeaderProps {
   league: League | null | undefined;
@@ -30,7 +31,6 @@ const DraftHeader: React.FC<DraftHeaderProps> = ({ league, draft, additionalCont
   const isLoading = !league || !draft;
   const pathname = usePathname();
   const [isUpdatingADP, setIsUpdatingADP] = useState(false);
-
   const { data: isCommissionerData, error: isCommissionerError } = useSWR(
     league ? `/api/db/league/${league.league_key}/isCommissioner` : null,
     fetcher
@@ -199,15 +199,9 @@ const DraftHeader: React.FC<DraftHeaderProps> = ({ league, draft, additionalCont
             <NavButton href={`/draft/${draft?.id}/kiosk`}>Kiosk Mode</NavButton>
           )}
           {isCommissioner && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={handleUpdateADP} 
-              disabled={isUpdatingADP}
-            >
-              <RefreshCcw className="mr-2 h-4 w-4" />
-              Update ADP
-            </Button>  
+            <ModifyDraftDialog
+              draft={draft!}
+            />
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
