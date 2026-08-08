@@ -1,7 +1,7 @@
 import { getServerSession, type NextAuthOptions } from "next-auth";
 import { JWT } from "next-auth/jwt";
 import { Account, User, Profile } from "next-auth";
-import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
+import { getServerSupabaseAdminClient } from '@/lib/serverSupabaseClient';
 
 interface ExtendedJWT extends JWT {
     accessToken?: string;
@@ -70,7 +70,7 @@ export const authOptions: NextAuthOptions = {
     callbacks: {
         async signIn({ user, account }: { user: User; account: Account | null }) {
             if (!user.email || !account) return false;
-            const supabase = getServerSupabaseClient();
+            const supabase = getServerSupabaseAdminClient();
 
             // Check if user exists, if not create a new user
             const { data: existingUser, error: userError } = await supabase
@@ -157,7 +157,7 @@ export const authOptions: NextAuthOptions = {
                     }
 
                     const refreshedTokens = await response.json();
-                    const supabase = getServerSupabaseClient();
+                    const supabase = getServerSupabaseAdminClient();
 
                     // Update token in database
                     const { error: updateError } = await supabase
@@ -192,7 +192,7 @@ export const authOptions: NextAuthOptions = {
             session: ExtendedSession; 
             token: ExtendedJWT; 
         }) {
-            const supabase = getServerSupabaseClient();``
+            const supabase = getServerSupabaseAdminClient();
             if (token.userId) {
                 const { data: userData, error: userError } = await supabase
                     .from('users')

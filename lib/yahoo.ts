@@ -2,11 +2,11 @@
 
 'use server'
 import { getServerAuthSession } from "@/auth"
-import { createClient } from '@supabase/supabase-js'
+import { getServerSupabaseAdminClient } from '@/lib/serverSupabaseClient'
 import {LeagueSettings, Team, Manager } from '@/lib/yahoo.types'
 import { Json, PlayerInsert } from "./types"
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
+const supabase = getServerSupabaseAdminClient();
 
 export async function getValidAccessToken() {
   const session = await getServerAuthSession();
