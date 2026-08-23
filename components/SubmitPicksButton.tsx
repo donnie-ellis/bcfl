@@ -24,7 +24,7 @@ const SubmitPickButton: React.FC<SubmitPickButtonProps> = ({
   const isDisabled = !isCurrentUserPick || !selectedPlayer || !currentPick || selectedPlayer.is_picked || isPickSubmitting;
   const buttonText = !isCurrentUserPick
     ? <>
-      <Clock className="inline mr-2" h-4 w-4 />
+      <Clock className="inline mr-2 h-4 w-4" />
       Waiting for your turn...
     </>
     : isPickSubmitting

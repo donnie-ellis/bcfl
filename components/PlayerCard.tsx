@@ -96,7 +96,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
           <div className="space-y-2">
             <p><strong>Position:</strong> {player.position}</p>
             <p><strong>Team:</strong> {player.team}</p>
-            <p><strong>Status:</strong> <Badge variant={getSeverityColor(player.status)}>{formatStatus(player.status)}</Badge></p>
+            <div className="flex items-center gap-1"><strong>Status:</strong> <Badge variant={getSeverityColor(player.status)}>{formatStatus(player.status)}</Badge></div>
           </div>
         </TooltipContent>
       </Tooltip>
