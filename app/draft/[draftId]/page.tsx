@@ -321,10 +321,21 @@ const DraftPage: React.FC = () => {
     return undefined;
   }, [draftData, state.picks]);
 
-  if (!memoizedDraft || !leagueData || !leagueSettings || !teams || !team || !players) {
+  const isTeamLoaded = team !== undefined;
+
+  if (!memoizedDraft || !leagueData || !leagueSettings || !teams || !isTeamLoaded || !players) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!team) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen gap-2 text-center px-4">
+        <p className="text-lg font-semibold">You don&apos;t have a team in this league.</p>
+        <p className="text-muted-foreground">Ask your commissioner to assign you to a team, or view the draft board instead.</p>
       </div>
     );
   }
