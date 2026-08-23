@@ -4,8 +4,9 @@ import { DragDropContext, Droppable, Draggable, DropResult, DroppableProps } fro
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { ListMinus, MoveDown, MoveUp, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, ListMinus, MoveDown, MoveUp, Trash2 } from 'lucide-react';
 import { toast } from "sonner";
+import { useIsMobile } from '@/hooks/use-media-query';
 
 // Union type for all possible player types in the queue
 type QueuePlayer = Player | PlayerWithADP | EnhancedPlayerWithADP;
@@ -34,6 +35,7 @@ const StrictModeDroppable = ({ children, ...props }: DroppableProps) => {
 };
 
 export default function DraftQueue({ queue, setQueue, managerId, onPlayerDrafted, onPlayerClick }: DraftQueueProps) {
+    const isMobile = useIsMobile();
 
     const removeFromQueue = (playerId: number | string): void => {
         setQueue(prev => prev.filter(p => p.id !== playerId));
@@ -96,6 +98,78 @@ export default function DraftQueue({ queue, setQueue, managerId, onPlayerDrafted
                 <div className="empty-queue">
                     <p>No players in queue</p>
                     <small>Use the + button on player cards to add them</small>
+                </div>
+            ) : isMobile ? (
+                <div className="queue-list">
+                    {queue.map((player, index) => (
+                        <Card
+                            key={player.id}
+                            className="flex w-full border my-1 cursor-default hover:bg-accent"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (onPlayerClick && 'adp' in player) {
+                                    onPlayerClick(player as PlayerWithADP);
+                                }
+                            }}
+                        >
+                            <CardContent className="p-3 flex items-center space-x-3 w-full">
+                                <Avatar className="h-8 w-8 rounded-full mr-1">
+                                    <AvatarImage src={player.headshot_url as string} alt={player.full_name || 'N/A'} />
+                                    <AvatarFallback>{(player.full_name || 'NA').split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                                </Avatar>
+
+                                <div className="min-w-0 flex-1">
+                                    <div className="truncate">
+                                        <span className="text-md">{player.full_name}</span>
+                                    </div>
+                                    <span className="text-muted-foreground text-xs uppercase">{player.team} - {player.position}</span>
+                                </div>
+
+                                <div className="flex flex-col ml-auto">
+                                    <Button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            moveUp(index);
+                                        }}
+                                        disabled={index === 0}
+                                        variant={"secondary"}
+                                        size="icon"
+                                        title="Move up in queue"
+                                        className="h-6 w-9 rounded-b-none"
+                                    >
+                                        <ChevronUp className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            moveDown(index);
+                                        }}
+                                        disabled={index === queue.length - 1}
+                                        variant={"secondary"}
+                                        size="icon"
+                                        title="Move down in queue"
+                                        className="h-6 w-9 rounded-t-none border-t"
+                                    >
+                                        <ChevronDown className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                                <Button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (player.id) {
+                                            removeFromQueue(player.id);
+                                        }
+                                    }}
+                                    className="h-11 w-11 hover:bg-destructive/40 hover:shadow"
+                                    title="Remove from queue"
+                                    variant={"secondary"}
+                                    size="icon"
+                                >
+                                    <ListMinus className="w-4 h-4 text-destructive" />
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    ))}
                 </div>
             ) : (
                 <DragDropContext onDragEnd={handleOnDragEnd}>

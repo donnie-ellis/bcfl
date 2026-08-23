@@ -1,5 +1,5 @@
 // ./components/DraftStatus.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,6 +22,8 @@ interface DraftStatusProps {
 }
 
 const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams, team }) => {
+  const [isNextPicksOpen, setIsNextPicksOpen] = useState(false);
+
   if (!draft || !leagueSettings) {
     return (
       <Card className="">
@@ -84,9 +86,12 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams,
               <TeamCard team={currentTeam} />
             </div>
             
-            <HoverCard>
+            <HoverCard open={isNextPicksOpen} onOpenChange={setIsNextPicksOpen}>
               <HoverCardTrigger asChild>
-                <div className="w-[48%] cursor-pointer">
+                <div
+                  className="w-[48%] cursor-pointer"
+                  onClick={() => setIsNextPicksOpen((open) => !open)}
+                >
                   <p className="text-xs mb-1">Next Pick:</p>
                   <TeamCard team={nextTeam} />
                 </div>
