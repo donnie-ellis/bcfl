@@ -1,0 +1,1 @@
+UPDATE public.profiles SET role = 'commissioner' WHERE email = 'donnie@dmellis.com';
