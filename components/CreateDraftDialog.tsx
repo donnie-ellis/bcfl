@@ -4,22 +4,20 @@ import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import { LeagueSettings, parseRosterPositions, Team } from '@/lib/types/';
-import { League, Manager } from '@/lib/yahoo.types';
 import TeamCard from './TeamCard';
 import { Loader2 } from 'lucide-react';
 import { toast } from "sonner";
 import { Reorder } from 'framer-motion';
 
 interface CreateDraftDialogProps {
-  leagueKey: string;
+  leagueId: number;
   teams: Team[];
   onDraftCreated: (drafts: any) => void;
   leagueSettings: LeagueSettings | null;
 }
 
-const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams, onDraftCreated, leagueSettings }) => {
+const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueId, teams, onDraftCreated, leagueSettings }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [draftName, setDraftName] = useState('');
   const [orderedTeams, setOrderedTeams] = useState<Team[]>([]);
@@ -32,73 +30,6 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
     setOrderedTeams(teams);
   }, [teams]);
 
-  const fetchYahooData = async () => {
-    try {
-      const [leagueResponse, settingsResponse, managersResponse] = await Promise.all([
-        fetch(`/api/yahoo/league/${leagueKey}`),
-        fetch(`/api/yahoo/league/${leagueKey}/leagueSettings`),
-        fetch(`/api/yahoo/league/${leagueKey}/managers`)
-      ]);
-
-      if (!leagueResponse.ok || !settingsResponse.ok || !managersResponse.ok) {
-        throw new Error('Failed to fetch Yahoo data');
-      }
-
-      const league: League = await leagueResponse.json();
-      const fetchedLeagueSettings: LeagueSettings = await settingsResponse.json();
-      const managers: Manager[] = await managersResponse.json();
-
-      return { league, leagueSettings: fetchedLeagueSettings, managers };
-    } catch (error) {
-      console.error('Error fetching Yahoo data:', error);
-      throw error;
-    }
-  };
-
-  const upsertData = async (league: League, leagueSettings: LeagueSettings, managers: Manager[]) => {
-    try {
-      // Upsert league
-      const leagueResponse = await fetch(`/api/db/league/${leagueKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(league)
-      });
-
-      if (!leagueResponse.ok) throw new Error('Failed to upsert league');
-
-      // Upsert league settings
-      const settingsResponse = await fetch(`/api/db/league/${leagueKey}/settings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(leagueSettings)
-      });
-
-      if (!settingsResponse.ok) throw new Error('Failed to upsert league settings');
-
-      // Upsert managers
-      const managersResponse = await fetch(`/api/db/league/${leagueKey}/managers`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(managers)
-      });
-
-      if (!managersResponse.ok) throw new Error('Failed to upsert managers');
-      
-      // Upsert teams
-      const teamsResponse = await fetch(`/api/db/league/${leagueKey}/teams`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(teams)
-      });
-
-      if (!teamsResponse.ok) throw new Error('Failed to upsert teams');
-
-    } catch (error) {
-      console.error('Error upserting data:', error);
-      throw error;
-    }
-  };
-
   const handleCreateDraft = async () => {
     if (!draftName.trim()) {
       toast.error('Please enter a draft name');
@@ -109,27 +40,21 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
     const toastId = toast.loading("Creating draft...");
 
     try {
-      toast.loading("Fetching Yahoo data...", { id: toastId });
-      const yahooData = await fetchYahooData();
-
-      toast.loading("Upserting data...", { id: toastId });
-      await upsertData(yahooData.league, yahooData.leagueSettings, yahooData.managers);
-
       const draftOrder = orderedTeams.reduce((acc, team, index) => {
-        acc[team.team_key] = index + 1;
+        acc[team.id] = index + 1;
         return acc;
-      }, {} as Record<string, number>);
+      }, {} as Record<number, number>);
 
       const orderedTeamsJson = orderedTeams.map(team => ({
-        team_key: team.team_key,
+        team_id: team.id,
         name: team.name
       }));
 
       const defaultRosterSize = 15;
       let rosterSize = defaultRosterSize;
 
-      if (yahooData.leagueSettings && yahooData.leagueSettings.roster_positions) {
-        const parsedRosterPositions = parseRosterPositions(yahooData.leagueSettings.roster_positions);
+      if (leagueSettings && leagueSettings.roster_positions) {
+        const parsedRosterPositions = parseRosterPositions(leagueSettings.roster_positions);
         rosterSize = parsedRosterPositions.reduce((sum, pos) => {
           // Exclude 'IR' positions from the roster size calculation
           if (pos.roster_position.position !== 'IR') {
@@ -152,7 +77,7 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
           'Expires': '0',
         },
         body: JSON.stringify({
-          leagueKey,
+          leagueId,
           draftName,
           rounds,
           totalPicks,
@@ -234,12 +159,12 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
   const startAdpUpdate = async (draftId: number, toastId: string | number) => {
     try {
       if (!leagueSettings) throw Error('League settings not found');
-      
-      const scoringType = leagueSettings.stat_categories && 
+
+      const scoringType = leagueSettings.stat_categories &&
         Array.isArray(leagueSettings.stat_categories) &&
-        leagueSettings.stat_categories.some(cat => 
-          typeof cat === 'object' && cat !== null && 
-          'name' in cat && cat.name === 'Rec' && 
+        leagueSettings.stat_categories.some(cat =>
+          typeof cat === 'object' && cat !== null &&
+          'name' in cat && cat.name === 'Rec' &&
           'value' in cat && typeof cat.value === 'number' && cat.value > 0
         ) ? 'ppr' : 'standard';
 
@@ -249,7 +174,7 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          leagueId: leagueKey,
+          leagueId,
           scoringType,
           numTeams: teams.length,
         }),
@@ -307,7 +232,7 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
     setIsDialogOpen(false);
     setDraftName('');
     try {
-      const draftsResponse = await fetch(`/api/db/league/${leagueKey}/drafts`, {
+      const draftsResponse = await fetch(`/api/db/league/${leagueId}/drafts`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -329,7 +254,7 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
       toast.error("Error occurred while finalizing draft. Please check the dashboard.", { id: toastId });
     }
   };
-  
+
   const handleDialogClose = (open: boolean) => {
     if (!open) {
       setDraftName('');
@@ -360,7 +285,7 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueKey, teams,
           <Reorder.Group axis='y' values={orderedTeams} onReorder={setOrderedTeams}>
             <div className='space-y-2'>
               {orderedTeams.map((team) => (
-                <Reorder.Item key={team.team_id} value={team}>
+                <Reorder.Item key={team.id} value={team}>
                   <TeamCard team={team} />
                 </Reorder.Item>
               ))}

@@ -1,20 +1,18 @@
 // proxy.ts
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { getToken } from 'next-auth/jwt'
+import { updateSession } from '@/lib/supabase/middleware'
+
+const PUBLIC_PATHS = ['/', '/auth/confirm'];
 
 export async function proxy(request: NextRequest) {
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+  const { response, user } = await updateSession(request)
 
-  if (request.nextUrl.pathname === '/') {
-    return NextResponse.next()
-  }
-
-  if (!token && request.nextUrl.pathname !== '/') {
+  if (!user && !PUBLIC_PATHS.includes(request.nextUrl.pathname)) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
-  return NextResponse.next()
+  return response
 }
 
 export const config = {

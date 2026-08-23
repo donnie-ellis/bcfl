@@ -64,9 +64,9 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
               <div className="grow">
                 <p className="font-semibold">{player.full_name}</p>
                 <p className="text-sm">
-                  <span className="font-medium text-primary">{player.display_position}</span>
-                  {player.editorial_team_full_name && (
-                    <> - <span className="text-muted-foreground">{player.editorial_team_full_name}</span></>
+                  <span className="font-medium text-primary">{player.position}</span>
+                  {player.team && (
+                    <> - <span className="text-muted-foreground">{player.team}</span></>
                   )}
                 </p>
               </div>
@@ -94,9 +94,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
         </TooltipTrigger>
         <TooltipContent side="right" align="start" className="w-64">
           <div className="space-y-2">
-            <p><strong>Position:</strong> {player.display_position}</p>
-            <p><strong>Team:</strong> {player.editorial_team_full_name}</p>
-            {player.bye_weeks && <p><strong>Bye Week{player.bye_weeks.length > 1 && 's'}:</strong> {player.bye_weeks.join(', ')}</p>}
+            <p><strong>Position:</strong> {player.position}</p>
+            <p><strong>Team:</strong> {player.team}</p>
             <p><strong>Status:</strong> <Badge variant={getSeverityColor(player.status)}>{formatStatus(player.status)}</Badge></p>
           </div>
         </TooltipContent>

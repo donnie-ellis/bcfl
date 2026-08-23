@@ -4,7 +4,7 @@
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { useSupabaseClient } from '@/lib/useSupabaseClient';
+import { createClient } from '@/lib/supabase/client';
 import { League, Draft, LeagueSettings, Team, Pick, Player, PickWithPlayerAndTeam, PlayerWithADP } from '@/lib/types/';
 import DraftHeader from '@/components/DraftHeader';
 import RoundSquares from '@/components/RoundSquares';
@@ -27,7 +27,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 const DraftBoardPage: React.FC = () => {
   const params = useParams();
   const draftId = params.draftId as string;
-  const supabase = useSupabaseClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerWithADP | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -76,7 +76,7 @@ const DraftBoardPage: React.FC = () => {
     const updatedPicks: PickWithPlayerAndTeam[] = picksData.map(pick => ({
       ...pick,
       player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
-      team: teams.find(t => t.team_key === pick.team_key) || null
+      team: teams.find(t => t.id === pick.team_id) || null
     }));
 
     const updatedCurrentPick = updatedPicks.find(p => !p.is_picked) || null;
@@ -90,13 +90,13 @@ const DraftBoardPage: React.FC = () => {
   const notifyPickMade = useCallback((updatedPick: Pick) => {
     if (updatedPick.is_picked && updatedPick.player_id) {
       const player = players?.find(p => p.id === updatedPick.player_id);
-      const team = teams?.find(t => t.team_key === updatedPick.team_key);
+      const team = teams?.find(t => t.id === updatedPick.team_id);
 
       if (player && team) {
         toast.success(
           `${team.name} drafted ${player.full_name}`,
           {
-            description: `${player.editorial_team_full_name} - ${player.display_position}`,
+            description: `${player.team} - ${player.position}`,
             duration: 5000,
           }
         );
@@ -141,7 +141,7 @@ const DraftBoardPage: React.FC = () => {
       const updatedPicks: PickWithPlayerAndTeam[] = picksData.map(pick => ({
         ...pick,
         player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
-        team: teams.find(t => t.team_key === pick.team_key) || null
+        team: teams.find(t => t.id === pick.team_id) || null
       }));
       return { ...draftData, picks: updatedPicks };
     }

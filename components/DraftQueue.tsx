@@ -131,8 +131,8 @@ export default function DraftQueue({ queue, setQueue, managerId, onPlayerDrafted
 
                                                     <div className="">
                                                         <span className="text-md">{player.full_name}</span>
-                                                        <span className="text-muted-foreground text-xs uppercase"> ({player.editorial_team_abbr})</span>
-                                                        <span className="text-muted-foreground text-sm uppercase"> - {player.display_position}</span>
+                                                        <span className="text-muted-foreground text-xs uppercase"> ({player.team})</span>
+                                                        <span className="text-muted-foreground text-sm uppercase"> - {player.position}</span>
                                                     </div>
 
                                                     <div className="flex ml-auto space-x-1">

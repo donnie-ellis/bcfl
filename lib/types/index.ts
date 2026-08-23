@@ -8,4 +8,3 @@ export * from './manager.types';
 export * from './pick.types';
 export * from './player.types';
 export * from './team.types';
-export * from './yahooTypes'

@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
-
-const supabase = getServerSupabaseClient();
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -12,6 +10,7 @@ export async function GET(request: NextRequest) {
   }
 
   const playerIds = ids.split(',').map(Number);
+  const supabase = await createClient();
 
   try {
     const { data, error } = await supabase

@@ -1,31 +1,16 @@
 // ./app/page.tsx
 // The start page for the application. Logged in users should not see this.
 
-'use client'
-
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
 import LoginButton from "@/components/LoginButton";
 
-export default function Home() {
-  const router = useRouter();
-  const { data: session, status } = useSession();
+export default async function Home() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  useEffect(() => {
-    if (status === 'authenticated') {
-      router.push('/dashboard');
-    }
-  }, [status, router]);
-
-  if (status === 'loading') {
-    return <main className="flex min-h-screen flex-col items-center justify-center">
-      <p>Loading...</p>
-    </main>;
-  }
-
-  if (status === 'authenticated') {
-    return null; // This will briefly show before redirecting
+  if (user) {
+    redirect('/dashboard');
   }
 
   return (

@@ -1,9 +1,7 @@
 // ./app/api/db/draft/[draftId]/players/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
-
-const supabase = getServerSupabaseClient();
+import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -13,6 +11,7 @@ export async function GET(
   { params }: { params: Promise<{ draftId: string }>}
 ) {
   const { draftId } = await params;
+  const supabase = await createClient();
 
   try {
     const { data, error } = await supabase

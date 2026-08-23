@@ -9,7 +9,7 @@ import PlayerDetailsSkeleton from './PlayerDetailsSkeleton';
 
 interface DraftedPlayersProps {
   picks: Pick[] | undefined;
-  teamKey: string;
+  teamId: number;
   teamName: string | undefined;
   currentPick?: number | null;
   className?: string;
@@ -17,7 +17,7 @@ interface DraftedPlayersProps {
 
 const DraftedPlayers: React.FC<DraftedPlayersProps> = React.memo(({
   picks,
-  teamKey,
+  teamId,
   teamName,
   currentPick,
   className
@@ -27,9 +27,9 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = React.memo(({
 
   const teamPicks = useMemo(() => {
     return picks
-      .filter(pick => pick.team_key === teamKey)
+      .filter(pick => pick.team_id === teamId)
       .sort((a, b) => a.total_pick_number - b.total_pick_number);
-  }, [picks, teamKey]);
+  }, [picks, teamId]);
 
   return (
     <div className={`flex flex-col h-full ${className}`}>

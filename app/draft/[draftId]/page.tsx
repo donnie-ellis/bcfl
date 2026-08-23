@@ -4,7 +4,7 @@
 import React, { useReducer, useEffect, useCallback, useMemo } from 'react';
 import { unstable_batchedUpdates } from 'react-dom';
 import { useParams } from 'next/navigation';
-import { useSupabaseClient } from '@/lib/useSupabaseClient';
+import { createClient } from '@/lib/supabase/client';
 import PlayersList from '@/components/PlayersList';
 import DraftedPlayers from '@/components/DraftedPlayers';
 import DraftStatus from '@/components/DraftStatus';
@@ -111,7 +111,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 const DraftPage: React.FC = () => {
   const params = useParams();
   const draftId = params.draftId as string;
-  const supabase = useSupabaseClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [state, dispatch] = useReducer(draftPageReducer, initialState);
 
@@ -122,8 +122,8 @@ const DraftPage: React.FC = () => {
   );
   const { data: leagueData } = useSWR<League>(draftData ? `/api/db/league/${draftData.league_id}` : null, fetcher);
   const { data: leagueSettings } = useSWR<LeagueSettings>(draftData ? `/api/db/league/${draftData.league_id}/settings` : null, fetcher);
-  const { data: teams } = useSWR<Team[]>(draftData ? `/api/yahoo/league/${draftData.league_id}/teams` : null, fetcher);
-  const { data: team } = useSWR<Team>(draftData ? `/api/yahoo/user/league/${draftData.league_id}/team` : null, fetcher);
+  const { data: teams } = useSWR<Team[]>(draftData ? `/api/db/league/${draftData.league_id}/teams` : null, fetcher);
+  const { data: team } = useSWR<Team | null>(`/api/me/team`, fetcher);
   const { data: players } = useSWR<Player[]>(draftData ? `/api/db/league/${draftData.league_id}/players` : null, fetcher);
 
   const updatePicksAndDraft = useCallback((latestDraft: Draft, latestPicks: Pick[]) => {
@@ -135,7 +135,7 @@ const DraftPage: React.FC = () => {
     const updatedPicks: PickWithPlayerAndTeam[] = latestPicks.map(pick => ({
       ...pick,
       player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
-      team: teams.find(t => t.team_key === pick.team_key) ?? {} as Team
+      team: teams.find(t => t.id === pick.team_id) ?? {} as Team
     }));
 
     const updatedCurrentPick = updatedPicks.find(p => !p.is_picked) || null;
@@ -170,13 +170,13 @@ const DraftPage: React.FC = () => {
   const notifyPickMade = useCallback((updatedPick: Pick) => {
     if (updatedPick.is_picked && updatedPick.player_id) {
       const player = players?.find(p => p.id === updatedPick.player_id);
-      const team = teams?.find(t => t.team_key === updatedPick.team_key);
+      const team = teams?.find(t => t.id === updatedPick.team_id);
 
       if (player && team) {
         toast.success(
           `${team.name} has made pick #${updatedPick.total_pick_number}`,
           {
-            description: `${player.full_name} (${player.editorial_team_abbr}) - ${player.display_position}`,
+            description: `${player.full_name} (${player.team}) - ${player.position}`,
             duration: 5000,
           }
         );
@@ -246,7 +246,7 @@ const DraftPage: React.FC = () => {
     }
   }
 
-  const isCurrentUserPick = state.currentPick?.team_key === team?.team_key;
+  const isCurrentUserPick = state.currentPick?.team_id === team?.id;
 
   const handleSubmitPick = async () => {
     dispatch({ type: 'SET_IS_PICK_SUBMITTING', payload: true });
@@ -385,7 +385,7 @@ const DraftPage: React.FC = () => {
               <DraftQueue
                 queue={state.queue}
                 setQueue={queueActions.setQueue}
-                managerId={team?.team_id}
+                managerId={team?.id?.toString()}
                 onPlayerClick={(player) => dispatch({ type: 'SET_SELECTED_PLAYER', payload: player })}
               />
             </ScrollArea>
@@ -395,7 +395,7 @@ const DraftPage: React.FC = () => {
           <div className="w-1/4 overflow-hidden flex flex-col">
             <div className="flex-shrink-0">
               <TeamNeeds
-                teamKey={team?.team_key}
+                teamId={team?.id}
                 leagueSettings={leagueSettings}
                 draft={memoizedDraft}
                 teams={teams}
@@ -404,7 +404,7 @@ const DraftPage: React.FC = () => {
             <div className="flex-1 min-h-0">
               <DraftedPlayers
                 picks={memoizedDraft.picks}
-                teamKey={team.team_key}
+                teamId={team.id}
                 teamName={team.name}
                 currentPick={memoizedDraft.current_pick}
                 className="md:bg-linear-to-r from-background to-muted/50 h-full"
@@ -444,7 +444,7 @@ const DraftPage: React.FC = () => {
             </TabsContent>
             <TabsContent value="team" className="grow overflow-hidden">
               <TeamNeeds
-                teamKey={team?.team_key}
+                teamId={team?.id}
                 leagueSettings={leagueSettings}
                 draft={memoizedDraft}
                 teams={teams}
@@ -453,7 +453,7 @@ const DraftPage: React.FC = () => {
                 <div className="p-4">
                   <DraftedPlayers
                     picks={memoizedDraft.picks}
-                    teamKey={team.team_key}
+                    teamId={team.id}
                     teamName={team.name}
                     currentPick={memoizedDraft.current_pick}
                   />
@@ -505,7 +505,7 @@ const DraftPage: React.FC = () => {
             <DraftQueue
                 queue={state.queue}
                 setQueue={queueActions.setQueue}
-                managerId={team?.team_id}
+                managerId={team?.id?.toString()}
                 onPlayerClick={(player) => dispatch({ type: 'SET_SELECTED_PLAYER', payload: player })}
               />
             </div>

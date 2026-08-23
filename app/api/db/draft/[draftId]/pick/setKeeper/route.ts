@@ -1,38 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
-import { getServerAuthSession } from "@/auth";
-import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from '@/lib/types/database.types';
+import { createClient } from '@/lib/supabase/server';
+import { isCommissioner } from '@/lib/auth/authz';
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ draftId: string }> }
 ) {
-  const supabase = getServerSupabaseClient();
   const { draftId } = await params;
   const { pickId, isKeeper } = await request.json();
+  const supabase = await createClient();
 
-  // Get the current user's session
-  const session = await getServerAuthSession();
-  if (!session || !session.user) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const userGuid = session.user.id;
-
   try {
-    // Fetch the draft and league information
-    const { data: draft, error: draftError } = await supabase
-      .from('drafts')
-      .select('league_id')
-      .eq('id', parseInt(draftId))
-      .single();
-
-    if (draftError) throw draftError;
-
-    // Check if the user is a commissioner
-    const isCommissioner = await checkCommissionerStatus(supabase, userGuid, draft.league_id as string);
-    if (!isCommissioner) {
+    if (!(await isCommissioner(supabase, user.id))) {
       return NextResponse.json({ error: 'Unauthorized to change keeper status' }, { status: 403 });
     }
 
@@ -50,20 +34,4 @@ export async function PUT(
     console.error('Error updating keeper status:', error);
     return NextResponse.json({ error: 'Failed to update keeper status', details: error }, { status: 500 });
   }
-}
-
-async function checkCommissionerStatus(supabase: SupabaseClient<Database>, userGuid: string, leagueKey: string): Promise<boolean> {
-  const { data: manager, error } = await supabase
-    .from('managers')
-    .select('is_commissioner')
-    .eq('guid', userGuid)
-    .contains('league_keys', [leagueKey])
-    .single();
-
-  if (error) {
-    console.error('Error checking commissioner status:', error);
-    return false;
-  }
-
-  return manager?.is_commissioner || false;
 }

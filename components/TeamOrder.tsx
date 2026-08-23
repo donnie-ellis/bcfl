@@ -59,7 +59,7 @@ const TeamOrder: React.FC<TeamOrderProps> = ({ teams, onSubmit }) => {
               className="space-y-2 w-full"
             >
               {orderedTeams.map((team, index) => (
-                <Draggable key={team.team_key} draggableId={team.team_key} index={index}>
+                <Draggable key={team.id} draggableId={team.id.toString()} index={index}>
                   {(provided, snapshot) => (
                     <div
                       ref={provided.innerRef}

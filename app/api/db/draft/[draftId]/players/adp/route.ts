@@ -2,10 +2,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
-import { getServerAuthSession } from "@/auth";
-import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
-
-const supabase = getServerSupabaseClient();
+import { createClient } from '@/lib/supabase/server';
+import { isCommissioner } from '@/lib/auth/authz';
 
 // POST
 export async function POST(
@@ -13,26 +11,18 @@ export async function POST(
   { params }: { params: Promise<{ draftId: string }> }
 ) {
   const { draftId } = await params;
-  const { leagueId, scoringType, numTeams } = await request.json();
+  const { scoringType, numTeams } = await request.json();
+  const supabase = await createClient();
 
   // Check if the user is authenticated
-  const session = await getServerAuthSession();
-  if (!session || !session.user) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    // Check if the user is a commissioner for this league
-    const { data: isCommissioner, error: commissionerError } = await supabase
-      .from('managers')
-      .select('is_commissioner')
-      .eq('guid', session.user.id)
-      .contains('league_keys', [leagueId])
-      .single();
-
-    if (commissionerError) throw commissionerError;
-
-    if (!isCommissioner || !isCommissioner.is_commissioner) {
+    // Check if the user is a commissioner
+    if (!(await isCommissioner(supabase, user.id))) {
       return NextResponse.json({ error: 'Unauthorized. Commissioner access required.' }, { status: 403 });
     }
 
@@ -41,7 +31,7 @@ export async function POST(
 
     // Construct ADP API URL
     const adpUrl = `https://fantasyfootballcalculator.com/api/v1/adp/${scoringType}?teams=${numTeams}&year=${currentYear}&position=all`;
-    
+
     // Create a job to track progress
     const jobId = uuidv4();
     await supabase.from('import_jobs').insert({
@@ -56,18 +46,18 @@ export async function POST(
       throw new Error(`Failed to fetch ADP data: ${response.statusText}`);
     }
     const adpData = await response.json();
-    
+
     // Update player_adp table
     const totalPlayers = adpData.players.length;
     for (let i = 0; i < totalPlayers; i++) {
       const player = adpData.players[i];
-      
+
       // Find player using a more robust search
       const { data: players, error: playerError } = await supabase
         .from('players')
-        .select('id, full_name, first_name, last_name, display_position, editorial_team_abbr')
+        .select('id, full_name, first_name, last_name, position, team')
         .or(`full_name.ilike.%${player.name}%,first_name.ilike.%${player.name.split(' ')[0]}%,last_name.ilike.%${player.name.split(' ').slice(-1)[0]}%`)
-        .eq('display_position', player.position);
+        .eq('position', player.position);
 
       if (playerError) throw playerError;
 
@@ -75,9 +65,9 @@ export async function POST(
 
       if (players && players.length > 0) {
         // Try to find an exact match first
-        matchedPlayer = players.find(p => 
-          p.full_name.toLowerCase() === player.name.toLowerCase() &&
-          p.editorial_team_abbr === player.team
+        matchedPlayer = players.find(p =>
+          p.full_name?.toLowerCase() === player.name.toLowerCase() &&
+          p.team === player.team
         );
 
         // If no exact match, use a scoring system
@@ -138,27 +128,27 @@ function calculateMatchScore(dbPlayer: any, adpPlayer: any): number {
   let score = 0;
 
   // Full name exact match (case-insensitive)
-  if (dbPlayer.full_name.toLowerCase() === adpPlayer.name.toLowerCase()) {
+  if (dbPlayer.full_name?.toLowerCase() === adpPlayer.name.toLowerCase()) {
     score += 10;
   }
 
   // First name match
-  if (dbPlayer.first_name.toLowerCase() === adpPlayer.name.split(' ')[0].toLowerCase()) {
+  if (dbPlayer.first_name?.toLowerCase() === adpPlayer.name.split(' ')[0].toLowerCase()) {
     score += 3;
   }
 
   // Last name match
-  if (dbPlayer.last_name.toLowerCase() === adpPlayer.name.split(' ').slice(-1)[0].toLowerCase()) {
+  if (dbPlayer.last_name?.toLowerCase() === adpPlayer.name.split(' ').slice(-1)[0].toLowerCase()) {
     score += 3;
   }
 
   // Position match
-  if (dbPlayer.display_position === adpPlayer.position) {
+  if (dbPlayer.position === adpPlayer.position) {
     score += 2;
   }
 
   // Team match
-  if (dbPlayer.editorial_team_abbr === adpPlayer.team) {
+  if (dbPlayer.team === adpPlayer.team) {
     score += 2;
   }
 

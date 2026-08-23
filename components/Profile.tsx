@@ -1,7 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import { useSession, signOut } from 'next-auth/react'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useUser } from '@/lib/supabase/useUser'
+import { createClient } from '@/lib/supabase/client'
+import { Profile as ProfileRow } from '@/lib/types/manager.types'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -19,19 +22,31 @@ import { Sun, Moon } from 'lucide-react'
 import { useTheme } from 'next-themes'
 
 export default function Profile() {
-  const { data: session } = useSession()
+  const { user } = useUser()
+  const [profile, setProfile] = useState<ProfileRow | null>(null)
   const [open, setOpen] = useState(false)
   const { theme, setTheme } = useTheme()
+  const router = useRouter()
 
-  if (!session?.user) return null
+  useEffect(() => {
+    if (!user) {
+      setProfile(null)
+      return
+    }
+    const supabase = createClient()
+    supabase.from('profiles').select('*').eq('id', user.id).single()
+      .then(({ data }) => setProfile(data))
+  }, [user])
+
+  if (!user) return null
+
+  const name = profile?.display_name || user.email || ''
 
   const handleLogout = async () => {
-    const response = await fetch('/api/auth/logout', { method: 'POST' })
-    if (response.ok) {
-      await signOut({ callbackUrl: '/' })
-    } else {
-      console.error('Failed to logout on server')
-    }
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/')
+    router.refresh()
   }
 
   return (
@@ -39,16 +54,16 @@ export default function Profile() {
       <PopoverTrigger asChild>
         <Button variant="ghost" className="h-8 w-8 rounded-full">
           <Avatar>
-            <AvatarImage src={session.user.image || ''} alt={session.user.name || ''} />
-            <AvatarFallback>{session.user.name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+            <AvatarImage src={profile?.avatar_url || ''} alt={name} />
+            <AvatarFallback>{name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
           </Avatar>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80">
         <div className="grid gap-4">
           <div className="space-y-2 col">
-            <h4 className="font-medium leading-none">{session.user.name}</h4>
-            <p className="text-sm text-muted-foreground">{session.user.email}</p>
+            <h4 className="font-medium leading-none">{name}</h4>
+            <p className="text-sm text-muted-foreground">{user.email}</p>
           </div>
           <div className='col'>
             <DropdownMenu>

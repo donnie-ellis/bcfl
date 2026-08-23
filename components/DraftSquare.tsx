@@ -1,13 +1,12 @@
-// ./components/DraftSquare.tsx
 
-import React, { memo, useMemo } from 'react';
+import React, { memo } from 'react';
 import { PickWithPlayerAndTeam } from '@/lib/types/pick.types';
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { parseTeamLogos, TeamLogo, sizedTitle } from '@/lib/types/team.types';
+import { getTeamLogoUrl, sizedTitle } from '@/lib/types/team.types';
 
 interface DraftSquareProps {
   pick: PickWithPlayerAndTeam;
@@ -17,8 +16,7 @@ interface DraftSquareProps {
 }
 
 const DraftSquare: React.FC<DraftSquareProps> = memo(({ pick, isCurrentPick, onSquareHover, isLoading }) => {
-  const teamLogos: TeamLogo[] = useMemo(() => parseTeamLogos(pick.team?.team_logos || []), [pick.team?.team_logos]);
-  const teamLogoUrl = useMemo(() => teamLogos.length > 0 ? teamLogos[0].url : '', [teamLogos]);
+  const teamLogoUrl = getTeamLogoUrl(pick.team);
 
   const Square = () => (
     <Card className={`w-full h-full ${isCurrentPick ? 'border-2 border-primary animate-pulse' : ''} hover:bg-muted`}>
@@ -38,7 +36,7 @@ const DraftSquare: React.FC<DraftSquareProps> = memo(({ pick, isCurrentPick, onS
             <div className="flex items-center justify-center grow">
               <Avatar className="h-12 w-12">
                 {pick.is_picked ? (
-                  <AvatarImage src={pick.player?.headshot_url || pick.player?.image_url || ''} alt={pick.player?.full_name} />
+                  <AvatarImage src={pick.player?.headshot_url || ''} alt={pick.player?.full_name || ''} />
                 ) : (
                   <AvatarImage src={teamLogoUrl} alt={pick.team?.name} />
                 )}
@@ -60,8 +58,8 @@ const DraftSquare: React.FC<DraftSquareProps> = memo(({ pick, isCurrentPick, onS
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{pick.player.editorial_team_full_name}</p>
-                      <p>{pick.player.display_position}</p>
+                      <p>{pick.player.team}</p>
+                      <p>{pick.player.position}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>

@@ -1,11 +1,10 @@
 // ./app/api/draft/[draftId]/status/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
-
-const supabase = getServerSupabaseClient();
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ draftId: string }> }) {
   const { draftId } = await params;
+  const supabase = await createClient();
 
   try {
     // Fetch draft data
@@ -44,7 +43,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       .from('picks')
       .select('total_pick_number')
       .eq('draft_id', parseInt(draftId))
-      .eq('team_key', request.headers.get('X-Team-Key') || '')
+      .eq('team_id', Number(request.headers.get('X-Team-Id')) || 0)
       .gte('total_pick_number', draft.current_pick)
       .order('total_pick_number', { ascending: true })
       .limit(1);

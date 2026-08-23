@@ -1,7 +1,6 @@
 // ./lib/types/player.types.ts
 
 import { Database } from '@/lib/types/database.types';
-import { Json } from '@/lib/types/database.types';
 
 // Base Player type from Supabase
 type BasePlayer = Database['public']['Tables']['players']['Row'];
@@ -20,7 +19,7 @@ export interface Player extends BasePlayer {
   average_draft_position?: number;
 }
 
-// PlayerInsert type for inserting players into Supabase
+// PlayerInsert type for inserting players into Supabase (from the Sleeper import)
 export type PlayerInsert = Database['public']['Tables']['players']['Insert'];
 
 // PlayerWithADP type from Supabase view
@@ -33,17 +32,10 @@ export interface EnhancedPlayerWithADP extends PlayerWithADP {
 // Custom types for specific use cases
 export interface PlayerSummary {
   id: number;
-  full_name: string;
-  position: string;
-  team: string;
-  bye_week: string;
+  full_name: string | null;
+  position: string | null;
+  team: string | null;
   adp: number | null;
-}
-
-export interface PlayerStats {
-  player_id: number;
-  season: number;
-  stats: Json;
 }
 
 // Enum for player positions
@@ -64,87 +56,19 @@ export interface PlayerSearchParams {
   draftedStatus?: 'drafted' | 'undrafted' | 'all';
 }
 
-// Interface for player ranking
-export interface PlayerRanking {
-  player_id: number;
-  rank: number;
-  tier?: number;
-}
-
-// Interface for draft analysis
-export interface DraftAnalysis {
-  average_pick: number;
-  average_round: number;
-  percent_drafted: number;
-  average_cost?: number;
-}
-
-// Type guard to check if a Json value conforms to DraftAnalysis structure
-function isDraftAnalysisLike(value: Json): value is { [K in keyof DraftAnalysis]: number } {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'average_pick' in value &&
-    'average_round' in value &&
-    'percent_drafted' in value &&
-    typeof value.average_pick === 'number' &&
-    typeof value.average_round === 'number' &&
-    typeof value.percent_drafted === 'number'
-  );
-}
-
-// Function to safely parse draft analysis from Json
-export function parseDraftAnalysis(json: Json): DraftAnalysis | null {
-  if (isDraftAnalysisLike(json)) {
-    return {
-      average_pick: json.average_pick,
-      average_round: json.average_round,
-      percent_drafted: json.percent_drafted,
-      average_cost: json.average_cost,
-    };
+// Function to format a player's Sleeper status/injury_status for display.
+// Sleeper's own status field is already a readable word (Active, Inactive,
+// Injured Reserve, etc); this mostly guards against null/empty values and
+// normalizes a couple of common short codes for injury_status.
+export const formatStatus = (status: string | null): string => {
+  if (!status) return 'Active';
+  switch (status) {
+    case 'Questionable': return 'Questionable';
+    case 'Doubtful': return 'Doubtful';
+    case 'Out': return 'Out';
+    case 'IR': return 'Injured Reserve';
+    case 'PUP': return 'Physically Unable to Perform';
+    case 'Sus': return 'Suspended';
+    default: return status;
   }
-  return null;
-}
-
-// Function to parse the status information
-export const formatStatus = (statusAbbr: string | null): string => {
-  if (!statusAbbr) return "Active";
-  switch (statusAbbr) {
-    case "D": return "Doubtful";
-    case "IR": return "Injured Reserve";
-    case "NA": return "Inactive";
-    case "NFI-A": return "Non Football Injury";
-    case "PUP-P": return "Physically Unable to Perform";
-    case "PUP-R": return "Physically Unable to Perform";
-    case "Q": return "Questionable";
-    case "SUSP": return "Suspended";
-    default: return "Active";
-  }
-}
-
-
-// Interface for player with parsed draft analysis
-export interface PlayerWithParsedDraftAnalysis extends Omit<Player, 'draft_analysis'> {
-  draft_analysis: DraftAnalysis | null;
-}
-
-// Function to parse player with draft analysis
-export function parsePlayerWithDraftAnalysis(player: Player): PlayerWithParsedDraftAnalysis {
-  return {
-    ...player,
-    draft_analysis: parseDraftAnalysis(player.draft_analysis),
-  };
-}
-
-// Interface for player comparison
-export interface PlayerComparison {
-  player1: Player;
-  player2: Player;
-  comparisonStats: {
-    [key: string]: {
-      player1Value: number;
-      player2Value: number;
-      difference: number;
-    };
-  };
 }

@@ -8,7 +8,7 @@ import { Draft, LeagueSettings, Pick, Player, Team, RosterPosition, parseRosterP
 interface TeamBreakdownProps {
     leagueSettings: LeagueSettings;
     draft: Draft;
-    teamKey: string;
+    teamId: number;
     teams: Team[];
 }
 
@@ -20,7 +20,7 @@ interface PositionNeed {
     isFlex: boolean;
 }
 
-const TeamBreakdown: React.FC<TeamBreakdownProps> = ({ leagueSettings, draft, teamKey, teams }) => {
+const TeamBreakdown: React.FC<TeamBreakdownProps> = ({ leagueSettings, draft, teamId, teams }) => {
     const positionNeeds = useMemo(() => {
         const rosterPositions = parseRosterPositions(leagueSettings.roster_positions);
         
@@ -34,13 +34,13 @@ const TeamBreakdown: React.FC<TeamBreakdownProps> = ({ leagueSettings, draft, te
           isFlex: false, // You can implement flex logic if needed
         }));
         
-        const teamPicks = draft.picks.filter(pick => pick.team_key === teamKey && pick.is_picked && pick.player_id !== null);
-    
-        teamPicks.forEach((pick: Pick) => { 
+        const teamPicks = draft.picks.filter(pick => pick.team_id === teamId && pick.is_picked && pick.player_id !== null);
+
+        teamPicks.forEach((pick: Pick) => {
           const player = pick.player as Player | undefined;
           if (!player) return;
-    
-          const eligiblePositions = player.eligible_positions || [];
+
+          const eligiblePositions = player.fantasy_positions || [];
     
           for (const position of eligiblePositions) {
             const positionNeed = needs.find(need => need.position === position);
@@ -53,7 +53,7 @@ const TeamBreakdown: React.FC<TeamBreakdownProps> = ({ leagueSettings, draft, te
         });
 
         return needs;
-    }, [leagueSettings, draft, teamKey]);
+    }, [leagueSettings, draft, teamId]);
 
     const getStatusIcon = (filled: number, needed: number) => {
         if (filled >= needed) return <CheckCircle className="h-4 w-4 text-success" />;
@@ -99,8 +99,8 @@ const TeamBreakdown: React.FC<TeamBreakdownProps> = ({ leagueSettings, draft, te
                             {need.players.length > 0 ? (
                                 need.players.map((player, index) => (
                                     <div key={index} className="flex items-center gap-2">
-                                        <span className="text-sm font-medium truncate" title={player.full_name}>
-                                            {player.full_name} ({player.editorial_team_abbr}) - {player.bye_weeks}
+                                        <span className="text-sm font-medium truncate" title={player.full_name || undefined}>
+                                            {player.full_name} ({player.team})
                                         </span>
                                     </div>
                                 ))

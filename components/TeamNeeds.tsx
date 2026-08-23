@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 interface TeamNeedsProps {
   leagueSettings: LeagueSettings;
   draft: Draft;
-  teamKey: string;
+  teamId: number;
   teams: Team[];
 }
 
@@ -31,7 +31,7 @@ interface PositionNeed {
   isFlex: boolean;
 }
 
-const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draft, teamKey, teams }) => {
+const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draft, teamId, teams }) => {
   const positionNeeds = useMemo(() => {
     const flexPositions = ['W/R/T', 'W/R', 'Q/W/R/T'];
     const rosterPositions = parseRosterPositions(leagueSettings.roster_positions);
@@ -46,13 +46,13 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draft, teamKey, t
       isFlex: flexPositions.includes(pos.roster_position.position)
     }));
     
-    const teamPicks = draft.picks.filter(pick => pick.team_key === teamKey && pick.is_picked && pick.player_id !== null);
+    const teamPicks = draft.picks.filter(pick => pick.team_id === teamId && pick.is_picked && pick.player_id !== null);
 
-    teamPicks.forEach((pick: Pick) => { 
+    teamPicks.forEach((pick: Pick) => {
       const player = pick.player as Player | undefined;
       if (!player) return;
 
-      const eligiblePositions = player.eligible_positions || [];
+      const eligiblePositions = player.fantasy_positions || [];
       const remainingEligiblePositions = [...eligiblePositions]; // Keep this immutable for flex checks
 
       // First, count the player for their primary position
@@ -60,7 +60,7 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draft, teamKey, t
         const positionNeed = needs.find(need => need.position === position);
         if (positionNeed) {
           positionNeed.filled++;
-          positionNeed.players.push({ name: player.full_name, position: player.display_position as string });
+          positionNeed.players.push({ name: player.full_name || '', position: player.position || '' });
           break; // Stop after assigning to the first eligible primary position
         }
       }
@@ -84,7 +84,7 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draft, teamKey, t
 
           if (primaryPosition) {
             flexNeed.filled++;
-            flexNeed.players.push({ name: player.full_name, position: player.display_position as string });
+            flexNeed.players.push({ name: player.full_name || '', position: player.position || '' });
             break; // Stop after assigning to the first eligible flex position
           }
         }
@@ -92,7 +92,7 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draft, teamKey, t
     });
 
     return needs;
-  }, [leagueSettings, draft, teamKey]);
+  }, [leagueSettings, draft, teamId]);
 
   const getSeverityColor = (needed: number, filled: number) => {
     const remaining = needed - filled;

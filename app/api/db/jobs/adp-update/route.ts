@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
+import { createClient } from '@/lib/supabase/server';
 
 interface JobMetadata {
   draftId: number;
@@ -37,10 +37,9 @@ function isJobMetadata(metadata: unknown): metadata is JobMetadata {
   );
 }
 
-const supabase = getServerSupabaseClient();
-
 export async function POST(request: NextRequest) {
   const { jobId } = await request.json();
+  const supabase = await createClient();
 
   try {
     // Fetch job details
@@ -82,11 +81,11 @@ export async function POST(request: NextRequest) {
       // Find player
       const { data: players, error: playerError } = await supabase
         .from('players')
-        .select('id, full_name, first_name, last_name, display_position, editorial_team_abbr')
+        .select('id, full_name, first_name, last_name, position, team')
         .or(
           `full_name.ilike.%${player.name}%,first_name.ilike.%${player.name.split(' ')[0]}%,last_name.ilike.%${player.name.split(' ').slice(-1)[0]}%`
         )
-        .eq('display_position', player.position);
+        .eq('position', player.position);
 
       if (playerError) throw playerError;
       if (!players.length) {
@@ -96,8 +95,8 @@ export async function POST(request: NextRequest) {
 
       let matchedPlayer = players.find(
         (p) =>
-          p.full_name.toLowerCase() === player.name.toLowerCase() &&
-          p.editorial_team_abbr === player.team
+          p.full_name?.toLowerCase() === player.name.toLowerCase() &&
+          p.team === player.team
       ) || players[0];
 
       // Upsert ADP data

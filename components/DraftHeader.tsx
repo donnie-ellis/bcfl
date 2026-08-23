@@ -32,12 +32,12 @@ const DraftHeader: React.FC<DraftHeaderProps> = ({ league, draft, additionalCont
   const [isUpdatingADP, setIsUpdatingADP] = useState(false);
 
   const { data: isCommissionerData, error: isCommissionerError } = useSWR(
-    league ? `/api/db/league/${league.league_key}/isCommissioner` : null,
+    league ? `/api/db/league/${league.id}/isCommissioner` : null,
     fetcher
   );
 
   const { data: leagueSettings, error: leagueSettingsError } = useSWR<LeagueSettings>(
-    league ? `/api/yahoo/league/${league.league_key}/leagueSettings` : null,
+    league ? `/api/db/league/${league.id}/settings` : null,
     fetcher
   );
 
@@ -115,7 +115,7 @@ const DraftHeader: React.FC<DraftHeaderProps> = ({ league, draft, additionalCont
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          leagueId: league.league_key,
+          leagueId: league.id,
           scoringType,
           numTeams: league.num_teams,
         }),

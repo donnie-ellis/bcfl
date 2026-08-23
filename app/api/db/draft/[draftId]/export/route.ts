@@ -1,14 +1,11 @@
 // ./app/api/db/draft/[draftId]/export/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerAuthSession } from "@/auth";
+import { createClient } from '@/lib/supabase/server';
 import { createObjectCsvStringifier } from 'csv-writer';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { League } from '@/lib/types/league.types';
-import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
-
-const supabase = getServerSupabaseClient();
 
 export async function GET(
   request: NextRequest,
@@ -17,10 +14,11 @@ export async function GET(
   const { draftId } = await params;
   const { searchParams } = new URL(request.url);
   const type = searchParams.get('type');
+  const supabase = await createClient();
 
   // Check if the user is authenticated
-  const session = await getServerAuthSession();
-  if (!session || !session.user) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -43,12 +41,12 @@ export async function GET(
         total_pick_number,
         players (
           full_name,
-          display_position,
-          editorial_team_abbr
+          position,
+          team
         ),
         teams (
           name,
-          team_logos
+          logo_url
         )
       `)
       .eq('draft_id', parseInt(draftId))
@@ -87,8 +85,8 @@ function handleCSVExport(picks: any[]) {
     pick: pick.pick_number,
     total_pick: pick.total_pick_number,
     player_name: pick.players?.full_name || 'N/A',
-    position: pick.players?.display_position || 'N/A',
-    team: pick.players?.editorial_team_abbr || 'N/A',
+    position: pick.players?.position || 'N/A',
+    team: pick.players?.team || 'N/A',
     fantasy_team: pick.teams?.name || 'N/A',
   }));
 
@@ -117,8 +115,8 @@ async function handlePDFExport(draft: any, picks: any[]) {
     pick.round_number,
     pick.pick_number,
     pick.players?.full_name || 'N/A',
-    pick.players?.display_position || 'N/A',
-    pick.players?.editorial_team_abbr || 'N/A',
+    pick.players?.position || 'N/A',
+    pick.players?.team || 'N/A',
     pick.teams?.name || 'N/A'
   ]);
 

@@ -1,10 +1,7 @@
-// ./app/api/draft/[draftId]/route.ts
+// ./app/api/db/draft/[draftId]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerAuthSession } from "@/auth";
-import { requestYahoo } from '@/lib/yahoo';
-import { getServerSupabaseClient } from '@/lib/serverSupabaseClient';
-
-const supabase = getServerSupabaseClient();
+import { createClient } from '@/lib/supabase/server';
+import { isCommissioner } from '@/lib/auth/authz';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -12,6 +9,7 @@ export const revalidate = 0;
 // GET
 export async function GET(request: NextRequest, { params }: { params: Promise<{ draftId: string }> }) {
   const { draftId } = await params;
+  const supabase = await createClient();
 
   try {
     // Fetch draft data
@@ -28,7 +26,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       .from('picks')
       .select(`
         *,
-        teams:team_key (
+        teams:team_id (
           name
         )
       `)
@@ -60,15 +58,19 @@ export async function DELETE(
   { params }: { params: Promise<{ draftId: string }> }
 ) {
   const { draftId } = await params;
+  const supabase = await createClient();
 
-  // Check if the user is authenticated
-  const session = await getServerAuthSession();
-  if (!session || !session.user) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  if (!(await isCommissioner(supabase, user.id))) {
+    return NextResponse.json({ error: 'Unauthorized. Commissioner access required.' }, { status: 403 });
+  }
+
   try {
-    const { data, error } = await supabase.rpc('delete_draft', { p_draft_id: parseInt(draftId) });
+    const { error } = await supabase.rpc('delete_draft', { p_draft_id: parseInt(draftId) });
 
     if (error) throw error;
 
@@ -76,37 +78,5 @@ export async function DELETE(
   } catch (error) {
     console.error('Error deleting draft:', error);
     return NextResponse.json({ error: 'Failed to delete draft' }, { status: 500 });
-  }
-}
-
-// TODO: Move this to a yahoo api call
-// Helper function to verify if the calling user is a commissioner
-async function checkCommissioner(leagueKey: string): Promise<boolean> {
-  try {
-    const path = `league/${leagueKey}/teams`;
-    const data = await requestYahoo(path);
-    const teams = data.fantasy_content.league[1].teams;
-
-    for (const key in teams) {
-      if (key !== 'count') {
-        const team = teams[key].team[0];
-        const managers = team.find((item: any) => item.managers)?.managers;
-
-        if (managers) {
-          const currentUserManager = managers.find((manager: any) => 
-            manager.manager.is_current_login === '1'
-          );
-
-          if (currentUserManager && currentUserManager.manager.is_commissioner === '1') {
-            return true;
-          }
-        }
-      }
-    }
-
-    return false;
-  } catch (error) {
-    console.error('Error checking commissioner status:', error);
-    return false;
   }
 }

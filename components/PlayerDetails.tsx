@@ -20,12 +20,6 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
 
   type BadgeVariant = ComponentProps<typeof Badge>['variant'];
 
-  // Helper function to format bye weeks
-  const formatByeWeeks = (byeWeeks: any): string => {
-    if (!byeWeeks || byeWeeks.length === 0) return 'N/A';
-    return byeWeeks.join(', ');
-  };
-
   const getSeverityColor = (status: string | null): BadgeVariant => {
     if (!status) return "success";
     switch (status) {
@@ -61,25 +55,24 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player }) => {
             </div>
             
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mb-2">
-              <span className="truncate">{player.editorial_team_full_name}</span>
-              {player.eligible_positions && (
+              <span className="truncate">{player.team}</span>
+              {player.fantasy_positions && (
                 <div className="flex gap-1">
-                  {player.eligible_positions.slice(0, 3).map((position, index) => (
+                  {player.fantasy_positions.slice(0, 3).map((position, index) => (
                     <Badge key={index} variant="outline" className="text-xs px-1.5 py-0.5 cursor-default">
                       {position}
                     </Badge>
                   ))}
-                  {player.eligible_positions.length > 3 && (
+                  {player.fantasy_positions.length > 3 && (
                     <Badge variant="outline" className="text-xs px-1.5 py-0.5 cursor-default">
-                      +{player.eligible_positions.length - 3}
+                      +{player.fantasy_positions.length - 3}
                     </Badge>
                   )}
                 </div>
               )}
             </div>
 
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Bye: {formatByeWeeks(player.bye_weeks)}</span>
+            <div className="flex justify-end text-xs text-muted-foreground">
               {player.adp_formatted && <span className="font-medium">ADP: {player.adp_formatted}</span>}
             </div>
           </div>
