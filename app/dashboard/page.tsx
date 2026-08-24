@@ -18,6 +18,7 @@ import {
 import { ChevronDown, Trash2, Settings } from "lucide-react";
 import Link from 'next/link';
 import Profile from '@/components/Profile';
+import AppHeader from '@/components/AppHeader';
 import CreateDraftDialog from '@/components/CreateDraftDialog';
 import { League } from '@/lib/types/league.types';
 import { Team, getTeamLogoUrl } from '@/lib/types/team.types';
@@ -121,11 +122,11 @@ const DashboardPage: React.FC = () => {
     return drafts.map((draft) => (
       <Card
         key={draft.id}
-        className="mb-4 cursor-pointer transition-shadow hover:shadow-lg"
+        className="cursor-pointer transition-shadow hover:shadow-md"
         onClick={() => handleDraftClick(draft.id.toString())}
       >
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>{draft.name}</CardTitle>
+          <CardTitle size="sm">{draft.name}</CardTitle>
           {isCommissioner && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -190,7 +191,7 @@ const DashboardPage: React.FC = () => {
                           className="w-8 h-8 object-contain"
                         />
                       ) : (
-                        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                        <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
                           <span className="text-xs">{team.name.charAt(0)}</span>
                         </div>
                       )}
@@ -209,7 +210,7 @@ const DashboardPage: React.FC = () => {
                           />
                           <div>
                             <p className="font-semibold">{member.display_name || member.email}</p>
-                            <p className="text-sm text-gray-500 capitalize">{member.role}</p>
+                            <p className="text-sm text-muted-foreground capitalize">{member.role}</p>
                           </div>
                         </div>
                       ))}
@@ -236,7 +237,7 @@ const DashboardPage: React.FC = () => {
             <Badge variant="outline">{pos.roster_position.position}</Badge>
             <span className="ml-2">{pos.roster_position.count}</span>
             {pos.roster_position.position_type && (
-              <span className="ml-2 text-sm text-gray-500">({pos.roster_position.position_type})</span>
+              <span className="ml-2 text-sm text-muted-foreground">({pos.roster_position.position_type})</span>
             )}
           </li>
         ))}
@@ -277,21 +278,24 @@ const DashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <div className="flex items-center gap-2">
-          {isCommissioner && (
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/dashboard/settings">
-                <Settings className="h-4 w-4 mr-2" />
-                League Settings
-              </Link>
-            </Button>
-          )}
-          <Profile />
-        </div>
-      </div>
+    <>
+      <AppHeader
+        left={<span className="font-bold truncate">Dashboard</span>}
+        right={
+          <>
+            {isCommissioner && (
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/dashboard/settings">
+                  <Settings className="h-4 w-4 mr-2" />
+                  League Settings
+                </Link>
+              </Button>
+            )}
+            <Profile />
+          </>
+        }
+      />
+      <div className="container mx-auto p-4">
       {isLoading || !league ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Skeleton className="h-40 w-full" />
@@ -313,9 +317,9 @@ const DashboardPage: React.FC = () => {
           </Card>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Drafts</CardTitle>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Drafts</h2>
                 {isCommissioner && (
                   <CreateDraftDialog
                     leagueId={league.id}
@@ -327,15 +331,15 @@ const DashboardPage: React.FC = () => {
                     leagueSettings={leagueSettings}
                   />
                 )}
-              </CardHeader>
-              <CardContent>
+              </div>
+              <div className="space-y-3">
                 {renderDraftCards()}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
             <div className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>League Information</CardTitle>
+                  <CardTitle size="sm">League Information</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
@@ -360,7 +364,7 @@ const DashboardPage: React.FC = () => {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>League Settings</CardTitle>
+                  <CardTitle size="sm">League Settings</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {leagueSettings ? (
@@ -406,7 +410,8 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 

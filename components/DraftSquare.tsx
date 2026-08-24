@@ -67,9 +67,9 @@ const DraftSquare: React.FC<DraftSquareProps> = memo(({ pick, isCurrentPick, onS
                   </p>
                 </>
               ) : (
-                <p className="text-gray-500">-</p>
+                <p className="text-muted-foreground">-</p>
               )}
-              <p className="text-gray-400">
+              <p className="text-muted-foreground/70">
                 Overall: {pick.total_pick_number}
               </p>
             </div>

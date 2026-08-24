@@ -392,28 +392,14 @@ const KioskPage: React.FC = () => {
                   </CardContent>
                 </Card>
               )}
-              <div className="p-4">
-                <h2 className="text-2xl font-semibold mb-6 text-right">
-                  {!state.selectedPlayer 
-                    ? 
-                    <>
-                      <span>Select a player to proceed</span>
-                      <span className="text-primary ml-4">→</span>
-                    </>
-                    : `Ready to draft ${state.selectedPlayer?.full_name}?`}
+              {!state.selectedPlayer && (
+                <div className="p-4">
+                  <h2 className="text-2xl font-semibold mb-6 text-right">
+                    <span>Select a player to proceed</span>
+                    <span className="text-primary ml-4">→</span>
                   </h2>
-                <div className={`flex columns-2 gap-6 transition-all duration-500 ${state.selectedPlayer ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"} overflow-hidden`}>
-                  <PlayerDetails player={state.selectedPlayer} />
-                  <SubmitPickButton
-                    isCurrentUserPick={true}
-                    selectedPlayer={state.selectedPlayer}
-                    currentPick={state.currentPick}
-                    onSubmitPick={handleSubmitPick}
-                    isPickSubmitting={state.isPickSubmitting}
-                    className='scale-95 hover:scale-100 transition-transform duration-300 ease-in-out'
-                  />
                 </div>
-              </div>
+              )}
             </div>
           </ScrollArea>
         </div>
@@ -431,6 +417,39 @@ const KioskPage: React.FC = () => {
               />
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Centered confirmation overlay: click the backdrop or the player card again to deselect. */}
+      <div
+        className={`fixed inset-0 z-[60] flex items-center justify-center bg-background/80 p-8 backdrop-blur-sm transition-opacity duration-300 ${
+          state.selectedPlayer ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={() => state.selectedPlayer && handlePlayerSelect(state.selectedPlayer)}
+      >
+        <div
+          className={`w-full max-w-xl space-y-6 transition-transform duration-300 ${
+            state.selectedPlayer ? 'scale-100' : 'scale-95'
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h2 className="text-2xl font-semibold text-center">
+            Ready to draft {state.selectedPlayer?.full_name}?
+          </h2>
+          <div
+            className="cursor-pointer"
+            onClick={() => state.selectedPlayer && handlePlayerSelect(state.selectedPlayer)}
+          >
+            <PlayerDetails player={state.selectedPlayer} />
+          </div>
+          <SubmitPickButton
+            isCurrentUserPick={true}
+            selectedPlayer={state.selectedPlayer}
+            currentPick={state.currentPick}
+            onSubmitPick={handleSubmitPick}
+            isPickSubmitting={state.isPickSubmitting}
+            className="scale-95 hover:scale-100 transition-transform duration-300 ease-in-out"
+          />
         </div>
       </div>
     </div>

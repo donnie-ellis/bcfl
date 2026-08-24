@@ -132,6 +132,7 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams,
                 player={lastPickedPlayer}
                 isDrafted={true}
                 onClick={() => {}}
+                flat
               />
             </div>
           ) : (

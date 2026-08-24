@@ -296,7 +296,7 @@ const CreateDraftDialog: React.FC<CreateDraftDialogProps> = ({ leagueId, teams, 
           </Button>
         </div>
         {isCreatingDraft && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70 dark:bg-gray-800 dark:bg-opacity-70 z-50">
+          <div className="absolute inset-0 flex items-center justify-center bg-background/70 z-50">
             <div className="text-center">
               <Loader2 className="h-8 w-8 animate-spin mb-2 mx-auto" />
               <p>Creating draft and importing players...</p>

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Button } from './ui/button';
 import { ListPlus } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface DraftQueueRef {
   addToQueue: (player: Player) => void;
@@ -24,6 +25,8 @@ interface PlayerCardProps {
   fadeDrafted?: boolean;
   onAddToQueue?: (player: Player | PlayerWithADP | EnhancedPlayerWithADP) => void;
   selectedPlayer?: Player | PlayerWithADP | EnhancedPlayerWithADP | null;
+  /** Drop border/shadow/background so this reads as inline content instead of a nested card, e.g. when already inside another Card. */
+  flat?: boolean;
 }
 
 type BadgeVariant = ComponentProps<typeof Badge>['variant'];
@@ -38,12 +41,13 @@ const getSeverityColor = (status: string | null): BadgeVariant => {
   }
 }
 
-const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fadeDrafted = false, onAddToQueue, selectedPlayer }) => {
+const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fadeDrafted = false, onAddToQueue, selectedPlayer, flat = false }) => {
 
   const queueRef = useRef<DraftQueueRef>(null);
 
   const cardClasses = `
     mb-2 cursor-pointer transition-all duration-300
+    ${flat ? 'border-0 shadow-none bg-transparent' : ''}
     ${isDrafted ? (fadeDrafted ? 'opacity-50' : '') : 'hover:bg-accent'}
     ${isDrafted ? 'cursor-not-allowed' : 'cursor-pointer'}
   `;
@@ -56,7 +60,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
             className={`${cardClasses} ${selectedPlayer && selectedPlayer.id === player.id ? 'bg-secondary border-primary' : ''}`}
             onClick={isDrafted ? undefined : onClick}
           >
-            <CardContent className="p-3 flex items-center space-x-3">
+            <CardContent className={cn("p-3 flex items-center space-x-3", flat && "p-0")}>
               <Avatar className="h-12 w-12 rounded">
                 <AvatarImage src={player.headshot_url as string} alt={player.full_name || 'N/A'} />
                 <AvatarFallback>{player.full_name || 'NA'.split(' ').map(n => n[0]).join('')}</AvatarFallback>

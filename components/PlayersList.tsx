@@ -81,7 +81,7 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
   return (
     <div className={`flex flex-col h-full ${className}`}>
       <div className="shrink-0">
-        <h2 className='text-2xl ml-4 py-2 font-bold text-primary text-center'>Players</h2>
+        <h2 className='text-lg ml-4 py-2 font-semibold text-primary text-center'>Players</h2>
         <div className="p-2 pl-4">
           <PlayerFilters
             searchTerm={searchTerm}

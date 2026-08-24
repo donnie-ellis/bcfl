@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import AppHeader from '@/components/AppHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { League } from '@/lib/types/league.types';
@@ -240,14 +241,18 @@ export default function SettingsForm() {
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl">
-      <div className="flex items-center gap-2 mb-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/dashboard"><ArrowLeft className="h-4 w-4" /></Link>
-        </Button>
-        <h1 className="text-2xl font-bold">League Settings</h1>
-      </div>
-
+    <>
+      <AppHeader
+        left={
+          <>
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/dashboard"><ArrowLeft className="h-4 w-4" /></Link>
+            </Button>
+            <span className="font-bold truncate">League Settings</span>
+          </>
+        }
+      />
+      <div className="container mx-auto p-4 max-w-4xl">
       <Tabs defaultValue="league">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="league">League</TabsTrigger>
@@ -476,6 +481,7 @@ export default function SettingsForm() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </>
   );
 }

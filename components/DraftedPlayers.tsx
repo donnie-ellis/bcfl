@@ -33,7 +33,7 @@ const DraftedPlayers: React.FC<DraftedPlayersProps> = React.memo(({
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
-      <h2 className='text-2xl font-bold text-center text-primary'>
+      <h2 className='text-lg font-semibold text-center text-primary'>
         {teamName ? possesiveTitle(teamName) + ' team' : 'Team'}
       </h2>
       <Separator className='mt-2' />

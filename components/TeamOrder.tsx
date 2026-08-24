@@ -66,11 +66,11 @@ const TeamOrder: React.FC<TeamOrderProps> = ({ teams, onSubmit }) => {
                       {...provided.draggableProps}
                       className="flex items-center relative"
                     >
-                      <div className="w-10 shrink-0 flex items-center justify-center font-bold text-gray-500">
+                      <div className="w-10 shrink-0 flex items-center justify-center font-bold text-muted-foreground">
                         {index + 1}
                       </div>
-                      <div 
-                        className={`flex items-center bg-white rounded-lg shadow-xs grow ${
+                      <div
+                        className={`flex items-center bg-card border rounded-lg shadow-xs grow ${
                           snapshot.isDragging ? 'shadow-md' : ''
                         }`}
                         style={{
@@ -81,11 +81,11 @@ const TeamOrder: React.FC<TeamOrderProps> = ({ teams, onSubmit }) => {
                         <div className="grow p-2 overflow-hidden">
                           <TeamCard team={team} />
                         </div>
-                        <div 
+                        <div
                           {...provided.dragHandleProps}
-                          className="flex items-center justify-center w-10 h-full bg-gray-100 rounded-r-lg cursor-grab active:cursor-grabbing"
+                          className="flex items-center justify-center w-10 h-full bg-muted rounded-r-lg cursor-grab active:cursor-grabbing"
                         >
-                          <GripVertical size={20} className="text-gray-500" />
+                          <GripVertical size={20} className="text-muted-foreground" />
                         </div>
                       </div>
                     </div>
