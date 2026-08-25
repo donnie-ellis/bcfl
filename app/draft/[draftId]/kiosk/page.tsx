@@ -115,8 +115,8 @@ const KioskPage: React.FC = () => {
 
     const updatedPicks: PickWithPlayerAndTeam[] = picksData.map(pick => ({
       ...pick,
-      player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
-      team: teams.find(t => t.id === pick.team_id) ?? {} as Team
+      player: pick.player_id ? (pick.player ?? players.find(p => p.id === pick.player_id) ?? null) : null,
+      team: pick.team ?? teams.find(t => t.id === pick.team_id) ?? ({} as Team)
     }));
 
     const updatedCurrentPick = updatedPicks.find(p => !p.is_picked) || null;
@@ -140,8 +140,8 @@ const KioskPage: React.FC = () => {
 
   const notifyPickMade = useCallback((updatedPick: Pick) => {
     if (updatedPick.is_picked && updatedPick.player_id) {
-      const player = players?.find(p => p.id === updatedPick.player_id);
-      const team = teams?.find(t => t.id === updatedPick.team_id);
+      const player = updatedPick.player ?? players?.find(p => p.id === updatedPick.player_id);
+      const team = updatedPick.team ?? teams?.find(t => t.id === updatedPick.team_id);
 
       if (player && team) {
         toast.success(
@@ -165,14 +165,15 @@ const KioskPage: React.FC = () => {
         schema: 'public',
         table: 'picks',
         filter: `draft_id=eq.${draftId}`
-      }, (payload) => {
+      }, async (payload) => {
         const updatedPick = payload.new as Pick;
         if (updatedPick.is_picked) {
-          // Batch the SWR mutation with the notification
-          unstable_batchedUpdates(() => {
-            mutatePicks();
-            notifyPickMade(updatedPick);
-          });
+          // Realtime payloads carry only the raw row (no player/team join), so
+          // re-fetch via the REST endpoint before notifying and use the
+          // joined row it returns for that pick.
+          const freshPicks = await mutatePicks();
+          const joinedPick = freshPicks?.find(p => p.id === updatedPick.id) ?? updatedPick;
+          notifyPickMade(joinedPick);
         }
       })
       .subscribe((status) => {
