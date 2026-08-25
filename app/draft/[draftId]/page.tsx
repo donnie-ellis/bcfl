@@ -134,8 +134,8 @@ const DraftPage: React.FC = () => {
 
     const updatedPicks: PickWithPlayerAndTeam[] = latestPicks.map(pick => ({
       ...pick,
-      player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
-      team: teams.find(t => t.id === pick.team_id) ?? {} as Team
+      player: pick.player_id ? (pick.player ?? players.find(p => p.id === pick.player_id) ?? null) : null,
+      team: pick.team ?? teams.find(t => t.id === pick.team_id) ?? ({} as Team)
     }));
 
     const updatedCurrentPick = updatedPicks.find(p => !p.is_picked) || null;
@@ -169,8 +169,8 @@ const DraftPage: React.FC = () => {
 
   const notifyPickMade = useCallback((updatedPick: Pick) => {
     if (updatedPick.is_picked && updatedPick.player_id) {
-      const player = players?.find(p => p.id === updatedPick.player_id);
-      const team = teams?.find(t => t.id === updatedPick.team_id);
+      const player = updatedPick.player ?? players?.find(p => p.id === updatedPick.player_id);
+      const team = updatedPick.team ?? teams?.find(t => t.id === updatedPick.team_id);
 
       if (player && team) {
         toast.success(
