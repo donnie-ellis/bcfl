@@ -119,10 +119,9 @@ content_path = "./supabase/templates/confirmation.html"
 subject = "Your sign-in link"
 content_path = "./supabase/templates/magic_link.html"
 
-# Uncomment to customize email template
-# [auth.email.template.invite]
-# subject = "You have been invited"
-# content_path = "./supabase/templates/invite.html"
+[auth.email.template.invite]
+subject = "You've been invited to Bent City Fantasy League"
+content_path = "./supabase/templates/invite.html"
 
 [auth.sms]
 # Allow/disallow new user signups via SMS to your project.
