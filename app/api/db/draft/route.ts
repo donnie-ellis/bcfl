@@ -1,10 +1,14 @@
 // ./app/api/db/draft/route.ts
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { importPlayers, getJobStatus } from '@/lib/playersImport';
 import { createClient } from '@/lib/supabase/server';
 import { getServerSupabaseAdminClient } from '@/lib/serverSupabaseClient';
 import { isCommissioner } from '@/lib/auth/authz';
+
+// The player import kicked off below runs after the response is sent;
+// 60s is the max Vercel allows a function to stay alive on the Hobby plan.
+export const maxDuration = 60;
 
 // POST
 export async function POST(request: NextRequest) {
@@ -62,9 +66,11 @@ export async function POST(request: NextRequest) {
     // access).
     const importJobId = uuidv4();
     const adminSupabase = getServerSupabaseAdminClient();
-    importPlayers(adminSupabase, importJobId).catch(error => {
-      console.error('Error during player import:', error);
-    });
+    after(() =>
+      importPlayers(adminSupabase, importJobId).catch(error => {
+        console.error('Error during player import:', error);
+      })
+    );
 
     return NextResponse.json({
       draftId: draftId,

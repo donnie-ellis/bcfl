@@ -4,6 +4,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { importPlayers } from '@/lib/playersImport'
 import { getServerSupabaseAdminClient } from '@/lib/serverSupabaseClient'
 
+// Fetching + upserting the full Sleeper player list takes well over the
+// platform's 10s default; 60s is the max allowed on Vercel's Hobby plan.
+export const maxDuration = 60;
+
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
