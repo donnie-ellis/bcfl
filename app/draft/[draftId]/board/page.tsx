@@ -93,6 +93,35 @@ const DraftBoardPage: React.FC = () => {
     }
   }, [players, teams]);
 
+  // Tracks the last picks we've rendered/notified on, so we can detect picks
+  // that were made while the realtime socket was dead (mobile browsers kill
+  // the websocket when the tab is backgrounded or the screen locks).
+  const picksDataRef = useRef<PickWithPlayerAndTeam[]>([]);
+  useEffect(() => {
+    picksDataRef.current = picksData ?? [];
+  }, [picksData]);
+
+  const refreshPicks = useCallback(async () => {
+    if (!draftId) return;
+
+    try {
+      const latestPicks: Pick[] = await fetch(`/api/db/draft/${draftId}/picks`).then(res => res.json());
+
+      const previouslyPicked = new Set(
+        picksDataRef.current.filter(p => p.is_picked).map(p => p.id)
+      );
+      const newlyMadePicks = latestPicks
+        .filter(p => p.is_picked && !previouslyPicked.has(p.id))
+        .sort((a, b) => a.total_pick_number - b.total_pick_number);
+
+      newlyMadePicks.forEach(notifyPickMade);
+
+      mutatePicks(latestPicks as PickWithPlayerAndTeam[], false);
+    } catch (error) {
+      console.error('Error refreshing picks:', error);
+    }
+  }, [draftId, notifyPickMade, mutatePicks]);
+
   useEffect(() => {
     if (!supabase || !draftId) return;
 
@@ -106,8 +135,7 @@ const DraftBoardPage: React.FC = () => {
       }, (payload) => {
         const updatedPick = payload.new as Pick;
         if (updatedPick.is_picked) {
-          mutatePicks();
-          notifyPickMade(updatedPick);
+          refreshPicks();
         }
       })
       .subscribe();
@@ -115,7 +143,27 @@ const DraftBoardPage: React.FC = () => {
     return () => {
       supabase.removeChannel(picksSubscription);
     };
-  }, [supabase, draftId, mutatePicks, notifyPickMade]);
+  }, [supabase, draftId, refreshPicks]);
+
+  // Mobile browsers suspend the realtime websocket while the tab is
+  // backgrounded or the screen is locked, so picks made during that window
+  // never arrive as events. Reconcile against the server whenever the tab
+  // becomes visible/focused again so those picks still get announced.
+  useEffect(() => {
+    const handleVisible = () => {
+      if (document.visibilityState === 'visible') {
+        refreshPicks();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisible);
+    window.addEventListener('focus', refreshPicks);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisible);
+      window.removeEventListener('focus', refreshPicks);
+    };
+  }, [refreshPicks]);
 
   useEffect(() => {
     updatePicksAndDraft();
