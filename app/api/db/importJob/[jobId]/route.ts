@@ -1,17 +1,17 @@
 // ./app/api/db/importJob/[jobId]/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/server';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { jobId: string } }
+  { params }: { params: Promise<{ jobId: string }> }
 ) {
-  const { jobId } = params;
+  const { jobId } = await params;
+  const supabase = await createClient();
 
   try {
     const { data, error } = await supabase

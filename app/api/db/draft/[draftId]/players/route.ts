@@ -1,17 +1,17 @@
 // ./app/api/db/draft/[draftId]/players/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/server';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { draftId: string } }
+  { params }: { params: Promise<{ draftId: string }>}
 ) {
-  const { draftId } = params;
+  const { draftId } = await params;
+  const supabase = await createClient();
 
   try {
     const { data, error } = await supabase
@@ -21,8 +21,8 @@ export async function GET(
         player_adp:player_adp(adp, adp_formatted, source_id, draft_id),
         draft_players:draft_players(is_picked, percent_drafted)
       `)
-      .eq('player_adp.draft_id', draftId)
-      .eq('draft_players.draft_id', draftId);
+      .eq('player_adp.draft_id', parseInt(draftId))
+      .eq('draft_players.draft_id', parseInt(draftId));
 
     if (error) throw error;
 

@@ -1,30 +1,31 @@
 // ./app/api/db/draft/[draftId]/picks/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/server';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { draftId: string } }
+  { params }: { params: Promise<{ draftId: string }> }
 ) {
-  const { draftId } = params;
+  const { draftId } = await params;
+  const supabase = await createClient();
   try {
     const { data, error } = await supabase
       .from('picks')
       .select(`
         *,
-        player:players(*)
+        player:players(*),
+        team:teams(*)
       `)
-      .eq('draft_id', draftId)
+      .eq('draft_id', parseInt(draftId))
       .order('total_pick_number', { ascending: true });
 
     if (error) throw error;
 
-    return NextResponse.json(data, 
-      { 
+    return NextResponse.json(data,
+      {
         headers: {
           'Cache-Control': 'no-store, max-age=0',
         },

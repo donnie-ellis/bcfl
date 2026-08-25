@@ -1,5 +1,5 @@
 // ./components/DraftStatus.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,6 +22,8 @@ interface DraftStatusProps {
 }
 
 const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams, team }) => {
+  const [isNextPicksOpen, setIsNextPicksOpen] = useState(false);
+
   if (!draft || !leagueSettings) {
     return (
       <Card className="">
@@ -53,8 +55,8 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams,
   const round = Math.ceil(currentPick / totalTeams);
   const pickInRound = ((currentPick - 1) % totalTeams) + 1;
 
-  const getCurrentTeam = (pickNumber: number) => 
-    teams.find(team => team.team_key === draft.picks[pickNumber - 1]?.team_key);
+  const getCurrentTeam = (pickNumber: number) =>
+    teams.find(team => team.id === draft.picks[pickNumber - 1]?.team_id);
 
   const currentTeam = getCurrentTeam(currentPick);
   const nextTeam = getCurrentTeam(currentPick + 1);
@@ -65,10 +67,10 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams,
 
   const lastPick: Pick | null = currentPick > 1 ? draft.picks[currentPick - 2] : null;
   const lastPickedPlayer: Player | null = lastPick?.player || null;
-  const lastPickTeam: Team | undefined = lastPick ? teams.find(t => t.team_key === lastPick.team_key) : undefined;
+  const lastPickTeam: Team | undefined = lastPick ? teams.find(t => t.id === lastPick.team_id) : undefined;
 
   // Calculate picks until next pick for the provided team
-  const picksUntilNextTeamPick = draft.picks.slice(currentPick - 1).findIndex(pick => pick.team_key === team.team_key);
+  const picksUntilNextTeamPick = draft.picks.slice(currentPick - 1).findIndex(pick => pick.team_id === team.id);
   const picksUntilNextTeamPickDisplay = picksUntilNextTeamPick === -1 ? 'No more picks' : picksUntilNextTeamPick;
 
   return (
@@ -84,9 +86,12 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams,
               <TeamCard team={currentTeam} />
             </div>
             
-            <HoverCard>
+            <HoverCard open={isNextPicksOpen} onOpenChange={setIsNextPicksOpen}>
               <HoverCardTrigger asChild>
-                <div className="w-[48%] cursor-pointer">
+                <div
+                  className="w-[48%] cursor-pointer"
+                  onClick={() => setIsNextPicksOpen((open) => !open)}
+                >
                   <p className="text-xs mb-1">Next Pick:</p>
                   <TeamCard team={nextTeam} />
                 </div>
@@ -127,6 +132,7 @@ const DraftStatus: React.FC<DraftStatusProps> = ({ draft, leagueSettings, teams,
                 player={lastPickedPlayer}
                 isDrafted={true}
                 onClick={() => {}}
+                flat
               />
             </div>
           ) : (

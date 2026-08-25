@@ -13,9 +13,9 @@ const RecentPicks: React.FC<RecentPicksProps> = ({ draft }) => {
     }
     const playerInfo = (player: Player | null) =>{
         if (!player) return 'Player not available';
-        return player.full_name + 
-        ' (' + player.editorial_team_abbr + ') - ' +
-        player.display_position;
+        return player.full_name +
+        ' (' + player.team + ') - ' +
+        player.position;
     }
     const teamInfo = (team: Team | null) => {
         if (!team) return 'Team not available';

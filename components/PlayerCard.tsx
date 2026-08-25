@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Button } from './ui/button';
 import { ListPlus } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface DraftQueueRef {
   addToQueue: (player: Player) => void;
@@ -24,6 +25,8 @@ interface PlayerCardProps {
   fadeDrafted?: boolean;
   onAddToQueue?: (player: Player | PlayerWithADP | EnhancedPlayerWithADP) => void;
   selectedPlayer?: Player | PlayerWithADP | EnhancedPlayerWithADP | null;
+  /** Drop border/shadow/background so this reads as inline content instead of a nested card, e.g. when already inside another Card. */
+  flat?: boolean;
 }
 
 type BadgeVariant = ComponentProps<typeof Badge>['variant'];
@@ -38,12 +41,13 @@ const getSeverityColor = (status: string | null): BadgeVariant => {
   }
 }
 
-const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fadeDrafted = false, onAddToQueue, selectedPlayer }) => {
+const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fadeDrafted = false, onAddToQueue, selectedPlayer, flat = false }) => {
 
   const queueRef = useRef<DraftQueueRef>(null);
 
   const cardClasses = `
     mb-2 cursor-pointer transition-all duration-300
+    ${flat ? 'border-0 shadow-none bg-transparent' : ''}
     ${isDrafted ? (fadeDrafted ? 'opacity-50' : '') : 'hover:bg-accent'}
     ${isDrafted ? 'cursor-not-allowed' : 'cursor-pointer'}
   `;
@@ -56,7 +60,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
             className={`${cardClasses} ${selectedPlayer && selectedPlayer.id === player.id ? 'bg-secondary border-primary' : ''}`}
             onClick={isDrafted ? undefined : onClick}
           >
-            <CardContent className="p-3 flex items-center space-x-3">
+            <CardContent className={cn("p-3 flex items-center space-x-3", flat && "p-0")}>
               <Avatar className="h-12 w-12 rounded">
                 <AvatarImage src={player.headshot_url as string} alt={player.full_name || 'N/A'} />
                 <AvatarFallback>{player.full_name || 'NA'.split(' ').map(n => n[0]).join('')}</AvatarFallback>
@@ -64,9 +68,9 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
               <div className="grow">
                 <p className="font-semibold">{player.full_name}</p>
                 <p className="text-sm">
-                  <span className="font-medium text-primary">{player.display_position}</span>
-                  {player.editorial_team_full_name && (
-                    <> - <span className="text-muted-foreground">{player.editorial_team_full_name}</span></>
+                  <span className="font-medium text-primary">{player.position}</span>
+                  {player.team && (
+                    <> - <span className="text-muted-foreground">{player.team}</span></>
                   )}
                 </p>
               </div>
@@ -94,10 +98,9 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isDrafted, onClick, fad
         </TooltipTrigger>
         <TooltipContent side="right" align="start" className="w-64">
           <div className="space-y-2">
-            <p><strong>Position:</strong> {player.display_position}</p>
-            <p><strong>Team:</strong> {player.editorial_team_full_name}</p>
-            {player.bye_weeks && <p><strong>Bye Week{player.bye_weeks.length > 1 && 's'}:</strong> {player.bye_weeks.join(', ')}</p>}
-            <p><strong>Status:</strong> <Badge variant={getSeverityColor(player.status)}>{formatStatus(player.status)}</Badge></p>
+            <p><strong>Position:</strong> {player.position}</p>
+            <p><strong>Team:</strong> {player.team}</p>
+            <div className="flex items-center gap-1"><strong>Status:</strong> <Badge variant={getSeverityColor(player.status)}>{formatStatus(player.status)}</Badge></div>
           </div>
         </TooltipContent>
       </Tooltip>

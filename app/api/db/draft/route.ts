@@ -1,15 +1,15 @@
 // ./app/api/db/draft/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
 import { importPlayers, getJobStatus } from '@/lib/playersImport';
-
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
+import { createClient } from '@/lib/supabase/server';
+import { getServerSupabaseAdminClient } from '@/lib/serverSupabaseClient';
+import { isCommissioner } from '@/lib/auth/authz';
 
 // POST
 export async function POST(request: NextRequest) {
   const body: {
-    leagueKey: string;
+    leagueId: number;
     draftName: string;
     rounds: number;
     totalPicks: number;
@@ -18,10 +18,20 @@ export async function POST(request: NextRequest) {
     status: string;
   } = await request.json();
 
-  const { leagueKey, draftName, rounds, totalPicks, draftOrder, orderedTeams, status } = body;
+  const { leagueId, draftName, rounds, totalPicks, draftOrder, orderedTeams, status } = body;
 
-  if (!leagueKey || !draftName || !rounds || !totalPicks || !draftOrder || !orderedTeams || !status) {
+  if (!leagueId || !draftName || !rounds || !totalPicks || !draftOrder || !orderedTeams || !status) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+  }
+
+  const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (!(await isCommissioner(supabase, user.id))) {
+    return NextResponse.json({ error: 'Unauthorized. Commissioner access required.' }, { status: 403 });
   }
 
   try {
@@ -29,7 +39,7 @@ export async function POST(request: NextRequest) {
     const parsedOrderedTeams = JSON.parse(orderedTeams);
 
     const { data, error } = await supabase.rpc('create_draft_with_picks', {
-      p_league_id: leagueKey,
+      p_league_id: leagueId,
       p_name: draftName,
       p_rounds: rounds,
       p_total_picks: totalPicks,
@@ -46,22 +56,25 @@ export async function POST(request: NextRequest) {
 
     const draftId = data[0].created_draft_id;
 
-    // Start the player import process here
+    // Start the player import process here. Uses the admin client since
+    // the players table is service-role-write-only (Sleeper import is a
+    // global, privileged bulk operation, not scoped to this user's RLS
+    // access).
     const importJobId = uuidv4();
-    importPlayers(leagueKey, importJobId).catch(error => {
+    const adminSupabase = getServerSupabaseAdminClient();
+    importPlayers(adminSupabase, importJobId).catch(error => {
       console.error('Error during player import:', error);
-      // You might want to update the job status to 'error' here as well
     });
 
-    return NextResponse.json({ 
-      draftId: draftId, 
+    return NextResponse.json({
+      draftId: draftId,
       importJobId: importJobId,
       message: 'Draft created successfully',
     });
   } catch (error: any) {
     console.error('Error creating draft:', error);
-    return NextResponse.json({ 
-      error: 'Failed to create draft', 
+    return NextResponse.json({
+      error: 'Failed to create draft',
       details: error.message || String(error)
     }, { status: 500 });
   }
@@ -78,27 +91,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Missing jobId parameter' }, { status: 400 });
   }
 
+  const supabase = await createClient();
+
   try {
-    const jobStatus = await getJobStatus(jobId);
+    const jobStatus = await getJobStatus(supabase, jobId);
     return NextResponse.json(jobStatus);
   } catch (error) {
     console.error('Error fetching job status:', error);
     return NextResponse.json({ error: 'Failed to fetch job status' }, { status: 500 });
-  }
-}
-
-export async function PATCH(request: NextRequest) {
-  const { leagueKey, jobId, continuationToken } = await request.json();
-
-  if (!leagueKey || !jobId || continuationToken === undefined) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-  }
-
-  try {
-    await importPlayers(leagueKey, jobId);
-    return NextResponse.json({ message: 'Import resumed successfully' });
-  } catch (error) {
-    console.error('Error resuming import:', error);
-    return NextResponse.json({ error: 'Failed to resume import' }, { status: 500 });
   }
 }

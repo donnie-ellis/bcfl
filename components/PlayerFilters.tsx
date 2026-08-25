@@ -50,7 +50,7 @@ const PlayerFilters: React.FC<PlayerFiltersProps> = ({
   const hasActiveFilters = searchTerm || selectedPositions.length > 0 || hideSelected;
 
   return (
-    <div className="w-full bg-background border-muted border rounded-lg shadow-sm overflow-hidden">
+    <div className="w-full bg-card border rounded-lg shadow-sm overflow-hidden">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger asChild>
           <Button

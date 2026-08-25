@@ -6,11 +6,11 @@ import PlayerCard from '@/components/PlayerCard';
 
 interface DraftListProps {
   draft: Draft & { picks: (Pick & { player: Player | null, team: Team })[] };
-  currentTeamKey: string;
+  currentTeamId: number;
 }
 
-const DraftList: React.FC<DraftListProps> = ({ draft, currentTeamKey }) => {
-  const teamPicks = draft.picks.filter(pick => pick.team_key === currentTeamKey);
+const DraftList: React.FC<DraftListProps> = ({ draft, currentTeamId }) => {
+  const teamPicks = draft.picks.filter(pick => pick.team_id === currentTeamId);
 
   return (
     <ScrollArea className="h-full">
@@ -27,9 +27,9 @@ const DraftList: React.FC<DraftListProps> = ({ draft, currentTeamKey }) => {
                 onClick={() => {}}
               />
             ) : (
-              <div className="grow bg-gray-100 rounded-lg p-4">
+              <div className="grow bg-muted rounded-lg p-4">
                 <p className="font-semibold">Pick {pick.total_pick_number} (Overall)</p>
-                <p className="text-gray-500">Not yet selected</p>
+                <p className="text-muted-foreground">Not yet selected</p>
               </div>
             )}
           </div>

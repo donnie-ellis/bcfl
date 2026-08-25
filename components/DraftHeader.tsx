@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import Profile from '@/components/Profile';
+import AppHeader from '@/components/AppHeader';
 import { League, Draft, LeagueSettings } from '@/lib/types/';
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
@@ -32,12 +33,12 @@ const DraftHeader: React.FC<DraftHeaderProps> = ({ league, draft, additionalCont
   const [isUpdatingADP, setIsUpdatingADP] = useState(false);
 
   const { data: isCommissionerData, error: isCommissionerError } = useSWR(
-    league ? `/api/db/league/${league.league_key}/isCommissioner` : null,
+    league ? `/api/db/league/${league.id}/isCommissioner` : null,
     fetcher
   );
 
   const { data: leagueSettings, error: leagueSettingsError } = useSWR<LeagueSettings>(
-    league ? `/api/yahoo/league/${league.league_key}/leagueSettings` : null,
+    league ? `/api/db/league/${league.id}/settings` : null,
     fetcher
   );
 
@@ -115,7 +116,7 @@ const DraftHeader: React.FC<DraftHeaderProps> = ({ league, draft, additionalCont
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          leagueId: league.league_key,
+          leagueId: league.id,
           scoringType,
           numTeams: league.num_teams,
         }),
@@ -167,123 +168,127 @@ const DraftHeader: React.FC<DraftHeaderProps> = ({ league, draft, additionalCont
     }
   };
 
-  return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur-sm supports-backdrop-filter:bg-background/60">
-      <div className="container flex h-16 items-center justify-between px-4">
-        <div className="flex items-center space-x-4 overflow-hidden">
-          <Link href="/dashboard" className="shrink-0">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={league?.logo_url || ''} alt={league?.name} />
-              <AvatarFallback>{league?.name?.[0]}</AvatarFallback>
-            </Avatar>
-          </Link>
-          <Link href={`/draft/${draft?.id}`} className="font-bold truncate">
-            {isLoading ? (
-              <Skeleton className="h-4 w-[200px]" />
-            ) : (
-              <>
-                <span className="hidden sm:inline">
-                  {`${setTitle(league?.name)} ${draft?.name} Draft`}
-                </span>
-                <span className="sm:hidden truncate">
-                  {draft?.name}
-                </span>
-              </>
-            )}
-          </Link>
-        </div>
-        <nav className="hidden md:flex items-center space-x-2">
-          <NavButton href={`/draft/${draft?.id}`}>Draft Central</NavButton>
-          <NavButton href={`/draft/${draft?.id}/board`}>Draft Board</NavButton>
-          {isCommissioner && (
-            <NavButton href={`/draft/${draft?.id}/kiosk`}>Kiosk Mode</NavButton>
-          )}
-          {isCommissioner && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={handleUpdateADP} 
-              disabled={isUpdatingADP}
-            >
-              <RefreshCcw className="mr-2 h-4 w-4" />
-              Update ADP
-            </Button>  
-          )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => handleExport('csv')}>
-                Export as CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                Export as PDF
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </nav>
-        <div className="flex items-center space-x-4">
-          {additionalContent}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="icon">
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle menu</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[200px]">
-              <DropdownMenuItem className="p-0">
-                <NavButton href={`/draft/${draft?.id}`}>Draft Central</NavButton>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="p-0">
-                <NavButton href={`/draft/${draft?.id}/board`}>Draft Board</NavButton>
-              </DropdownMenuItem>
-              {isCommissioner && (
-                <DropdownMenuItem className="p-0">
-                  <NavButton href={`/draft/${draft?.id}/kiosk`}>Kiosk Mode</NavButton>
-                </DropdownMenuItem>
-              )}
-              {isCommissioner && (
-                <DropdownMenuItem className="p-0">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={handleUpdateADP} 
-                    disabled={isUpdatingADP}
-                    className="w-full justify-start"
-                  >
-                    <RefreshCcw className="mr-2 h-4 w-4" />
-                    Update ADP
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline">
-                        <Download className="mr-2 h-4 w-4" />
-                        Export
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem onClick={() => handleExport('csv')}>
-                        Export as CSV
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                        Export as PDF
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Profile />
-        </div>
-      </div>
-    </header>
+  const left = (
+    <>
+      <Link href="/dashboard" className="shrink-0">
+        <Avatar className="h-8 w-8">
+          <AvatarImage src={league?.logo_url || ''} alt={league?.name} />
+          <AvatarFallback>{league?.name?.[0]}</AvatarFallback>
+        </Avatar>
+      </Link>
+      <Link href={`/draft/${draft?.id}`} className="font-bold truncate">
+        {isLoading ? (
+          <Skeleton className="h-4 w-[200px]" />
+        ) : (
+          <>
+            <span className="hidden sm:inline">
+              {`${setTitle(league?.name)} ${draft?.name} Draft`}
+            </span>
+            <span className="sm:hidden truncate">
+              {draft?.name}
+            </span>
+          </>
+        )}
+      </Link>
+    </>
   );
+
+  const center = (
+    <>
+      <NavButton href={`/draft/${draft?.id}`}>Draft Central</NavButton>
+      <NavButton href={`/draft/${draft?.id}/board`}>Draft Board</NavButton>
+      {isCommissioner && (
+        <NavButton href={`/draft/${draft?.id}/kiosk`}>Kiosk Mode</NavButton>
+      )}
+      {isCommissioner && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleUpdateADP}
+          disabled={isUpdatingADP}
+        >
+          <RefreshCcw className="mr-2 h-4 w-4" />
+          Update ADP
+        </Button>
+      )}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline">
+            <Download className="mr-2 h-4 w-4" />
+            Export
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem onClick={() => handleExport('csv')}>
+            Export as CSV
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleExport('pdf')}>
+            Export as PDF
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  );
+
+  const right = (
+    <>
+      {additionalContent}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild className="md:hidden">
+          <Button variant="ghost" size="icon">
+            <Menu className="h-5 w-5" />
+            <span className="sr-only">Toggle menu</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-[200px]">
+          <DropdownMenuItem className="p-0">
+            <NavButton href={`/draft/${draft?.id}`}>Draft Central</NavButton>
+          </DropdownMenuItem>
+          <DropdownMenuItem className="p-0">
+            <NavButton href={`/draft/${draft?.id}/board`}>Draft Board</NavButton>
+          </DropdownMenuItem>
+          {isCommissioner && (
+            <DropdownMenuItem className="p-0">
+              <NavButton href={`/draft/${draft?.id}/kiosk`}>Kiosk Mode</NavButton>
+            </DropdownMenuItem>
+          )}
+          {isCommissioner && (
+            <DropdownMenuItem className="p-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleUpdateADP}
+                disabled={isUpdatingADP}
+                className="w-full justify-start"
+              >
+                <RefreshCcw className="mr-2 h-4 w-4" />
+                Update ADP
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Download className="mr-2 h-4 w-4" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => handleExport('csv')}>
+                    Export as CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                    Export as PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <Profile />
+    </>
+  );
+
+  return <AppHeader left={left} center={center} right={right} />;
 };
 
 export default DraftHeader;

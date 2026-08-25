@@ -4,8 +4,8 @@
 import React, { useReducer, useCallback, useMemo, useEffect } from 'react';
 import { unstable_batchedUpdates } from 'react-dom';
 import { useParams, useRouter } from 'next/navigation';
-import { useSupabaseClient } from '@/lib/useSupabaseClient';
-import { League, Draft, LeagueSettings, PlayerWithADP, Json } from '@/lib/types/';
+import { createClient } from '@/lib/supabase/client';
+import { League, Draft, LeagueSettings, PlayerWithADP } from '@/lib/types/';
 import { Pick, Player, Team } from '@/lib/types/';
 import { PickWithPlayerAndTeam } from '@/lib/types/pick.types';
 import RoundSquares from '@/components/RoundSquares';
@@ -22,7 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import TeamNeeds from '@/components/TeamNeeds';
-import { parseTeamLogos, possesiveTitle } from '@/lib/types/team.types';
+import { getTeamLogoUrl, possesiveTitle } from '@/lib/types/team.types';
 import TeamBreakdown from '@/components/TeamBreakdown';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -87,10 +87,11 @@ const KioskPage: React.FC = () => {
   const params = useParams();
   const router = useRouter();
   const draftId = params.draftId as string;
-  const supabase = useSupabaseClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [state, dispatch] = useReducer(kioskPageReducer, initialState);
 
+  const { data: me } = useSWR<{ role: string } | null>('/api/me', fetcher);
   const { data: draftData, mutate: mutateDraft } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher);
   const { data: picksData, mutate: mutatePicks } = useSWR<Pick[]>(
     draftData ? `/api/db/draft/${draftId}/picks` : null,
@@ -98,15 +99,16 @@ const KioskPage: React.FC = () => {
   );
   const { data: leagueData } = useSWR<League>(draftData ? `/api/db/league/${draftData.league_id}` : null, fetcher);
   const { data: leagueSettings } = useSWR<LeagueSettings>(draftData ? `/api/db/league/${draftData.league_id}/settings` : null, fetcher);
-  const { data: teams } = useSWR<Team[]>(draftData ? `/api/yahoo/league/${draftData.league_id}/teams` : null, fetcher);
+  const { data: teams } = useSWR<Team[]>(draftData ? `/api/db/league/${draftData.league_id}/teams` : null, fetcher);
   const { data: players } = useSWR<Player[]>(`/api/db/league/${draftData?.league_id}/players`, fetcher);
-  
-  const isLoading = !draftData || !leagueData || !leagueSettings || !teams || !players || !state.currentPick;
 
-  const getTeamLogoUrl = (teamLogos: Json): string => {
-    const parsedLogos = parseTeamLogos(teamLogos);
-    return parsedLogos && parsedLogos.length > 0 ? parsedLogos[0].url : '';
-  };
+  useEffect(() => {
+    if (me && me.role !== 'commissioner') {
+      router.push('/dashboard');
+    }
+  }, [me, router]);
+
+  const isLoading = !draftData || !leagueData || !leagueSettings || !teams || !players || !state.currentPick;
 
   const updatePicksAndDraft = useCallback(() => {
     if (!draftData || !picksData || !players || !teams) return;
@@ -114,7 +116,7 @@ const KioskPage: React.FC = () => {
     const updatedPicks: PickWithPlayerAndTeam[] = picksData.map(pick => ({
       ...pick,
       player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
-      team: teams.find(t => t.team_key === pick.team_key) ?? {} as Team
+      team: teams.find(t => t.id === pick.team_id) ?? {} as Team
     }));
 
     const updatedCurrentPick = updatedPicks.find(p => !p.is_picked) || null;
@@ -139,13 +141,13 @@ const KioskPage: React.FC = () => {
   const notifyPickMade = useCallback((updatedPick: Pick) => {
     if (updatedPick.is_picked && updatedPick.player_id) {
       const player = players?.find(p => p.id === updatedPick.player_id);
-      const team = teams?.find(t => t.team_key === updatedPick.team_key);
+      const team = teams?.find(t => t.id === updatedPick.team_id);
 
       if (player && team) {
         toast.success(
           `${team.name} has made pick #${updatedPick.total_pick_number}`,
           {
-            description: `${player.full_name} (${player.editorial_team_abbr}) - ${player.display_position}`,
+            description: `${player.full_name} (${player.team}) - ${player.position}`,
             duration: 5000,
           }
         );
@@ -269,14 +271,14 @@ const KioskPage: React.FC = () => {
 
   const currentTeam = useMemo(() => {
     if (state.currentPick && teams) {
-      return teams.find(team => team.team_key === state.currentPick!.team_key);
+      return teams.find(team => team.id === state.currentPick!.team_id);
     }
     return undefined;
   }, [state.currentPick, teams]);
 
   const remainingPicks = useMemo(() => {
     if (currentTeam && memoizedDraft) {
-      return memoizedDraft.picks.filter(pick => pick.team_key === currentTeam.team_key && !pick.is_picked).length;
+      return memoizedDraft.picks.filter(pick => pick.team_id === currentTeam.id && !pick.is_picked).length;
     }
     return 0;
   }, [currentTeam, memoizedDraft]);
@@ -331,8 +333,8 @@ const KioskPage: React.FC = () => {
             <div className="flex-1 min-h-0">
               <DraftedPlayers
                 picks={memoizedDraft.picks}
-                teamKey={state.currentPick.team_key}
-                teamName={teams ? teams.find(team => team.team_key === state.currentPick!.team_key)?.name : ''}
+                teamId={state.currentPick.team_id}
+                teamName={teams ? teams.find(team => team.id === state.currentPick!.team_id)?.name : ''}
                 currentPick={memoizedDraft.current_pick}
                 className="pl-4 h-full"
               />
@@ -349,7 +351,7 @@ const KioskPage: React.FC = () => {
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-4">
                       <Avatar className="h-16 w-16">
-                        <AvatarImage src={getTeamLogoUrl(currentTeam.team_logos)} alt={currentTeam.name} />
+                        <AvatarImage src={getTeamLogoUrl(currentTeam)} alt={currentTeam.name} />
                         <AvatarFallback>{currentTeam.name[0]}</AvatarFallback>
                       </Avatar>
                       <div className="grow">
@@ -361,12 +363,12 @@ const KioskPage: React.FC = () => {
                           </div>
                         </div>
                         <div className='flex space-x-2 text-sm'>
-                          {currentTeam.managers?.map((manager, index) => (
+                          {currentTeam.members?.map((member, index) => (
                             <span key={index} className="flex items-center space-x-2">
-                              <span>{manager.nickname ?? 'Unknown'}</span>
+                              <span>{member.display_name ?? member.email}</span>
                               <Avatar className="h-4 w-4">
-                                <AvatarImage src={manager.image_url as string} alt={manager.nickname ?? 'Unknown'} />
-                                <AvatarFallback>{(manager.nickname ?? 'U')[0]}</AvatarFallback>
+                                <AvatarImage src={member.avatar_url as string} alt={member.display_name ?? member.email} />
+                                <AvatarFallback>{(member.display_name ?? member.email ?? 'U')[0]}</AvatarFallback>
                               </Avatar>
                             </span>
                           ))}
@@ -377,41 +379,27 @@ const KioskPage: React.FC = () => {
                   <CardContent className="space-y-4">
                     <TeamNeeds
                       draft={memoizedDraft}
-                      teamKey={currentTeam.team_key}
+                      teamId={currentTeam.id}
                       leagueSettings={leagueSettings}
                       teams={teams}
                     />
                     <TeamBreakdown
                       leagueSettings={leagueSettings}
                       draft={memoizedDraft}
-                      teamKey={currentTeam.team_key}
+                      teamId={currentTeam.id}
                       teams={teams}
                       />
                   </CardContent>
                 </Card>
               )}
-              <div className="p-4">
-                <h2 className="text-2xl font-semibold mb-6 text-right">
-                  {!state.selectedPlayer 
-                    ? 
-                    <>
-                      <span>Select a player to proceed</span>
-                      <span className="text-primary ml-4">→</span>
-                    </>
-                    : `Ready to draft ${state.selectedPlayer?.full_name}?`}
+              {!state.selectedPlayer && (
+                <div className="p-4">
+                  <h2 className="text-2xl font-semibold mb-6 text-right">
+                    <span>Select a player to proceed</span>
+                    <span className="text-primary ml-4">→</span>
                   </h2>
-                <div className={`flex columns-2 gap-6 transition-all duration-500 ${state.selectedPlayer ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"} overflow-hidden`}>
-                  <PlayerDetails player={state.selectedPlayer} />
-                  <SubmitPickButton
-                    isCurrentUserPick={true}
-                    selectedPlayer={state.selectedPlayer}
-                    currentPick={state.currentPick}
-                    onSubmitPick={handleSubmitPick}
-                    isPickSubmitting={state.isPickSubmitting}
-                    className='scale-95 hover:scale-100 transition-transform duration-300 ease-in-out'
-                  />
                 </div>
-              </div>
+              )}
             </div>
           </ScrollArea>
         </div>
@@ -429,6 +417,39 @@ const KioskPage: React.FC = () => {
               />
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Centered confirmation overlay: click the backdrop or the player card again to deselect. */}
+      <div
+        className={`fixed inset-0 z-[60] flex items-center justify-center bg-background/80 p-8 backdrop-blur-sm transition-opacity duration-300 ${
+          state.selectedPlayer ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={() => state.selectedPlayer && handlePlayerSelect(state.selectedPlayer)}
+      >
+        <div
+          className={`w-full max-w-xl space-y-6 transition-transform duration-300 ${
+            state.selectedPlayer ? 'scale-100' : 'scale-95'
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h2 className="text-2xl font-semibold text-center">
+            Ready to draft {state.selectedPlayer?.full_name}?
+          </h2>
+          <div
+            className="cursor-pointer"
+            onClick={() => state.selectedPlayer && handlePlayerSelect(state.selectedPlayer)}
+          >
+            <PlayerDetails player={state.selectedPlayer} />
+          </div>
+          <SubmitPickButton
+            isCurrentUserPick={true}
+            selectedPlayer={state.selectedPlayer}
+            currentPick={state.currentPick}
+            onSubmitPick={handleSubmitPick}
+            isPickSubmitting={state.isPickSubmitting}
+            className="scale-95 hover:scale-100 transition-transform duration-300 ease-in-out"
+          />
         </div>
       </div>
     </div>

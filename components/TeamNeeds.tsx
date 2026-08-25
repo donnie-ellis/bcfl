@@ -15,11 +15,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-media-query';
 
 interface TeamNeedsProps {
   leagueSettings: LeagueSettings;
   draft: Draft;
-  teamKey: string;
+  teamId: number;
   teams: Team[];
 }
 
@@ -31,7 +32,8 @@ interface PositionNeed {
   isFlex: boolean;
 }
 
-const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draft, teamKey, teams }) => {
+const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draft, teamId, teams }) => {
+  const isMobile = useIsMobile();
   const positionNeeds = useMemo(() => {
     const flexPositions = ['W/R/T', 'W/R', 'Q/W/R/T'];
     const rosterPositions = parseRosterPositions(leagueSettings.roster_positions);
@@ -46,13 +48,13 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draft, teamKey, t
       isFlex: flexPositions.includes(pos.roster_position.position)
     }));
     
-    const teamPicks = draft.picks.filter(pick => pick.team_key === teamKey && pick.is_picked && pick.player_id !== null);
+    const teamPicks = draft.picks.filter(pick => pick.team_id === teamId && pick.is_picked && pick.player_id !== null);
 
-    teamPicks.forEach((pick: Pick) => { 
+    teamPicks.forEach((pick: Pick) => {
       const player = pick.player as Player | undefined;
       if (!player) return;
 
-      const eligiblePositions = player.eligible_positions || [];
+      const eligiblePositions = player.fantasy_positions || [];
       const remainingEligiblePositions = [...eligiblePositions]; // Keep this immutable for flex checks
 
       // First, count the player for their primary position
@@ -60,7 +62,7 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draft, teamKey, t
         const positionNeed = needs.find(need => need.position === position);
         if (positionNeed) {
           positionNeed.filled++;
-          positionNeed.players.push({ name: player.full_name, position: player.display_position as string });
+          positionNeed.players.push({ name: player.full_name || '', position: player.position || '' });
           break; // Stop after assigning to the first eligible primary position
         }
       }
@@ -84,7 +86,7 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draft, teamKey, t
 
           if (primaryPosition) {
             flexNeed.filled++;
-            flexNeed.players.push({ name: player.full_name, position: player.display_position as string });
+            flexNeed.players.push({ name: player.full_name || '', position: player.position || '' });
             break; // Stop after assigning to the first eligible flex position
           }
         }
@@ -92,7 +94,7 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draft, teamKey, t
     });
 
     return needs;
-  }, [leagueSettings, draft, teamKey]);
+  }, [leagueSettings, draft, teamId]);
 
   const getSeverityColor = (needed: number, filled: number) => {
     const remaining = needed - filled;
@@ -101,54 +103,83 @@ const TeamNeeds: React.FC<TeamNeedsProps> = ({ leagueSettings, draft, teamKey, t
     return "bg-destructive hover:bg-destructive/90 text-destructive-foreground hover:text-destructive-foreground transition-colors duration-200 cursor-default data-[state=open]:bg-destructive/50";
   };
 
+  const renderNeedDetails = (need: PositionNeed) => (
+    <div className="space-y-2">
+      <h3 className="font-bold">{need.position} Players:</h3>
+      {need.players.length > 0 ? (
+        <ul className="list-disc pl-4 space-y-1">
+          {need.players.map((player, index) => (
+            <li key={index}>
+              {player.name}
+              {need.isFlex && ` - ${player.position}`}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>No players drafted yet</p>
+      )}
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <div className="grid grid-cols-4 gap-2 p-2">
+        {positionNeeds.map((need) => (
+          <Popover key={need.position}>
+            <PopoverTrigger asChild>
+              <Button
+                className={`h-14 w-full flex-col gap-0.5 rounded-md ${getSeverityColor(need.needed, need.filled)} transition-colors duration-200`}
+              >
+                <span className="text-[10px] font-medium uppercase">{need.position}</span>
+                <span className="text-sm font-semibold">{need.filled}/{need.needed}</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64">
+              {renderNeedDetails(need)}
+            </PopoverContent>
+          </Popover>
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <Table className="w-full min-w-0">
-      <TableHeader>
-        <TableRow>
-          {positionNeeds.map((need) => (
-            <TableHead key={need.position} className="text-center text-muted-foreground p-1 text-xs">
-              {need.position}
-            </TableHead>
-          ))}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        <TableRow>
-          {positionNeeds.map((need) => (
-            <TableCell key={need.position} className="p-0 min-w-0">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button 
-                    className={`w-full rounded-none h-full p-2 ${getSeverityColor(need.needed, need.filled)} transition-colors duration-200 cursor-pointer`}
-                  >
-                    <span className="font-medium text-xs">
-                      {need.filled}/{need.needed}
-                    </span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="min-w-0">
-                  <div className="space-y-2">
-                    <h3 className="font-bold">{need.position} Players:</h3>
-                    {need.players.length > 0 ? (
-                      <ul className="list-disc pl-4 space-y-1">
-                        {need.players.map((player, index) => (
-                          <li key={index}>
-                            {player.name}
-                            {need.isFlex && ` - ${player.position}`}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p>No players drafted yet</p>
-                    )}
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </TableCell>
-          ))}
-        </TableRow>
-      </TableBody>
-    </Table>
+    <div className="relative">
+      <Table className="w-full">
+        <TableHeader>
+          <TableRow>
+            {positionNeeds.map((need) => (
+              <TableHead key={need.position} className="min-w-[52px] whitespace-nowrap text-center text-muted-foreground p-1 text-xs">
+                {need.position}
+              </TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableRow>
+            {positionNeeds.map((need) => (
+              <TableCell key={need.position} className="min-w-[52px] whitespace-nowrap p-0">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      className={`w-full rounded-none h-full p-2 ${getSeverityColor(need.needed, need.filled)} transition-colors duration-200 cursor-pointer`}
+                    >
+                      <span className="font-medium text-xs">
+                        {need.filled}/{need.needed}
+                      </span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64">
+                    {renderNeedDetails(need)}
+                  </PopoverContent>
+                </Popover>
+              </TableCell>
+            ))}
+          </TableRow>
+        </TableBody>
+      </Table>
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-background to-transparent" />
+    </div>
   );
 };
 

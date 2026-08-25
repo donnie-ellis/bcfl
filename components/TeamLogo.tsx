@@ -2,17 +2,17 @@
 import React from 'react';
 import { Team } from '@/lib/types';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { parseTeamLogos, TeamLogo as TeamLogoType } from '@/lib/types/team.types';
+import { getTeamLogoUrl } from '@/lib/types/team.types';
 
 interface TeamLogoProps {
-    teamKey: string;
+    teamId: number;
     teams: Team[];
     className?: string;
 }
 
-export const TeamLogo: React.FC<TeamLogoProps> = ({ teamKey, teams, className = 'h-10 w-10' }) => {
-    const team = teams.find(t => t.team_key === teamKey);
-    
+export const TeamLogo: React.FC<TeamLogoProps> = ({ teamId, teams, className = 'h-10 w-10' }) => {
+    const team = teams.find(t => t.id === teamId);
+
     if (!team) {
         return (
             <Avatar className={className}>
@@ -21,8 +21,7 @@ export const TeamLogo: React.FC<TeamLogoProps> = ({ teamKey, teams, className = 
         );
     }
 
-    const teamLogos: TeamLogoType[] = parseTeamLogos(team.team_logos);
-    const logoUrl = teamLogos.length > 0 ? teamLogos[0].url : '';
+    const logoUrl = getTeamLogoUrl(team);
 
     return (
         <Avatar className={className}>

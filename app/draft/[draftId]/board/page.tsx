@@ -4,7 +4,7 @@
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { useSupabaseClient } from '@/lib/useSupabaseClient';
+import { createClient } from '@/lib/supabase/client';
 import { League, Draft, LeagueSettings, Team, Pick, Player, PickWithPlayerAndTeam, PlayerWithADP } from '@/lib/types/';
 import DraftHeader from '@/components/DraftHeader';
 import RoundSquares from '@/components/RoundSquares';
@@ -17,23 +17,25 @@ import PlayersList from '@/components/PlayersList';
 import SubmitPickButton from '@/components/SubmitPicksButton';
 import PlayerCard from '@/components/PlayerCard';
 import { Switch } from "@/components/ui/switch";
+import { PopoverClose } from "@/components/ui/popover";
 import useSWR from 'swr';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Trophy } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-media-query';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 const DraftBoardPage: React.FC = () => {
   const params = useParams();
   const draftId = params.draftId as string;
-  const supabase = useSupabaseClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerWithADP | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [currentPick, setCurrentPick] = useState<PickWithPlayerAndTeam | null>(null);
   const [selectedRound, setSelectedRound] = useState<string>("1");
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
 
   const { data: draftData, mutate: mutateDraft } = useSWR<Draft>(`/api/db/draft/${draftId}`, fetcher);
   const { data: picksData, mutate: mutatePicks } = useSWR<PickWithPlayerAndTeam[]>(
@@ -46,19 +48,6 @@ const DraftBoardPage: React.FC = () => {
   const { data: teams } = useSWR<Team[]>(draftData ? `/api/db/league/${draftData.league_id}/teams` : null, fetcher);
   const { data: players } = useSWR<Player[]>(draftData ? `/api/db/league/${draftData.league_id}/players` : null, fetcher);
   const roundRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 640); // Adjust this breakpoint as needed
-    };
-
-    handleResize(); // Set initial state
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
 
   useEffect(() => {
     if (draftData && draftData.current_pick) {
@@ -76,7 +65,7 @@ const DraftBoardPage: React.FC = () => {
     const updatedPicks: PickWithPlayerAndTeam[] = picksData.map(pick => ({
       ...pick,
       player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
-      team: teams.find(t => t.team_key === pick.team_key) || null
+      team: teams.find(t => t.id === pick.team_id) || null
     }));
 
     const updatedCurrentPick = updatedPicks.find(p => !p.is_picked) || null;
@@ -90,13 +79,13 @@ const DraftBoardPage: React.FC = () => {
   const notifyPickMade = useCallback((updatedPick: Pick) => {
     if (updatedPick.is_picked && updatedPick.player_id) {
       const player = players?.find(p => p.id === updatedPick.player_id);
-      const team = teams?.find(t => t.team_key === updatedPick.team_key);
+      const team = teams?.find(t => t.id === updatedPick.team_id);
 
       if (player && team) {
         toast.success(
           `${team.name} drafted ${player.full_name}`,
           {
-            description: `${player.editorial_team_full_name} - ${player.display_position}`,
+            description: `${player.team} - ${player.position}`,
             duration: 5000,
           }
         );
@@ -141,7 +130,7 @@ const DraftBoardPage: React.FC = () => {
       const updatedPicks: PickWithPlayerAndTeam[] = picksData.map(pick => ({
         ...pick,
         player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
-        team: teams.find(t => t.team_key === pick.team_key) || null
+        team: teams.find(t => t.id === pick.team_id) || null
       }));
       return { ...draftData, picks: updatedPicks };
     }
@@ -193,12 +182,16 @@ const DraftBoardPage: React.FC = () => {
           </div>
         )}
         {pick.player ? (
-          <Button variant="destructive" onClick={() => handleDeletePick(pick)}>Delete Pick</Button>
+          <PopoverClose asChild>
+            <Button size="lg" variant="destructive" onClick={() => handleDeletePick(pick)}>Delete Pick</Button>
+          </PopoverClose>
         ) : (
-          <Button onClick={() => {
-            setCurrentPick(pick);
-            setIsSheetOpen(true);
-          }}>Set Pick</Button>
+          <PopoverClose asChild>
+            <Button size="lg" onClick={() => {
+              setCurrentPick(pick);
+              setIsSheetOpen(true);
+            }}>Set Pick</Button>
+          </PopoverClose>
         )}
       </div>
     );
@@ -272,6 +265,73 @@ const DraftBoardPage: React.FC = () => {
     }
   };
 
+  const roundSelector = (
+    <div className="p-4">
+      <Select
+        value={selectedRound}
+        onValueChange={handleRoundChange}
+      >
+        <SelectTrigger className="w-[180px] h-11">
+          <SelectValue placeholder="Select round" />
+        </SelectTrigger>
+        <SelectContent>
+          {rounds.map((round) => (
+            <SelectItem key={round} value={round.toString()}>
+              Round {round}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
+  // Mobile shows only the selected round; desktop stacks every round with scroll-into-view refs.
+  const roundsContent = isMobile ? (
+    <Card>
+      <CardHeader>
+        <CardTitle>Round {selectedRound}</CardTitle>
+      </CardHeader>
+      <CardContent className="px-2 sm:px-6">
+        <RoundSquares
+          draft={{
+            ...memoizedDraft,
+            picks: memoizedDraft.picks.filter(
+              (pick: PickWithPlayerAndTeam) => pick.round_number === parseInt(selectedRound)
+            ),
+          }}
+          leagueSettings={leagueSettings}
+          currentRoundOnly={false}
+          onSquareHover={handleSquareHover}
+          teams={teams}
+          currentRound={parseInt(selectedRound)}
+        />
+      </CardContent>
+    </Card>
+  ) : (
+    rounds.map((round, index) => (
+      <Card key={round} ref={(el) => setRoundRef(el, index)}>
+        <CardHeader>
+          <CardTitle>Round {round}</CardTitle>
+        </CardHeader>
+        <CardContent className="px-2 sm:px-6">
+          <RoundSquares
+            draft={{
+              ...memoizedDraft,
+              picks: memoizedDraft.picks.filter(
+                (pick: PickWithPlayerAndTeam) => pick.round_number === round
+              ),
+            }}
+            leagueSettings={leagueSettings}
+            currentRoundOnly={false}
+            onSquareHover={handleSquareHover}
+            teams={teams}
+            currentRound={round}
+          />
+        </CardContent>
+      </Card>
+    ))
+  );
+
   if (memoizedDraft.status === 'completed') {
     return (
       <div className="flex flex-col h-screen">
@@ -282,30 +342,10 @@ const DraftBoardPage: React.FC = () => {
             The draft has been completed. You can review the final draft results below.
           </AlertDescription>
         </Alert>
+        {roundSelector}
         <ScrollArea className="grow">
           <div className="p-4 space-y-8">
-            {rounds.map((round, index) => (
-              <Card key={round} ref={(el) => setRoundRef(el, index)}>
-                <CardHeader>
-                  <CardTitle>Round {round}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <RoundSquares
-                    draft={{
-                      ...memoizedDraft,
-                      picks: memoizedDraft.picks.filter(
-                        (pick: PickWithPlayerAndTeam) => pick.round_number === round
-                      ),
-                    }}
-                    leagueSettings={leagueSettings}
-                    currentRoundOnly={false}
-                    onSquareHover={handleSquareHover}
-                    teams={teams}
-                    currentRound={round}
-                  />
-                </CardContent>
-              </Card>
-            ))}
+            {roundsContent}
           </div>
         </ScrollArea>
       </div>
@@ -315,70 +355,10 @@ const DraftBoardPage: React.FC = () => {
   return (
     <div className="flex flex-col h-screen bg-muted/50">
       {MemoizedDraftHeader}
-      <div className="p-4">
-        <Select
-          value={selectedRound}
-          onValueChange={handleRoundChange}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select round" />
-          </SelectTrigger>
-          <SelectContent>
-            {rounds.map((round) => (
-              <SelectItem key={round} value={round.toString()}>
-                Round {round}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {roundSelector}
       <ScrollArea className="grow">
         <div className="p-4 space-y-8">
-          {isMobile ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Round {selectedRound}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <RoundSquares
-                  draft={{
-                    ...memoizedDraft,
-                    picks: memoizedDraft.picks.filter(
-                      (pick: PickWithPlayerAndTeam) => pick.round_number === parseInt(selectedRound)
-                    ),
-                  }}
-                  leagueSettings={leagueSettings}
-                  currentRoundOnly={false}
-                  onSquareHover={handleSquareHover}
-                  teams={teams}
-                  currentRound={parseInt(selectedRound)}
-                />
-              </CardContent>
-            </Card>
-          ) : (
-            rounds.map((round, index) => (
-              <Card key={round} ref={(el) => setRoundRef(el, index)}>
-                <CardHeader>
-                  <CardTitle>Round {round}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <RoundSquares
-                    draft={{
-                      ...memoizedDraft,
-                      picks: memoizedDraft.picks.filter(
-                        (pick: PickWithPlayerAndTeam) => pick.round_number === round
-                      ),
-                    }}
-                    leagueSettings={leagueSettings}
-                    currentRoundOnly={false}
-                    onSquareHover={handleSquareHover}
-                    teams={teams}
-                    currentRound={round}
-                  />
-                </CardContent>
-              </Card>
-            ))
-          )}
+          {roundsContent}
         </div>
       </ScrollArea>
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>

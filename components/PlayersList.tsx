@@ -48,17 +48,17 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
   }, [playersData, draft.picks]);
 
   const positions = useMemo(() => {
-    const allPositions = players.flatMap(player => player.eligible_positions || []);
-    return Array.from(new Set(allPositions)).filter(pos => pos !== 'IR' && pos !== 'BN' && pos !== 'W/R/T');
+    const allPositions = players.flatMap(player => player.fantasy_positions || []);
+    return Array.from(new Set(allPositions)).filter((pos): pos is string => pos !== 'IR' && pos !== 'BN' && pos !== 'W/R/T');
   }, [players]);
 
   const filteredPlayers = useMemo(() => {
     return players
       .filter(player => {
         const matchesSearch = (player.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (player.display_position || '').toLowerCase().includes(searchTerm.toLowerCase());
+          (player.position || '').toLowerCase().includes(searchTerm.toLowerCase());
         const matchesPosition = selectedPositions.length === 0 ||
-          (player.eligible_positions && player.eligible_positions.some(pos => selectedPositions.includes(pos)));
+          (player.fantasy_positions && player.fantasy_positions.some(pos => selectedPositions.includes(pos)));
         const matchesHideSelected = !hideSelected || !player.is_drafted;
 
         return matchesSearch && matchesPosition && matchesHideSelected;
@@ -81,7 +81,7 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
   return (
     <div className={`flex flex-col h-full ${className}`}>
       <div className="shrink-0">
-        <h2 className='text-2xl ml-4 py-2 font-bold text-primary text-center'>Players</h2>
+        <h2 className='text-lg ml-4 py-2 font-semibold text-primary text-center'>Players</h2>
         <div className="p-2 pl-4">
           <PlayerFilters
             searchTerm={searchTerm}

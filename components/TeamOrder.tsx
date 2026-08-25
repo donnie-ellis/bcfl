@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DragDropContext, Droppable, Draggable, DropResult, DroppableProps } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable, DropResult, DroppableProps } from '@hello-pangea/dnd';
 import { Button } from "@/components/ui/button";
 import TeamCard from './TeamCard';
 import { Team } from '@/lib/types/';
@@ -59,18 +59,18 @@ const TeamOrder: React.FC<TeamOrderProps> = ({ teams, onSubmit }) => {
               className="space-y-2 w-full"
             >
               {orderedTeams.map((team, index) => (
-                <Draggable key={team.team_key} draggableId={team.team_key} index={index}>
+                <Draggable key={team.id} draggableId={team.id.toString()} index={index}>
                   {(provided, snapshot) => (
                     <div
                       ref={provided.innerRef}
                       {...provided.draggableProps}
                       className="flex items-center relative"
                     >
-                      <div className="w-10 shrink-0 flex items-center justify-center font-bold text-gray-500">
+                      <div className="w-10 shrink-0 flex items-center justify-center font-bold text-muted-foreground">
                         {index + 1}
                       </div>
-                      <div 
-                        className={`flex items-center bg-white rounded-lg shadow-xs grow ${
+                      <div
+                        className={`flex items-center bg-card border rounded-lg shadow-xs grow ${
                           snapshot.isDragging ? 'shadow-md' : ''
                         }`}
                         style={{
@@ -81,11 +81,11 @@ const TeamOrder: React.FC<TeamOrderProps> = ({ teams, onSubmit }) => {
                         <div className="grow p-2 overflow-hidden">
                           <TeamCard team={team} />
                         </div>
-                        <div 
+                        <div
                           {...provided.dragHandleProps}
-                          className="flex items-center justify-center w-10 h-full bg-gray-100 rounded-r-lg cursor-grab active:cursor-grabbing"
+                          className="flex items-center justify-center w-10 h-full bg-muted rounded-r-lg cursor-grab active:cursor-grabbing"
                         >
-                          <GripVertical size={20} className="text-gray-500" />
+                          <GripVertical size={20} className="text-muted-foreground" />
                         </div>
                       </div>
                     </div>

@@ -1,5 +1,3 @@
-import { hostname } from 'os';
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     experimental: {
@@ -14,15 +12,28 @@ const nextConfig = {
     },
     images: {
         domains: [
-            'yahoofantasysports-res.cloudinary.com', 
+            'yahoofantasysports-res.cloudinary.com',
             'l.yimg.com',
             's.yimg.com',
         ],
         remotePatterns: [
             {
-                hostname: 's.yimg.com'
-            }
-        ]
+                protocol: 'https',
+                hostname: 'yahoofantasysports-res.cloudinary.com',
+                pathname: '/**',
+            },
+            {
+                protocol: 'https',
+                hostname: 'l.yimg.com',
+                pathname: '/**',
+            },
+            {
+                protocol: 'https',
+                hostname: 's.yimg.com',
+                pathname: '/**',
+            },
+
+        ],
     },
 };
 
