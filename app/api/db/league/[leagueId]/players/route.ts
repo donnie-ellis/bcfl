@@ -12,28 +12,37 @@ export async function GET(
   const supabase = await createClient();
 
   try {
-    // Fetch players from the database
-    let { data: players, error } = await supabase
-      .from('players')
-      .select(`
-        id,
-        sleeper_id,
-        full_name,
-        first_name,
-        last_name,
-        team,
-        position,
-        fantasy_positions,
-        status,
-        injury_status,
-        number,
-        active,
-        search_rank,
-        headshot_url
-      `);
+    // Supabase's PostgREST caps any unranged query at db.max_rows (1000),
+    // silently truncating the players table (3200+ rows). Page through
+    // with .range() so the full roster comes back regardless of size.
+    const PAGE_SIZE = 1000;
+    let players: any[] = [];
+    for (let from = 0; ; from += PAGE_SIZE) {
+      const { data: page, error } = await supabase
+        .from('players')
+        .select(`
+          id,
+          sleeper_id,
+          full_name,
+          first_name,
+          last_name,
+          team,
+          position,
+          fantasy_positions,
+          status,
+          injury_status,
+          number,
+          active,
+          search_rank,
+          headshot_url
+        `)
+        .order('id', { ascending: true })
+        .range(from, from + PAGE_SIZE - 1);
 
-    if (error) throw error;
-    if (!players) throw Error('No players returned');
+      if (error) throw error;
+      players.push(...page);
+      if (page.length < PAGE_SIZE) break;
+    }
 
     // If a draft ID is provided, fetch draft-specific information
     if (draftId) {

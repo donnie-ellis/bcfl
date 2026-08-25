@@ -64,8 +64,8 @@ const DraftBoardPage: React.FC = () => {
 
     const updatedPicks: PickWithPlayerAndTeam[] = picksData.map(pick => ({
       ...pick,
-      player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
-      team: teams.find(t => t.id === pick.team_id) || null
+      player: pick.player_id ? (pick.player ?? players.find(p => p.id === pick.player_id) ?? null) : null,
+      team: pick.team ?? teams.find(t => t.id === pick.team_id) ?? null
     }));
 
     const updatedCurrentPick = updatedPicks.find(p => !p.is_picked) || null;
@@ -78,8 +78,8 @@ const DraftBoardPage: React.FC = () => {
 
   const notifyPickMade = useCallback((updatedPick: Pick) => {
     if (updatedPick.is_picked && updatedPick.player_id) {
-      const player = players?.find(p => p.id === updatedPick.player_id);
-      const team = teams?.find(t => t.id === updatedPick.team_id);
+      const player = updatedPick.player ?? players?.find(p => p.id === updatedPick.player_id);
+      const team = updatedPick.team ?? teams?.find(t => t.id === updatedPick.team_id);
 
       if (player && team) {
         toast.success(
@@ -177,8 +177,8 @@ const DraftBoardPage: React.FC = () => {
     if (draftData && picksData && players && teams) {
       const updatedPicks: PickWithPlayerAndTeam[] = picksData.map(pick => ({
         ...pick,
-        player: pick.player_id ? players.find(p => p.id === pick.player_id) || null : null,
-        team: teams.find(t => t.id === pick.team_id) || null
+        player: pick.player_id ? (pick.player ?? players.find(p => p.id === pick.player_id) ?? null) : null,
+        team: pick.team ?? teams.find(t => t.id === pick.team_id) ?? null
       }));
       return { ...draftData, picks: updatedPicks };
     }
