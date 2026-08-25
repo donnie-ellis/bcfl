@@ -100,7 +100,11 @@ const KioskPage: React.FC = () => {
   const { data: leagueData } = useSWR<League>(draftData ? `/api/db/league/${draftData.league_id}` : null, fetcher);
   const { data: leagueSettings } = useSWR<LeagueSettings>(draftData ? `/api/db/league/${draftData.league_id}/settings` : null, fetcher);
   const { data: teams } = useSWR<Team[]>(draftData ? `/api/db/league/${draftData.league_id}/teams` : null, fetcher);
-  const { data: players } = useSWR<Player[]>(`/api/db/league/${draftData?.league_id}/players`, fetcher);
+  const { data: players } = useSWR<Player[]>(
+    `/api/db/league/${draftData?.league_id}/players`,
+    fetcher,
+    { revalidateOnFocus: false, revalidateOnReconnect: false, dedupingInterval: 300000 }
+  );
 
   useEffect(() => {
     if (me && me.role !== 'commissioner') {

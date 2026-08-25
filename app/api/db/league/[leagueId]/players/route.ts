@@ -15,12 +15,10 @@ export async function GET(
     // Supabase's PostgREST caps any unranged query at db.max_rows (1000),
     // silently truncating the players table (3200+ rows). Page through
     // with .range() so the full roster comes back regardless of size.
+    // Fetch page 1 with an exact count, then fire the remaining pages in
+    // parallel instead of awaiting them one at a time.
     const PAGE_SIZE = 1000;
-    let players: any[] = [];
-    for (let from = 0; ; from += PAGE_SIZE) {
-      const { data: page, error } = await supabase
-        .from('players')
-        .select(`
+    const selectQuery = `
           id,
           sleeper_id,
           full_name,
@@ -35,13 +33,32 @@ export async function GET(
           active,
           search_rank,
           headshot_url
-        `)
-        .order('id', { ascending: true })
-        .range(from, from + PAGE_SIZE - 1);
+        `;
 
-      if (error) throw error;
-      players.push(...page);
-      if (page.length < PAGE_SIZE) break;
+    const { data: firstPage, count, error: firstError } = await supabase
+      .from('players')
+      .select(selectQuery, { count: 'exact' })
+      .order('id', { ascending: true })
+      .range(0, PAGE_SIZE - 1);
+
+    if (firstError) throw firstError;
+
+    const totalPages = Math.ceil((count ?? firstPage.length) / PAGE_SIZE);
+    const remainingPages = await Promise.all(
+      Array.from({ length: Math.max(totalPages - 1, 0) }, (_, i) => {
+        const from = (i + 1) * PAGE_SIZE;
+        return supabase
+          .from('players')
+          .select(selectQuery)
+          .order('id', { ascending: true })
+          .range(from, from + PAGE_SIZE - 1);
+      })
+    );
+
+    let players: any[] = [...firstPage];
+    for (const page of remainingPages) {
+      if (page.error) throw page.error;
+      players.push(...(page.data ?? []));
     }
 
     // If a draft ID is provided, fetch draft-specific information

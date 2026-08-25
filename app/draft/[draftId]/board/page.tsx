@@ -46,7 +46,11 @@ const DraftBoardPage: React.FC = () => {
   const { data: leagueSettings } = useSWR<LeagueSettings>(draftData ? `/api/db/league/${draftData.league_id}/settings` : null, fetcher);
   const { data: isCommissioner } = useSWR<{ isCommissioner: boolean }>(draftData ? `/api/db/league/${draftData.league_id}/isCommissioner` : null, fetcher);
   const { data: teams } = useSWR<Team[]>(draftData ? `/api/db/league/${draftData.league_id}/teams` : null, fetcher);
-  const { data: players } = useSWR<Player[]>(draftData ? `/api/db/league/${draftData.league_id}/players` : null, fetcher);
+  const { data: players } = useSWR<Player[]>(
+    draftData ? `/api/db/league/${draftData.league_id}/players` : null,
+    fetcher,
+    { revalidateOnFocus: false, revalidateOnReconnect: false, dedupingInterval: 300000 }
+  );
   const roundRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {

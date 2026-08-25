@@ -1,13 +1,19 @@
 // ./components/PlayersList.tsx
 'use client'
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { PlayerWithADP, Draft, Pick, EnhancedPlayerWithADP, Player } from '@/lib/types/';
 import PlayerFilters from './PlayerFilters';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import PlayerCard from '@/components/PlayerCard';
 import { Skeleton } from "@/components/ui/skeleton";
 import useSWR from 'swr';
+import { useVirtualizer } from '@tanstack/react-virtual';
+
+// Fixed row height (PlayerCard content + its own mb-2 spacing) used for
+// virtualization. The card's content is uniform (fixed avatar size, two
+// lines of text) so a constant row height is safe here.
+const ROW_HEIGHT = 84;
 
 interface PlayersListProps {
   draftId: string;
@@ -76,6 +82,26 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
     }
   }, [onPlayerSelect]);
 
+  // Radix's ScrollArea only forwards a ref to its Root, not the scrollable
+  // Viewport inside it, so grab the viewport element (marked by Radix with
+  // this data attribute) once it's mounted to hand to the virtualizer.
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const viewport = scrollAreaRef.current?.querySelector<HTMLDivElement>(
+      '[data-radix-scroll-area-viewport]'
+    );
+    if (viewport) setScrollElement(viewport);
+  }, []);
+
+  const rowVirtualizer = useVirtualizer({
+    count: filteredPlayers.length,
+    getScrollElement: () => scrollElement,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 8,
+  });
+
   if (playersError) return <div>Error loading data</div>;
 
   return (
@@ -94,7 +120,7 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
           />
         </div>
       </div>
-      <ScrollArea className="grow">
+      <ScrollArea className="grow" ref={scrollAreaRef}>
         <div className="p-4 pr-3">
             {!playersData ? (
               Array.from({ length: 10 }).map((_, index) => (
@@ -109,17 +135,33 @@ const PlayersList: React.FC<PlayersListProps> = React.memo(({ draftId, onPlayerS
                 </div>
               ))
             ) : (
-              filteredPlayers.map((player) => (
-                  <PlayerCard
-                    key={player.id}
-                    player={player}
-                    isDrafted={player.is_drafted}
-                    onClick={() => handlePlayerClick(player)}
-                    fadeDrafted={true}
-                    onAddToQueue={onAddToQueue}
-                    selectedPlayer={selectedPlayer}
-                  />
-              ))
+              <div style={{ height: rowVirtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const player = filteredPlayers[virtualRow.index];
+                  return (
+                    <div
+                      key={player.id}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: ROW_HEIGHT,
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                    >
+                      <PlayerCard
+                        player={player}
+                        isDrafted={player.is_drafted}
+                        onClick={() => handlePlayerClick(player)}
+                        fadeDrafted={true}
+                        onAddToQueue={onAddToQueue}
+                        selectedPlayer={selectedPlayer}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             )}
         </div>
       </ScrollArea>

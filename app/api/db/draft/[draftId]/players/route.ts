@@ -17,24 +17,43 @@ export async function GET(
     // Supabase's PostgREST caps any unranged query at db.max_rows (1000),
     // silently truncating the players table (3200+ rows). Page through
     // with .range() so the full roster comes back regardless of size.
+    // Fetch page 1 with an exact count, then fire the remaining pages in
+    // parallel instead of awaiting them one at a time.
     const PAGE_SIZE = 1000;
-    const data: any[] = [];
-    for (let from = 0; ; from += PAGE_SIZE) {
-      const { data: page, error } = await supabase
-        .from('players')
-        .select(`
+    const selectQuery = `
           *,
           player_adp:player_adp(adp, adp_formatted, source_id, draft_id),
           draft_players:draft_players(is_picked, percent_drafted)
-        `)
-        .eq('player_adp.draft_id', parseInt(draftId))
-        .eq('draft_players.draft_id', parseInt(draftId))
-        .order('id', { ascending: true })
-        .range(from, from + PAGE_SIZE - 1);
+        `;
 
-      if (error) throw error;
-      data.push(...page);
-      if (page.length < PAGE_SIZE) break;
+    const { data: firstPage, count, error: firstError } = await supabase
+      .from('players')
+      .select(selectQuery, { count: 'exact' })
+      .eq('player_adp.draft_id', parseInt(draftId))
+      .eq('draft_players.draft_id', parseInt(draftId))
+      .order('id', { ascending: true })
+      .range(0, PAGE_SIZE - 1);
+
+    if (firstError) throw firstError;
+
+    const totalPages = Math.ceil((count ?? firstPage.length) / PAGE_SIZE);
+    const remainingPages = await Promise.all(
+      Array.from({ length: Math.max(totalPages - 1, 0) }, (_, i) => {
+        const from = (i + 1) * PAGE_SIZE;
+        return supabase
+          .from('players')
+          .select(selectQuery)
+          .eq('player_adp.draft_id', parseInt(draftId))
+          .eq('draft_players.draft_id', parseInt(draftId))
+          .order('id', { ascending: true })
+          .range(from, from + PAGE_SIZE - 1);
+      })
+    );
+
+    const data: any[] = [...firstPage];
+    for (const page of remainingPages) {
+      if (page.error) throw page.error;
+      data.push(...(page.data ?? []));
     }
 
     // Transform the data to match the expected format
