@@ -15,20 +15,25 @@ export async function GET(request: NextRequest) {
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type') as EmailOtpType | null
   const next = searchParams.get('next') ?? '/dashboard'
+  const upstreamError = searchParams.get('error_description') ?? searchParams.get('error')
 
   const supabase = await createClient()
+  let failureReason = upstreamError
 
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`)
     }
+    failureReason = error.message
   } else if (token_hash && type) {
     const { error } = await supabase.auth.verifyOtp({ type, token_hash })
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`)
     }
+    failureReason = error.message
   }
 
-  return NextResponse.redirect(`${origin}/?error=auth`)
+  const params = new URLSearchParams({ error: failureReason ?? 'auth' })
+  return NextResponse.redirect(`${origin}/?${params.toString()}`)
 }
